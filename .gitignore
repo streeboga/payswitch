@@ -28,3 +28,4 @@ yarn-error.log
 /.zed
 /dashboard/.playwright-mcp
 /dashboard/dist
+.playwright-mcp
