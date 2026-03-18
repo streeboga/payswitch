@@ -80,7 +80,7 @@ test('merchant account has many api keys', function () {
     $merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
     ApiKey::create([
         'merchant_account_id' => $merchant->id,
-        'key_hash' => bcrypt('test_key'),
+        'key_hash' => hash('sha256', 'test_key'),
         'key_prefix' => 'snd_testke',
         'name' => 'Key 1',
     ]);
@@ -95,7 +95,7 @@ test('api key can be revoked', function () {
     $merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
     $key = ApiKey::create([
         'merchant_account_id' => $merchant->id,
-        'key_hash' => bcrypt('test'),
+        'key_hash' => hash('sha256', 'test'),
         'key_prefix' => 'snd_test',
         'name' => 'Key',
     ]);
@@ -114,7 +114,7 @@ test('api key expiration check works', function () {
 
     $active = ApiKey::create([
         'merchant_account_id' => $merchant->id,
-        'key_hash' => bcrypt('test'),
+        'key_hash' => hash('sha256', 'test'),
         'key_prefix' => 'snd_test',
         'name' => 'Active',
         'expires_at' => now()->addYear(),
@@ -122,7 +122,7 @@ test('api key expiration check works', function () {
 
     $expired = ApiKey::create([
         'merchant_account_id' => $merchant->id,
-        'key_hash' => bcrypt('test2'),
+        'key_hash' => hash('sha256', 'test2'),
         'key_prefix' => 'snd_test2',
         'name' => 'Expired',
         'expires_at' => now()->subDay(),

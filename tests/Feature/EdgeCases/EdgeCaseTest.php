@@ -175,7 +175,7 @@ test('payment method requires type and connector_name', function () {
     $rawKey = IdGenerator::apiKey('sandbox');
     ApiKey::create([
         'merchant_account_id' => $this->merchant->id,
-        'key_hash' => bcrypt($rawKey),
+        'key_hash' => hash('sha256', $rawKey),
         'key_prefix' => substr($rawKey, 0, 20),
         'name' => 'Test',
     ]);
@@ -203,7 +203,7 @@ test('setDefault is atomic', function () {
     $rawKey = IdGenerator::apiKey('sandbox');
     ApiKey::create([
         'merchant_account_id' => $this->merchant->id,
-        'key_hash' => bcrypt($rawKey),
+        'key_hash' => hash('sha256', $rawKey),
         'key_prefix' => substr($rawKey, 0, 20),
         'name' => 'Test',
     ]);

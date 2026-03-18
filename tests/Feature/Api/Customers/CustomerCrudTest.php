@@ -17,7 +17,7 @@ beforeEach(function () {
     $this->rawKey = IdGenerator::apiKey('sandbox');
     ApiKey::create([
         'merchant_account_id' => $this->merchant->id,
-        'key_hash' => bcrypt($this->rawKey),
+        'key_hash' => hash('sha256', $this->rawKey),
         'key_prefix' => substr($this->rawKey, 0, 20),
         'name' => 'Test',
     ]);
@@ -132,7 +132,7 @@ test('customer is scoped to authenticated merchant', function () {
     $rawKey2 = IdGenerator::apiKey('sandbox');
     ApiKey::create([
         'merchant_account_id' => $merchant2->id,
-        'key_hash' => bcrypt($rawKey2),
+        'key_hash' => hash('sha256', $rawKey2),
         'key_prefix' => substr($rawKey2, 0, 20),
         'name' => 'Other',
     ]);

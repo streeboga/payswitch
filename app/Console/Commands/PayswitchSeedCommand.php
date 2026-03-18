@@ -47,7 +47,7 @@ final class PayswitchSeedCommand extends Command
         $rawKey = IdGenerator::apiKey(config('payswitch.environment', 'sandbox'));
         ApiKey::create([
             'merchant_account_id' => $merchant->id,
-            'key_hash' => bcrypt($rawKey),
+            'key_hash' => hash('sha256', $rawKey),
             'key_prefix' => substr($rawKey, 0, 20),
             'name' => 'Demo API Key',
         ]);

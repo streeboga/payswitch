@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Streeboga\PaymentData\Models;
 
+use App\Enums\RoutingRuleType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Streeboga\PaymentData\Support\IdGenerator;
@@ -23,6 +24,7 @@ class RoutingRule extends Model
     protected function casts(): array
     {
         return [
+            'type' => RoutingRuleType::class,
             'rules' => 'array',
             'active' => 'boolean',
             'priority' => 'integer',

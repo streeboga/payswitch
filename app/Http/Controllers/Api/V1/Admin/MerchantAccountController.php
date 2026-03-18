@@ -9,6 +9,7 @@ use App\Http\Resources\MerchantAccountResource;
 use App\Services\MerchantService;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 #[Group(name: 'Admin > Merchant Accounts', weight: 11)]
@@ -38,10 +39,10 @@ final class MerchantAccountController extends Controller
      *
      * Retrieves the details of a merchant account.
      */
-    public function show(string $merchantKey): JsonResponse
+    public function show(string $merchantKey, Request $request): JsonResponse
     {
         $merchant = $this->merchantService->findMerchant($merchantKey);
 
-        return (new MerchantAccountResource($merchant))->toResponse(request());
+        return (new MerchantAccountResource($merchant))->toResponse($request);
     }
 }

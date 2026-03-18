@@ -20,7 +20,7 @@ use App\Repositories\Eloquent\RoutingRuleRepository;
 use App\Repositories\Eloquent\WebhookEventRepository;
 use Illuminate\Support\ServiceProvider;
 
-class RepositoryServiceProvider extends ServiceProvider
+final class RepositoryServiceProvider extends ServiceProvider
 {
     public array $bindings = [
         PaymentIntentRepositoryInterface::class => PaymentIntentRepository::class,

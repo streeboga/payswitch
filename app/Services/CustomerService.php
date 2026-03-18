@@ -52,9 +52,11 @@ final readonly class CustomerService
         $customer = $this->customerRepository->findByKey($customerKey, $merchantAccountId);
         $updateData = $dto->toUpdateArray();
 
-        if (! empty($updateData)) {
-            $this->customerRepository->update($customer, $updateData);
+        if (empty($updateData)) {
+            return $customer;
         }
+
+        $this->customerRepository->update($customer, $updateData);
 
         return $customer->fresh();
     }

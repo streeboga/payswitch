@@ -28,7 +28,7 @@ beforeEach(function () {
     $this->rawKey = IdGenerator::apiKey('sandbox');
     ApiKey::create([
         'merchant_account_id' => $this->merchant->id,
-        'key_hash' => bcrypt($this->rawKey),
+        'key_hash' => hash('sha256', $this->rawKey),
         'key_prefix' => substr($this->rawKey, 0, 20),
         'name' => 'Test',
     ]);

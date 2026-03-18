@@ -7,7 +7,7 @@ namespace App\Http\Requests\Api\Payment;
 use App\DataTransferObjects\Payment\CreatePaymentData;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StorePaymentRequest extends FormRequest
+final class StorePaymentRequest extends FormRequest
 {
     public function rules(): array
     {

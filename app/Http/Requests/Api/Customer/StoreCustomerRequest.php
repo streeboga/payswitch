@@ -7,11 +7,12 @@ namespace App\Http\Requests\Api\Customer;
 use App\DataTransferObjects\Customer\CreateCustomerData;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreCustomerRequest extends FormRequest
+final class StoreCustomerRequest extends FormRequest
 {
     public function rules(): array
     {
         return [
+            'data.id' => ['sometimes', 'nullable', 'string', 'min:1', 'max:64'],
             'data.attributes.name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'data.attributes.email' => ['sometimes', 'nullable', 'email', 'max:255'],
             'data.attributes.phone' => ['sometimes', 'nullable', 'string', 'max:20'],
