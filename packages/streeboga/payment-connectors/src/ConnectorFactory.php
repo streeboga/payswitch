@@ -13,7 +13,7 @@ final class ConnectorFactory
         'stripe' => Drivers\StripeConnector::class,
         'cloudpayments' => Drivers\CloudPaymentsConnector::class,
         'test' => Drivers\TestConnector::class,
-        // 'yookassa' => Drivers\YooKassaConnector::class,
+        'yookassa' => Drivers\YooKassaConnector::class,
     ];
 
     public static function resolve(MerchantConnectorAccount $mca): ConnectorInterface

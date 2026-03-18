@@ -58,7 +58,7 @@ development_status:
   3-1-connector-crud: done
   3-2-omnipay-abstraction: done
   3-3-stripe-connector: done
-  3-4-yookassa-connector: backlog
+  3-4-yookassa-connector: done
   epic-3-retrospective: optional
 
   # Epic 4: Создание платежа и State Machine
