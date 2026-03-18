@@ -556,7 +556,13 @@
     "resultStatus": "Статус",
     "resultId": "ID",
     "resultAmount": "Сумма",
-    "resultConnector": "Коннектор"
+    "resultConnector": "Коннектор",
+    "presetInsufficientFunds": "Недостаточно средств",
+    "presetExpiredCard": "Истёк срок",
+    "labelConnector": "Коннектор",
+    "connectorAuto": "Авто (роутинг)",
+    "labelDescription": "Описание",
+    "descriptionPlaceholder": "Тестовый платёж"
   },
   "eventLogs": {
     "title": "Журнал событий",

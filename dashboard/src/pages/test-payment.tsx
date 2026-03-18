@@ -5,6 +5,7 @@ import { FlaskConical, Loader2 } from 'lucide-react'
 
 import type { PaymentIntentAttributes } from '@/api/types'
 import { useCreateTestPayment } from '@/hooks/use-test-payment'
+import { useConnectorsList } from '@/hooks/use-connectors'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,7 +37,17 @@ const CARD_PRESETS: CardPreset[] = [
   { labelKey: 'testPayment.presetSuccessful', number: '4242424242424242' },
   { labelKey: 'testPayment.presetDecline', number: '4000000000000002' },
   { labelKey: 'testPayment.preset3ds', number: '4000000000003220' },
+  { labelKey: 'testPayment.presetInsufficientFunds', number: '4000000000009995' },
+  { labelKey: 'testPayment.presetExpiredCard', number: '4000000000000069' },
 ]
+
+// ─── Currency symbol helper ──────────────────────────────────
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  RUB: '₽',
+  USD: '$',
+  EUR: '€',
+}
 
 // ─── Test Payment Form (reusable) ────────────────────────────
 
@@ -49,8 +60,9 @@ interface TestPaymentFormProps {
 export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
   const { t } = useTranslation()
   const mutation = useCreateTestPayment()
+  const { data: connectors } = useConnectorsList()
 
-  const [amount, setAmount] = useState('10000')
+  const [amount, setAmount] = useState('100.00')
   const [currency, setCurrency] = useState('RUB')
   const [paymentMethod, setPaymentMethod] = useState('card')
   const [cardNumber, setCardNumber] = useState('4242424242424242')
@@ -58,7 +70,12 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
   const [cardExpYear, setCardExpYear] = useState('30')
   const [cardCvc, setCardCvc] = useState('123')
   const [captureMethod, setCaptureMethod] = useState('automatic')
+  const [connectorName, setConnectorName] = useState('')
+  const [description, setDescription] = useState('')
   const [result, setResult] = useState<TestPaymentResult | null>(null)
+
+  const activeConnectors = connectors?.items.filter((c) => !c.disabled) ?? []
+  const currencySymbol = CURRENCY_SYMBOLS[currency] ?? currency
 
   function applyPreset(preset: CardPreset) {
     setCardNumber(preset.number)
@@ -68,7 +85,7 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
     e.preventDefault()
     mutation.mutate(
       {
-        amount: Number(amount),
+        amount: Math.round(parseFloat(amount) * 100),
         currency,
         payment_method: paymentMethod,
         card_number: cardNumber,
@@ -76,6 +93,8 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
         card_exp_year: cardExpYear,
         card_cvc: cardCvc,
         capture_method: captureMethod,
+        ...(connectorName ? { connector_name: connectorName } : {}),
+        ...(description ? { description } : {}),
       },
       {
         onSuccess: (data) => {
@@ -113,13 +132,16 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">{t('testPayment.labelAmount')}</Label>
+                <Label htmlFor="amount">
+                  {t('testPayment.labelAmount')} ({currencySymbol})
+                </Label>
                 <Input
                   id="amount"
                   type="number"
+                  step="0.01"
+                  min="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  min={1}
                 />
               </div>
               <div className="space-y-2">
@@ -135,6 +157,33 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="connector">{t('testPayment.labelConnector')}</Label>
+              <Select value={connectorName} onValueChange={setConnectorName}>
+                <SelectTrigger id="connector">
+                  <SelectValue placeholder={t('testPayment.connectorAuto')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t('testPayment.connectorAuto')}</SelectItem>
+                  {activeConnectors.map((c) => (
+                    <SelectItem key={c.id} value={c.connector_name}>
+                      {c.connector_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">{t('testPayment.labelDescription')}</Label>
+              <Input
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t('testPayment.descriptionPlaceholder')}
+              />
             </div>
 
             <div className="space-y-2">

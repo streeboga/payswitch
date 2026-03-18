@@ -13,6 +13,8 @@ export interface TestPaymentRequest {
   card_exp_year: string
   card_cvc: string
   capture_method: string
+  connector_name?: string
+  description?: string
 }
 
 // ─── API Functions ───────────────────────────────────────────

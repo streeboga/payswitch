@@ -556,7 +556,13 @@
     "resultStatus": "Status",
     "resultId": "ID",
     "resultAmount": "Amount",
-    "resultConnector": "Connector"
+    "resultConnector": "Connector",
+    "presetInsufficientFunds": "Insufficient Funds",
+    "presetExpiredCard": "Expired Card",
+    "labelConnector": "Connector",
+    "connectorAuto": "Auto (routing)",
+    "labelDescription": "Description",
+    "descriptionPlaceholder": "Test payment"
   },
   "eventLogs": {
     "title": "Event Logs",
