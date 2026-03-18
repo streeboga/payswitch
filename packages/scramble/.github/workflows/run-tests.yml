@@ -1,0 +1,66 @@
+name: run-tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        php: ['8.2', '8.5']
+        laravel: ['10.*', '12.*', '13.*']
+        phpdoc-parser: ['2.*']
+        stability: [prefer-stable]
+        include:
+          - laravel: 10.*
+            testbench: 8.*
+          - laravel: 12.*
+            testbench: 10.*
+          - laravel: 13.*
+            testbench: 11.*
+          - php: 8.2
+            laravel: 10.*
+            phpdoc-parser: 1.*
+            stability: prefer-lowest
+            testbench: 8.*
+        exclude:
+          - laravel: 10.*
+            php: '8.5'
+          - laravel: 13.*
+            php: '8.2'
+
+    name: P${{ matrix.php }} - L${{ matrix.laravel }} - PHPDoc-Parser${{ matrix.phpdoc-parser }} - ${{ matrix.stability }} - ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick, fileinfo
+          coverage: none
+
+      - name: Setup problem matchers
+        run: |
+          echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+          echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+      - name: Install dependencies
+        run: |
+          composer remove --dev larastan/larastan phpstan/extension-installer phpstan/phpstan-deprecation-rules phpstan/phpstan-phpunit
+          composer config --no-plugins allow-plugins.pestphp/pest-plugin true
+          composer require "laravel/framework:${{ matrix.laravel }}" "phpstan/phpdoc-parser:${{ matrix.phpdoc-parser }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+
+      - name: Execute tests
+        run: vendor/bin/pest --no-coverage
