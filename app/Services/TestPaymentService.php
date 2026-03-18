@@ -43,6 +43,6 @@ final readonly class TestPaymentService
             'connector' => $params['connector_name'] ?? null,
         ]);
 
-        return $this->confirmationService->confirm($payment->payment_key, $confirmDto, $merchantAccountId);
+        return $this->confirmationService->confirm($payment->key, $confirmDto, $merchantAccountId);
     }
 }
