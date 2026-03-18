@@ -71,7 +71,7 @@ final class RefundService
             }
 
             // Resolve connector from last successful attempt
-            $lastAttempt = $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
+            $lastAttempt = $this->paymentRepository->findLastSuccessfulAttempt($payment);
             $connectorName = $payment->connector;
 
             if (! $lastAttempt || ! $connectorName) {

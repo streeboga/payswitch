@@ -6,6 +6,7 @@ namespace App\Repositories\Contracts;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Streeboga\PaymentData\Models\PaymentIntent;
+use Streeboga\PaymentData\Models\PaymentMethod;
 
 interface PaymentIntentRepositoryInterface
 {
@@ -26,4 +27,12 @@ interface PaymentIntentRepositoryInterface
     public function findByKeyGlobal(string $key): PaymentIntent;
 
     public function findByIdLocked(int $id): ?PaymentIntent;
+
+    public function incrementAttemptCount(PaymentIntent $payment): void;
+
+    public function createAttempt(PaymentIntent $payment, array $data): void;
+
+    public function findLastSuccessfulAttempt(PaymentIntent $payment): ?object;
+
+    public function findPaymentMethodByKey(string $key, int|string $merchantAccountId): ?PaymentMethod;
 }

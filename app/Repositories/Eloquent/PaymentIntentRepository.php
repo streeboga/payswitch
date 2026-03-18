@@ -7,6 +7,7 @@ namespace App\Repositories\Eloquent;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Streeboga\PaymentData\Models\PaymentIntent;
+use Streeboga\PaymentData\Models\PaymentMethod;
 
 final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
 {
@@ -76,5 +77,27 @@ final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
     public function findByIdLocked(int $id): ?PaymentIntent
     {
         return PaymentIntent::where('id', $id)->lockForUpdate()->first();
+    }
+
+    public function incrementAttemptCount(PaymentIntent $payment): void
+    {
+        $payment->increment('attempt_count');
+    }
+
+    public function createAttempt(PaymentIntent $payment, array $data): void
+    {
+        $payment->paymentAttempts()->create($data);
+    }
+
+    public function findLastSuccessfulAttempt(PaymentIntent $payment): ?object
+    {
+        return $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
+    }
+
+    public function findPaymentMethodByKey(string $key, int|string $merchantAccountId): ?PaymentMethod
+    {
+        return PaymentMethod::where('key', $key)
+            ->where('merchant_account_id', $merchantAccountId)
+            ->first();
     }
 }

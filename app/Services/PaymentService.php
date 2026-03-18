@@ -15,7 +15,6 @@ use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Exceptions\InvalidStateTransitionException;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\PaymentIntent;
-use Streeboga\PaymentData\Models\PaymentMethod;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
 final class PaymentService
@@ -30,7 +29,7 @@ final class PaymentService
         if (isset($data['payment_id'])) {
             $existing = $this->paymentRepository->findByKeyOrNull($data['payment_id'], $merchantAccountId);
             if ($existing) {
-                return $existing; // idempotent — return existing payment
+                return $existing;
             }
         }
 
@@ -72,18 +71,15 @@ final class PaymentService
     {
         $result = DB::transaction(function () use ($paymentKey, $data, $merchantAccountId) {
             $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
-
             $previousStatus = $payment->status->value;
 
             if ($payment->expires_on && $payment->expires_on->isPast()) {
-                // Transition to expired
                 if (PaymentStateMachine::canTransition($payment->status, PaymentStatus::Expired)) {
-                    $payment->update(['status' => PaymentStatus::Expired]);
+                    $this->paymentRepository->update($payment, ['status' => PaymentStatus::Expired]);
                 }
                 throw new PaymentException('Payment session has expired', 'payment_expired', 'invalid_request_error', 400);
             }
 
-            // Check payment is in confirmable state BEFORE calling PSP
             if (! in_array($payment->status, [PaymentStatus::RequiresPaymentMethod, PaymentStatus::RequiresConfirmation])) {
                 throw new PaymentException(
                     "Payment cannot be confirmed in status '{$payment->status->value}'",
@@ -96,15 +92,13 @@ final class PaymentService
             // Check for saved payment method
             $paymentMethodId = $data['payment_method_data']['payment_method_id'] ?? null;
             if ($paymentMethodId) {
-                $pm = PaymentMethod::where('key', $paymentMethodId)
-                    ->where('merchant_account_id', $merchantAccountId)
-                    ->firstOrFail();
-
-                if ($pm && empty($pm->connector_token)) {
+                $pm = $this->paymentRepository->findPaymentMethodByKey($paymentMethodId, $merchantAccountId);
+                if (! $pm) {
+                    throw new PaymentException('Payment method not found', 'payment_method_not_found', 'invalid_request_error', 404);
+                }
+                if (empty($pm->connector_token)) {
                     throw new PaymentException('Payment method token is invalid or expired', 'invalid_payment_method_token', 'invalid_request_error', 400);
                 }
-
-                // Use the saved token
                 $data['token'] = $pm->connector_token;
                 $data['connector'] = $pm->connector_name;
             }
@@ -115,10 +109,7 @@ final class PaymentService
             $paymentMethod = $data['payment_method'] ?? null;
             $mca = $routingService->resolve($merchantAccountId, $explicitConnector, $paymentMethod, $payment->currency, $payment->amount);
 
-            // Get connector instance
             $connector = ConnectorFactory::resolve($mca);
-
-            // Call PSP
             $connectorParams = array_merge($data, [
                 'amount' => $payment->amount,
                 'currency' => $payment->currency,
@@ -130,21 +121,18 @@ final class PaymentService
                     ? $connector->authorize($connectorParams)
                     : $connector->purchase($connectorParams);
             } catch (\Throwable $e) {
-                // Record failed attempt
-                $payment->paymentAttempts()->create([
+                $this->paymentRepository->createAttempt($payment, [
                     'connector' => $mca->connector_name,
                     'status' => 'failed',
                     'amount' => $payment->amount,
                     'error_code' => 'connector_exception',
                     'error_message' => $e->getMessage(),
                 ]);
-                // Try fallback
                 $result = ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_exception'];
             }
 
-            // Create attempt record
             if (($result['code'] ?? null) !== 'connector_exception') {
-                $payment->paymentAttempts()->create([
+                $this->paymentRepository->createAttempt($payment, [
                     'connector' => $mca->connector_name,
                     'connector_transaction_id' => $result['transaction_id'] ?? null,
                     'status' => $result['success'] ? 'succeeded' : 'failed',
@@ -154,25 +142,24 @@ final class PaymentService
                 ]);
             }
 
-            $payment->increment('attempt_count');
+            $this->paymentRepository->incrementAttemptCount($payment);
 
             if ($result['success']) {
                 if ($payment->capture_method === CaptureMethod::Manual) {
                     PaymentStateMachine::assertTransition($payment->status, PaymentStatus::RequiresCapture);
-                    $payment->update([
+                    $this->paymentRepository->update($payment, [
                         'status' => PaymentStatus::RequiresCapture,
                         'connector' => $mca->connector_name,
                     ]);
                 } else {
                     PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Succeeded);
-                    $payment->update([
+                    $this->paymentRepository->update($payment, [
                         'status' => PaymentStatus::Succeeded,
                         'amount_received' => $payment->amount,
                         'connector' => $mca->connector_name,
                     ]);
                 }
             } else {
-                // Try fallback
                 $fallbackMca = $routingService->fallback($merchantAccountId, [$mca->connector_name]);
 
                 if ($fallbackMca) {
@@ -185,7 +172,7 @@ final class PaymentService
                         $fallbackResult = ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_exception'];
                     }
 
-                    $payment->paymentAttempts()->create([
+                    $this->paymentRepository->createAttempt($payment, [
                         'connector' => $fallbackMca->connector_name,
                         'connector_transaction_id' => $fallbackResult['transaction_id'] ?? null,
                         'status' => $fallbackResult['success'] ? 'succeeded' : 'failed',
@@ -194,21 +181,21 @@ final class PaymentService
                         'error_message' => $fallbackResult['success'] ? null : ($fallbackResult['message'] ?? null),
                     ]);
 
-                    $payment->increment('attempt_count');
+                    $this->paymentRepository->incrementAttemptCount($payment);
 
                     if ($fallbackResult['success']) {
                         $newStatus = $payment->capture_method === CaptureMethod::Manual
                             ? PaymentStatus::RequiresCapture
                             : PaymentStatus::Succeeded;
                         PaymentStateMachine::assertTransition($payment->status, $newStatus);
-                        $payment->update([
+                        $this->paymentRepository->update($payment, [
                             'status' => $newStatus,
                             'amount_received' => $newStatus === PaymentStatus::Succeeded ? $payment->amount : null,
                             'connector' => $fallbackMca->connector_name,
                         ]);
                     } else {
                         PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Failed);
-                        $payment->update([
+                        $this->paymentRepository->update($payment, [
                             'status' => PaymentStatus::Failed,
                             'error_code' => $fallbackResult['code'] ?? null,
                             'error_message' => $fallbackResult['message'] ?? null,
@@ -217,7 +204,7 @@ final class PaymentService
                     }
                 } else {
                     PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Failed);
-                    $payment->update([
+                    $this->paymentRepository->update($payment, [
                         'status' => PaymentStatus::Failed,
                         'error_code' => $result['code'] ?? null,
                         'error_message' => $result['message'] ?? null,
@@ -242,23 +229,14 @@ final class PaymentService
     {
         $result = DB::transaction(function () use ($paymentKey, $amount, $merchantAccountId) {
             $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
-
             $previousStatus = $payment->status->value;
 
             if (! in_array($payment->status, [PaymentStatus::RequiresCapture, PaymentStatus::PartiallyCapturedAndCapturable], true)) {
-                throw new InvalidStateTransitionException(
-                    $payment->status->value,
-                    PaymentStatus::Succeeded->value,
-                );
+                throw new InvalidStateTransitionException($payment->status->value, PaymentStatus::Succeeded->value);
             }
 
             if ($amount <= 0) {
-                throw new PaymentException(
-                    'Capture amount must be positive',
-                    'invalid_amount',
-                    'invalid_request_error',
-                    400,
-                );
+                throw new PaymentException('Capture amount must be positive', 'invalid_amount', 'invalid_request_error', 400);
             }
 
             if ($amount > $payment->amount_capturable) {
@@ -270,15 +248,9 @@ final class PaymentService
                 );
             }
 
-            // Find connector from last successful attempt
-            $lastAttempt = $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
+            $lastAttempt = $this->paymentRepository->findLastSuccessfulAttempt($payment);
             if (! $lastAttempt) {
-                throw new PaymentException(
-                    'No successful payment attempt found for capture',
-                    'no_attempt',
-                    'invalid_request_error',
-                    400,
-                );
+                throw new PaymentException('No successful payment attempt found for capture', 'no_attempt', 'invalid_request_error', 400);
             }
 
             if (! $lastAttempt->connector_transaction_id) {
@@ -286,14 +258,8 @@ final class PaymentService
             }
 
             $mca = $this->merchantRepository->findConnectorByMerchantAndName($merchantAccountId, $lastAttempt->connector);
-
             if (! $mca) {
-                throw new PaymentException(
-                    'Connector not found for capture',
-                    'connector_not_found',
-                    'invalid_request_error',
-                    400,
-                );
+                throw new PaymentException('Connector not found for capture', 'connector_not_found', 'invalid_request_error', 400);
             }
 
             $connector = ConnectorFactory::resolve($mca);
@@ -303,27 +269,20 @@ final class PaymentService
             ]);
 
             if (! $result['success']) {
-                throw new PaymentException(
-                    $result['message'] ?? 'Capture failed at connector',
-                    'capture_failed',
-                    'connector_error',
-                    502,
-                );
+                throw new PaymentException($result['message'] ?? 'Capture failed at connector', 'capture_failed', 'connector_error', 502);
             }
 
             $remaining = $payment->amount_capturable - $amount;
             if ($remaining > 0) {
-                // Partial capture
                 PaymentStateMachine::assertTransition($payment->status, PaymentStatus::PartiallyCapturedAndCapturable);
-                $payment->update([
+                $this->paymentRepository->update($payment, [
                     'status' => PaymentStatus::PartiallyCapturedAndCapturable,
                     'amount_received' => ($payment->amount_received ?? 0) + $amount,
                     'amount_capturable' => $remaining,
                 ]);
             } else {
-                // Full capture
                 PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Succeeded);
-                $payment->update([
+                $this->paymentRepository->update($payment, [
                     'status' => PaymentStatus::Succeeded,
                     'amount_received' => ($payment->amount_received ?? 0) + $amount,
                     'amount_capturable' => 0,
@@ -346,11 +305,10 @@ final class PaymentService
     {
         $result = DB::transaction(function () use ($paymentKey, $merchantAccountId) {
             $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
-
             $previousStatus = $payment->status->value;
 
             if ($payment->status === PaymentStatus::RequiresCapture && $payment->connector) {
-                $lastAttempt = $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
+                $lastAttempt = $this->paymentRepository->findLastSuccessfulAttempt($payment);
                 if ($lastAttempt) {
                     $mca = $this->merchantRepository->findConnectorByMerchantAndName($merchantAccountId, $lastAttempt->connector);
                     if ($mca) {
@@ -365,8 +323,7 @@ final class PaymentService
             }
 
             PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Cancelled);
-
-            $payment->update(['status' => PaymentStatus::Cancelled]);
+            $this->paymentRepository->update($payment, ['status' => PaymentStatus::Cancelled]);
 
             return ['payment' => $payment->fresh(), 'previousStatus' => $previousStatus];
         });
