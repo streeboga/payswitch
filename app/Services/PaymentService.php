@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Events\PaymentStatusChanged;
+use App\Repositories\Contracts\MerchantRepositoryInterface;
+use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
@@ -12,19 +14,21 @@ use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Exceptions\InvalidStateTransitionException;
 use Streeboga\PaymentData\Exceptions\PaymentException;
-use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
 final class PaymentService
 {
+    public function __construct(
+        private PaymentIntentRepositoryInterface $paymentRepository,
+        private MerchantRepositoryInterface $merchantRepository,
+    ) {}
+
     public function create(array $data, int|string $merchantAccountId): PaymentIntent
     {
         if (isset($data['payment_id'])) {
-            $existing = PaymentIntent::where('key', $data['payment_id'])
-                ->where('merchant_account_id', $merchantAccountId)
-                ->first();
+            $existing = $this->paymentRepository->findByKeyOrNull($data['payment_id'], $merchantAccountId);
             if ($existing) {
                 return $existing; // idempotent — return existing payment
             }
@@ -41,7 +45,7 @@ final class PaymentService
             throw new PaymentException('Session expiry must be positive', 'invalid_session_expiry', 'invalid_request_error', 400);
         }
 
-        return PaymentIntent::create([
+        return $this->paymentRepository->create([
             'merchant_account_id' => $merchantAccountId,
             'amount' => $data['amount'],
             'currency' => strtoupper($data['currency']),
@@ -61,18 +65,13 @@ final class PaymentService
 
     public function find(string $paymentKey, int|string $merchantAccountId): PaymentIntent
     {
-        return PaymentIntent::where('key', $paymentKey)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->firstOrFail();
+        return $this->paymentRepository->findByKey($paymentKey, $merchantAccountId);
     }
 
     public function confirm(string $paymentKey, array $data, int|string $merchantAccountId): PaymentIntent
     {
         $result = DB::transaction(function () use ($paymentKey, $data, $merchantAccountId) {
-            $payment = PaymentIntent::where('key', $paymentKey)
-                ->where('merchant_account_id', $merchantAccountId)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
 
             $previousStatus = $payment->status->value;
 
@@ -242,10 +241,7 @@ final class PaymentService
     public function capture(string $paymentKey, int $amount, int|string $merchantAccountId): PaymentIntent
     {
         $result = DB::transaction(function () use ($paymentKey, $amount, $merchantAccountId) {
-            $payment = PaymentIntent::where('key', $paymentKey)
-                ->where('merchant_account_id', $merchantAccountId)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
 
             $previousStatus = $payment->status->value;
 
@@ -289,9 +285,7 @@ final class PaymentService
                 throw new PaymentException('Missing transaction ID for capture', 'missing_transaction_id', 'invalid_request_error', 500);
             }
 
-            $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                ->where('connector_name', $lastAttempt->connector)
-                ->first();
+            $mca = $this->merchantRepository->findConnectorByMerchantAndName($merchantAccountId, $lastAttempt->connector);
 
             if (! $mca) {
                 throw new PaymentException(
@@ -351,18 +345,14 @@ final class PaymentService
     public function cancel(string $paymentKey, int|string $merchantAccountId): PaymentIntent
     {
         $result = DB::transaction(function () use ($paymentKey, $merchantAccountId) {
-            $payment = PaymentIntent::where('key', $paymentKey)
-                ->where('merchant_account_id', $merchantAccountId)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
 
             $previousStatus = $payment->status->value;
 
             if ($payment->status === PaymentStatus::RequiresCapture && $payment->connector) {
                 $lastAttempt = $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
                 if ($lastAttempt) {
-                    $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                        ->where('connector_name', $lastAttempt->connector)->first();
+                    $mca = $this->merchantRepository->findConnectorByMerchantAndName($merchantAccountId, $lastAttempt->connector);
                     if ($mca) {
                         try {
                             $connector = ConnectorFactory::resolve($mca);

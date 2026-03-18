@@ -5,18 +5,26 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Jobs\DeliverWebhookJob;
+use App\Repositories\Contracts\MerchantRepositoryInterface;
+use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use App\Repositories\Contracts\RefundRepositoryInterface;
+use App\Repositories\Contracts\WebhookEventRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Exceptions\PaymentException;
-use Streeboga\PaymentData\Models\MerchantConnectorAccount;
-use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\Refund;
-use Streeboga\PaymentData\Models\WebhookEvent;
 
 final class RefundService
 {
+    public function __construct(
+        private RefundRepositoryInterface $refundRepository,
+        private PaymentIntentRepositoryInterface $paymentRepository,
+        private MerchantRepositoryInterface $merchantRepository,
+        private WebhookEventRepositoryInterface $webhookRepository,
+    ) {}
+
     public function create(array $data, int|string $merchantAccountId): Refund
     {
         if (! isset($data['payment_id'])) {
@@ -27,10 +35,7 @@ final class RefundService
         }
 
         return DB::transaction(function () use ($data, $merchantAccountId) {
-            $payment = PaymentIntent::where('key', $data['payment_id'])
-                ->where('merchant_account_id', $merchantAccountId)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $payment = $this->paymentRepository->findByKeyLocked($data['payment_id'], $merchantAccountId);
 
             if (! in_array($payment->status, [PaymentStatus::Succeeded, PaymentStatus::PartiallyCaptured, PaymentStatus::PartiallyCapturedAndCapturable])) {
                 throw new PaymentException(
@@ -50,9 +55,7 @@ final class RefundService
                 );
             }
 
-            $totalRefunded = Refund::where('payment_intent_id', $payment->id)
-                ->whereIn('status', [RefundStatus::Succeeded, RefundStatus::Pending])
-                ->sum('amount');
+            $totalRefunded = $this->refundRepository->sumPendingAndSucceededForPayment($payment->id);
 
             if ($data['amount'] > PHP_INT_MAX - $totalRefunded) {
                 throw new PaymentException('Amount overflow', 'amount_overflow', 'invalid_request_error', 400);
@@ -75,9 +78,7 @@ final class RefundService
                 throw new PaymentException('No successful payment attempt found for refund', 'missing_attempt', 'invalid_request_error', 400);
             }
 
-            $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                ->where('connector_name', $connectorName)
-                ->first();
+            $mca = $this->merchantRepository->findConnectorByMerchantAndName($merchantAccountId, $connectorName);
 
             if (! $mca) {
                 throw new PaymentException('Connector no longer available for refund', 'connector_unavailable', 'invalid_request_error', 502);
@@ -92,7 +93,7 @@ final class RefundService
 
             $refundStatus = $refundResult['success'] ? RefundStatus::Succeeded : RefundStatus::Failed;
 
-            $refund = Refund::create([
+            $refund = $this->refundRepository->create([
                 'payment_intent_id' => $payment->id,
                 'merchant_account_id' => $merchantAccountId,
                 'amount' => $data['amount'],
@@ -108,7 +109,7 @@ final class RefundService
 
             // Webhook event
             $eventType = $refundResult['success'] ? 'refund_succeeded' : 'refund_failed';
-            $webhookEvent = WebhookEvent::create([
+            $webhookEvent = $this->webhookRepository->create([
                 'event_type' => $eventType,
                 'merchant_account_id' => $merchantAccountId,
                 'payment_intent_id' => $payment->id,
@@ -137,8 +138,6 @@ final class RefundService
 
     public function find(string $refundKey, int|string $merchantAccountId): Refund
     {
-        return Refund::where('key', $refundKey)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->firstOrFail();
+        return $this->refundRepository->findByKey($refundKey, $merchantAccountId);
     }
 }

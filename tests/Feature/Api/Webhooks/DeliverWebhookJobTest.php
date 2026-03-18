@@ -30,7 +30,7 @@ test('delivers webhook successfully', function () {
     Http::fake(['*' => Http::response('ok', 200)]);
 
     $job = new DeliverWebhookJob($this->event->id);
-    $job->handle();
+    app()->call([$job, 'handle']);
 
     expect($this->event->fresh()->delivered)->toBeTrue();
     expect($this->event->fresh()->delivery_attempts)->toBe(1);
@@ -42,7 +42,7 @@ test('marks delivery attempt on failure', function () {
     $job = new DeliverWebhookJob($this->event->id);
 
     try {
-        $job->handle();
+        app()->call([$job, 'handle']);
     } catch (RuntimeException $e) {
         // Expected — triggers retry
     }
@@ -56,7 +56,7 @@ test('skips already delivered event', function () {
     Http::fake();
 
     $job = new DeliverWebhookJob($this->event->id);
-    $job->handle();
+    app()->call([$job, 'handle']);
 
     Http::assertNothingSent();
 });
@@ -66,7 +66,7 @@ test('skips when no webhook url configured', function () {
     Http::fake();
 
     $job = new DeliverWebhookJob($this->event->id);
-    $job->handle();
+    app()->call([$job, 'handle']);
 
     Http::assertNothingSent();
 });
@@ -76,7 +76,7 @@ test('skips when no signing key configured', function () {
     Http::fake();
 
     $job = new DeliverWebhookJob($this->event->id);
-    $job->handle();
+    app()->call([$job, 'handle']);
 
     Http::assertNothingSent();
     expect($this->event->fresh()->last_error)->toContain('signing key');
@@ -86,7 +86,7 @@ test('sends x-webhook-signature-512 header', function () {
     Http::fake(['*' => Http::response('ok', 200)]);
 
     $job = new DeliverWebhookJob($this->event->id);
-    $job->handle();
+    app()->call([$job, 'handle']);
 
     Http::assertSent(function ($request) {
         return $request->hasHeader('x-webhook-signature-512');

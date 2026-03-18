@@ -29,7 +29,7 @@ beforeEach(function () {
         ]);
     }
 
-    $this->routing = new RoutingService;
+    $this->routing = app(RoutingService::class);
 });
 
 test('rule-based routing selects connector by currency', function () {

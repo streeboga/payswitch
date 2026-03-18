@@ -35,7 +35,7 @@ beforeEach(function () {
         'test_mode' => true,
     ]);
 
-    $this->routing = new RoutingService;
+    $this->routing = app(RoutingService::class);
 });
 
 // --- SSRF Protection ---

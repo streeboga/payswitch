@@ -5,18 +5,35 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Concerns\JsonApiResponse;
+use App\Repositories\Contracts\CustomerRepositoryInterface;
+use App\Repositories\Contracts\PaymentMethodRepositoryInterface;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Streeboga\PaymentData\Models\Customer;
 use Streeboga\PaymentData\Models\PaymentMethod;
 
+#[Group(name: 'Payment Methods', weight: 4)]
 final class PaymentMethodController extends Controller
 {
     use JsonApiResponse;
 
+    public function __construct(
+        private CustomerRepositoryInterface $customerRepository,
+        private PaymentMethodRepositoryInterface $paymentMethodRepository,
+    ) {}
+
+    /**
+     * Create a payment method.
+     *
+     * Attaches a new payment method to an existing customer. The payment method is tokenized
+     * through the specified connector. In production, card data should be tokenized client-side
+     * and only the token passed to this endpoint.
+     *
+     * @pathParam customerKey string required The unique key of the customer. Example: cus_1a2b3c4d5e
+     */
     public function store(string $customerKey, Request $request): JsonResponse
     {
         $request->validate([
@@ -25,9 +42,7 @@ final class PaymentMethodController extends Controller
         ]);
 
         $merchantAccountId = $request->attributes->get('merchant_id');
-        $customer = Customer::where('key', $customerKey)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->firstOrFail();
+        $customer = $this->customerRepository->findByKey($customerKey, $merchantAccountId);
 
         $attributes = $request->input('data.attributes', []);
 
@@ -46,7 +61,7 @@ final class PaymentMethodController extends Controller
             ? array_slice($attributes['metadata'], 0, 50) // limit to 50 keys
             : null;
 
-        $pm = PaymentMethod::create([
+        $pm = $this->paymentMethodRepository->create([
             'customer_id' => $customer->id,
             'merchant_account_id' => $merchantAccountId,
             'type' => $attributes['type'] ?? 'card',
@@ -70,26 +85,36 @@ final class PaymentMethodController extends Controller
         );
     }
 
+    /**
+     * List payment methods.
+     *
+     * Returns all payment methods belonging to a specific customer under the authenticated merchant.
+     * Includes card details (masked), type, and default status for each method.
+     *
+     * @pathParam customerKey string required The unique key of the customer. Example: cus_1a2b3c4d5e
+     */
     public function index(string $customerKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
-        $customer = Customer::where('key', $customerKey)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->firstOrFail();
+        $customer = $this->customerRepository->findByKey($customerKey, $merchantAccountId);
 
-        $methods = PaymentMethod::where('customer_id', $customer->id)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->get();
+        $methods = $this->paymentMethodRepository->findByCustomer($customer->id, $merchantAccountId);
 
         return $this->jsonApiCollection($methods, 'payment-methods', fn ($pm) => $this->pmAttributes($pm));
     }
 
+    /**
+     * Get a payment method.
+     *
+     * Retrieves the details of a specific payment method including card brand,
+     * last four digits, expiration, and connector information.
+     *
+     * @pathParam pmKey string required The unique key of the payment method. Example: pm_1a2b3c4d5e
+     */
     public function show(string $pmKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
-        $pm = PaymentMethod::where('key', $pmKey)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->firstOrFail();
+        $pm = $this->paymentMethodRepository->findByKey($pmKey, $merchantAccountId);
 
         return $this->jsonApiResource(
             model: $pm,
@@ -98,33 +123,43 @@ final class PaymentMethodController extends Controller
         );
     }
 
+    /**
+     * Delete a payment method.
+     *
+     * Permanently removes a payment method from the customer. If the deleted method
+     * was the default, no new default is automatically assigned.
+     *
+     * @pathParam pmKey string required The unique key of the payment method. Example: pm_1a2b3c4d5e
+     */
     public function destroy(string $pmKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
-        $pm = PaymentMethod::where('key', $pmKey)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->firstOrFail();
+        $pm = $this->paymentMethodRepository->findByKey($pmKey, $merchantAccountId);
 
-        $pm->delete();
+        $this->paymentMethodRepository->delete($pm);
 
         return $this->jsonApiNoContent();
     }
 
+    /**
+     * Set default payment method.
+     *
+     * Marks the specified payment method as the default for its customer. Any previously
+     * default payment method for the same customer is automatically unset. This operation
+     * is performed within a database transaction.
+     *
+     * @pathParam pmKey string required The unique key of the payment method. Example: pm_1a2b3c4d5e
+     */
     public function setDefault(string $pmKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
-        $pm = PaymentMethod::where('key', $pmKey)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->firstOrFail();
+        $pm = $this->paymentMethodRepository->findByKey($pmKey, $merchantAccountId);
 
         DB::transaction(function () use ($pm, $merchantAccountId) {
             // Unmark all other payment methods for this customer
-            PaymentMethod::where('customer_id', $pm->customer_id)
-                ->where('merchant_account_id', $merchantAccountId)
-                ->where('id', '!=', $pm->id)
-                ->update(['is_default' => false]);
+            $this->paymentMethodRepository->unsetDefaultForCustomer($pm->customer_id, $merchantAccountId, $pm->id);
 
-            $pm->update(['is_default' => true]);
+            $this->paymentMethodRepository->update($pm, ['is_default' => true]);
         });
 
         return $this->jsonApiResource(

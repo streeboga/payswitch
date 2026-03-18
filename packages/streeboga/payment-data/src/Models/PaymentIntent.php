@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Streeboga\PaymentData\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -61,11 +60,6 @@ class PaymentIntent extends Model
             $model->key ??= IdGenerator::paymentId();
             $model->client_secret ??= IdGenerator::clientSecret($model->key);
         });
-    }
-
-    public function scopeLocked(Builder $query): Builder
-    {
-        return $query->lockForUpdate();
     }
 
     public function merchantAccount(): BelongsTo

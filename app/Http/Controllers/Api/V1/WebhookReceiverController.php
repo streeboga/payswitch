@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Events\PaymentStatusChanged;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,12 +16,19 @@ use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
+#[Group(name: 'Webhooks', weight: 20)]
 final class WebhookReceiverController
 {
     /**
-     * Receive webhook from PSP (Stripe, CloudPayments, etc.)
-     * Route: POST /api/v1/webhooks/{merchantKey}/{mcaKey}
-     * No auth middleware — PSP sends directly.
+     * Handle incoming PSP webhook.
+     *
+     * Receives and processes webhook notifications from payment service providers (Stripe, CloudPayments, etc.).
+     * The endpoint verifies the webhook signature, matches the event to a payment intent, and updates the
+     * payment status accordingly. No authentication middleware is applied as PSPs send requests directly.
+     * Always returns 200 to prevent unnecessary retries, even if processing fails internally.
+     *
+     * @pathParam merchantKey string required The unique key of the merchant account. Example: mer_1a2b3c4d5e
+     * @pathParam mcaKey string required The unique key of the merchant connector account. Example: mca_1a2b3c4d5e
      */
     public function handle(Request $request, string $merchantKey, string $mcaKey): JsonResponse
     {

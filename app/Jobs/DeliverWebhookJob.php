@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Repositories\Contracts\MerchantRepositoryInterface;
+use App\Repositories\Contracts\WebhookEventRepositoryInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -12,8 +14,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Streeboga\PaymentData\Models\BusinessProfile;
-use Streeboga\PaymentData\Models\WebhookEvent;
 use Streeboga\PaymentData\Support\WebhookSigner;
 
 final class DeliverWebhookJob implements ShouldQueue
@@ -32,28 +32,30 @@ final class DeliverWebhookJob implements ShouldQueue
         $this->backoff = array_map(fn ($m) => $m * 60, $retrySchedule); // minutes to seconds
     }
 
-    public function handle(): void
-    {
-        $event = WebhookEvent::find($this->webhookEventId);
+    public function handle(
+        WebhookEventRepositoryInterface $webhookRepository,
+        MerchantRepositoryInterface $merchantRepository,
+    ): void {
+        $event = $webhookRepository->findById($this->webhookEventId);
         if (! $event || $event->delivered) {
             return;
         }
 
-        $profile = BusinessProfile::where('merchant_account_id', $event->merchant_account_id)->first();
+        $profile = $merchantRepository->findProfileByMerchant($event->merchant_account_id);
         if (! $profile || ! $profile->webhook_url) {
             return;
         }
 
         if (! $this->isUrlSafe($profile->webhook_url)) {
             Log::warning("Blocked webhook delivery to unsafe URL for event {$this->webhookEventId}");
-            $event->update(['last_error' => 'Webhook URL blocked: internal/private address']);
+            $webhookRepository->markFailed($event, $event->delivery_attempts, 'Webhook URL blocked: internal/private address');
 
             return;
         }
 
         if (! $profile->payment_response_hash_key) {
             Log::warning("No webhook signing key for merchant {$event->merchant_account_id}");
-            $event->update(['last_error' => 'No signing key configured']);
+            $webhookRepository->markFailed($event, $event->delivery_attempts, 'No signing key configured');
 
             return;
         }
@@ -77,29 +79,20 @@ final class DeliverWebhookJob implements ShouldQueue
                 ->post($profile->webhook_url);
 
             if ($response->successful()) {
-                $event->update([
-                    'delivered' => true,
-                    'delivery_attempts' => $event->delivery_attempts + 1,
-                ]);
+                $webhookRepository->markDelivered($event, $event->delivery_attempts + 1);
 
                 return;
             }
 
             $error = Str::limit("HTTP {$response->status()}: {$response->body()}", 1000);
-            $event->update([
-                'delivery_attempts' => $event->delivery_attempts + 1,
-                'last_error' => $error,
-            ]);
+            $webhookRepository->markFailed($event, $event->delivery_attempts + 1, $error);
         } catch (\Exception $e) {
-            $event->update([
-                'delivery_attempts' => $event->delivery_attempts + 1,
-                'last_error' => $e->getMessage(),
-            ]);
+            $webhookRepository->markFailed($event, $event->delivery_attempts + 1, $e->getMessage());
         }
 
         // If we've exhausted all retries, the job framework handles it
         if ($event->delivery_attempts >= config('payswitch.webhook.max_attempts', 16)) {
-            $event->update(['last_error' => 'Max delivery attempts exceeded']);
+            $webhookRepository->markFailed($event, $event->delivery_attempts, 'Max delivery attempts exceeded');
 
             return;
         }
@@ -110,9 +103,10 @@ final class DeliverWebhookJob implements ShouldQueue
 
     public function failed(\Throwable $e): void
     {
-        $event = WebhookEvent::find($this->webhookEventId);
+        $webhookRepository = app(WebhookEventRepositoryInterface::class);
+        $event = $webhookRepository->findById($this->webhookEventId);
         if ($event) {
-            $event->update(['last_error' => 'Permanently failed: '.$e->getMessage()]);
+            $webhookRepository->markFailed($event, $event->delivery_attempts, 'Permanently failed: '.$e->getMessage());
         }
         Log::error("Webhook delivery permanently failed for event {$this->webhookEventId}", [
             'error' => $e->getMessage(),

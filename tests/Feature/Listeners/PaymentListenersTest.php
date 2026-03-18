@@ -59,7 +59,7 @@ test('SendWebhookNotification creates webhook event with correct type', function
     Queue::fake();
 
     $event = new PaymentStatusChanged($this->payment, 'processing');
-    $listener = new SendWebhookNotification;
+    $listener = app(SendWebhookNotification::class);
     $listener->handle($event);
 
     $this->assertDatabaseHas('webhook_events', [
@@ -73,7 +73,7 @@ test('SendWebhookNotification maps cancelled status correctly', function () {
     $this->payment->update(['status' => PaymentStatus::Cancelled]);
 
     $event = new PaymentStatusChanged($this->payment, 'requires_payment_method');
-    $listener = new SendWebhookNotification;
+    $listener = app(SendWebhookNotification::class);
     $listener->handle($event);
 
     $this->assertDatabaseHas('webhook_events', ['event_type' => 'payment_cancelled']);
@@ -84,7 +84,7 @@ test('SendWebhookNotification maps requires_capture to payment_authorized', func
     $this->payment->update(['status' => PaymentStatus::RequiresCapture]);
 
     $event = new PaymentStatusChanged($this->payment, 'requires_payment_method');
-    $listener = new SendWebhookNotification;
+    $listener = app(SendWebhookNotification::class);
     $listener->handle($event);
 
     $this->assertDatabaseHas('webhook_events', ['event_type' => 'payment_authorized']);
@@ -94,7 +94,7 @@ test('SendWebhookNotification dispatches DeliverWebhookJob', function () {
     Queue::fake();
 
     $event = new PaymentStatusChanged($this->payment, 'processing');
-    $listener = new SendWebhookNotification;
+    $listener = app(SendWebhookNotification::class);
     $listener->handle($event);
 
     Queue::assertPushed(DeliverWebhookJob::class);
@@ -104,7 +104,7 @@ test('webhook event content contains payment details', function () {
     Queue::fake();
 
     $event = new PaymentStatusChanged($this->payment, 'processing');
-    $listener = new SendWebhookNotification;
+    $listener = app(SendWebhookNotification::class);
     $listener->handle($event);
 
     $webhookEvent = WebhookEvent::first();

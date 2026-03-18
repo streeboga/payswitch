@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Concerns\JsonApiResponse;
+use App\Http\Requests\Api\Payment\CapturePaymentRequest;
+use App\Http\Requests\Api\Payment\ConfirmPaymentRequest;
+use App\Http\Requests\Api\Payment\StorePaymentRequest;
 use App\Services\PaymentService;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Streeboga\PaymentData\Models\PaymentIntent;
 
+#[Group(name: 'Payments', weight: 1)]
 final class PaymentController extends Controller
 {
     use JsonApiResponse;
@@ -19,24 +24,15 @@ final class PaymentController extends Controller
         private readonly PaymentService $paymentService,
     ) {}
 
-    public function store(Request $request): JsonResponse
+    /**
+     * Create a payment intent.
+     *
+     * Creates a new payment intent for the authenticated merchant. The payment can optionally
+     * be confirmed immediately by setting the confirm flag to true and providing payment method data.
+     * When capture_method is set to manual, the payment will require a separate capture step after confirmation.
+     */
+    public function store(StorePaymentRequest $request): JsonResponse
     {
-        $request->validate([
-            'data.attributes.amount' => ['required', 'integer', 'min:1', 'max:999999999999'],
-            'data.attributes.currency' => ['required', 'string', 'size:3'],
-            'data.attributes.capture_method' => ['sometimes', 'string', 'in:automatic,manual'],
-            'data.attributes.authentication_type' => ['sometimes', 'string', 'in:three_ds,no_three_ds'],
-            'data.attributes.customer_id' => ['sometimes', 'nullable', 'string', 'max:64'],
-            'data.attributes.description' => ['sometimes', 'nullable', 'string', 'max:1000'],
-            'data.attributes.return_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
-            'data.attributes.metadata' => ['sometimes', 'nullable', 'array', 'max:50'],
-            'data.attributes.session_expiry' => ['sometimes', 'integer', 'min:60', 'max:86400'],
-            'data.attributes.payment_id' => ['sometimes', 'string', 'max:40'],
-            'data.attributes.confirm' => ['sometimes', 'boolean'],
-            'data.attributes.payment_method' => ['required_if:data.attributes.confirm,true', 'string'],
-            'data.attributes.payment_method_data' => ['required_if:data.attributes.confirm,true', 'array'],
-        ]);
-
         $attributes = $request->input('data.attributes', []);
         $merchantAccountId = $request->attributes->get('merchant_id');
 
@@ -55,6 +51,14 @@ final class PaymentController extends Controller
         );
     }
 
+    /**
+     * Get a payment intent.
+     *
+     * Retrieves the details of a payment intent that belongs to the authenticated merchant.
+     * Returns the current status, amounts, and all associated metadata.
+     *
+     * @pathParam paymentKey string required The unique key of the payment intent. Example: pay_1a2b3c4d5e
+     */
     public function show(string $paymentKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
@@ -67,13 +71,16 @@ final class PaymentController extends Controller
         );
     }
 
-    public function confirm(string $paymentKey, Request $request): JsonResponse
+    /**
+     * Confirm a payment intent.
+     *
+     * Confirms a payment intent that is in the requires_confirmation status. The payment method
+     * and payment method data must be provided to proceed with processing through the configured connector.
+     *
+     * @pathParam paymentKey string required The unique key of the payment intent. Example: pay_1a2b3c4d5e
+     */
+    public function confirm(string $paymentKey, ConfirmPaymentRequest $request): JsonResponse
     {
-        $request->validate([
-            'data.attributes.payment_method' => ['required', 'string'],
-            'data.attributes.payment_method_data' => ['required', 'array'],
-        ]);
-
         $merchantAccountId = $request->attributes->get('merchant_id');
         $attributes = $request->input('data.attributes', []);
 
@@ -86,12 +93,17 @@ final class PaymentController extends Controller
         );
     }
 
-    public function capture(string $paymentKey, Request $request): JsonResponse
+    /**
+     * Capture a payment intent.
+     *
+     * Captures a previously authorized payment intent. Only applicable to payments created
+     * with capture_method set to manual. Allows partial capture by specifying an amount
+     * less than the original authorization.
+     *
+     * @pathParam paymentKey string required The unique key of the payment intent. Example: pay_1a2b3c4d5e
+     */
+    public function capture(string $paymentKey, CapturePaymentRequest $request): JsonResponse
     {
-        $request->validate([
-            'data.attributes.amount_to_capture' => ['required', 'integer', 'min:1'],
-        ]);
-
         $merchantAccountId = $request->attributes->get('merchant_id');
         $amount = (int) $request->input('data.attributes.amount_to_capture');
 
@@ -104,6 +116,14 @@ final class PaymentController extends Controller
         );
     }
 
+    /**
+     * Cancel a payment intent.
+     *
+     * Cancels a payment intent that has not yet been captured or completed. Once cancelled,
+     * the payment cannot be confirmed or captured. Any held funds will be released.
+     *
+     * @pathParam paymentKey string required The unique key of the payment intent. Example: pay_1a2b3c4d5e
+     */
     public function cancel(string $paymentKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');

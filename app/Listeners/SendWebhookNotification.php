@@ -6,11 +6,15 @@ namespace App\Listeners;
 
 use App\Events\PaymentStatusChanged;
 use App\Jobs\DeliverWebhookJob;
+use App\Repositories\Contracts\WebhookEventRepositoryInterface;
 use Streeboga\PaymentData\Enums\CaptureMethod;
-use Streeboga\PaymentData\Models\WebhookEvent;
 
 class SendWebhookNotification
 {
+    public function __construct(
+        private WebhookEventRepositoryInterface $webhookRepository,
+    ) {}
+
     public function handle(PaymentStatusChanged $event): void
     {
         $payment = $event->payment;
@@ -24,7 +28,7 @@ class SendWebhookNotification
             default => 'payment_status_changed',
         };
 
-        $webhookEvent = WebhookEvent::create([
+        $webhookEvent = $this->webhookRepository->create([
             'event_type' => $eventType,
             'merchant_account_id' => $payment->merchant_account_id,
             'payment_intent_id' => $payment->id,

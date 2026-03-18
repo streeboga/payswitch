@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Streeboga\PaymentData\Models\PaymentIntent;
 
 final class PaymentsController
 {
+    public function __construct(
+        private PaymentIntentRepositoryInterface $paymentRepository,
+    ) {}
+
     public function index(Request $request): Response
     {
-        $payments = PaymentIntent::query()
-            ->latest()
-            ->paginate(20)
+        $payments = $this->paymentRepository->paginateAll(20)
             ->through(fn ($payment) => [
                 'id' => $payment->key,
                 'amount' => $payment->amount,
@@ -33,7 +35,7 @@ final class PaymentsController
 
     public function show(string $paymentKey): Response
     {
-        $payment = PaymentIntent::where('key', $paymentKey)->firstOrFail();
+        $payment = $this->paymentRepository->findByKeyGlobal($paymentKey);
         $payment->load(['paymentAttempts', 'refunds']);
 
         return Inertia::render('dashboard/payments/show', [

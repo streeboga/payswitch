@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\Admin;
 
+use App\DataTransferObjects\Admin\CreateBusinessProfileData;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreBusinessProfileRequest extends FormRequest
@@ -19,5 +20,10 @@ class StoreBusinessProfileRequest extends FormRequest
     public function validatedAttributes(): array
     {
         return $this->validated('data.attributes');
+    }
+
+    public function toDto(): CreateBusinessProfileData
+    {
+        return CreateBusinessProfileData::from($this->validated('data.attributes'));
     }
 }

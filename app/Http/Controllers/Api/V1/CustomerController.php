@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\Concerns\JsonApiResponse;
+use App\Http\Requests\Api\Customer\StoreCustomerRequest;
+use App\Http\Requests\Api\Customer\UpdateCustomerRequest;
 use App\Services\CustomerService;
+use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Streeboga\PaymentData\Models\Customer;
 
+#[Group(name: 'Customers', weight: 2)]
 final class CustomerController extends Controller
 {
     use JsonApiResponse;
@@ -19,6 +23,12 @@ final class CustomerController extends Controller
         private readonly CustomerService $customerService,
     ) {}
 
+    /**
+     * List customers.
+     *
+     * Returns all customers belonging to the authenticated merchant.
+     * Results include customer details and their default payment method references.
+     */
     public function index(Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
@@ -27,7 +37,14 @@ final class CustomerController extends Controller
         return $this->jsonApiCollection($customers, 'customers', fn ($customer) => $this->customerAttributes($customer));
     }
 
-    public function store(Request $request): JsonResponse
+    /**
+     * Create a customer.
+     *
+     * Creates a new customer record for the authenticated merchant. Customers can be
+     * associated with payment intents and payment methods to enable returning customer flows.
+     * An optional custom ID can be provided to link the customer to an external system.
+     */
+    public function store(StoreCustomerRequest $request): JsonResponse
     {
         $attributes = $request->input('data.attributes', []);
         $customId = $request->input('data.id');
@@ -44,6 +61,13 @@ final class CustomerController extends Controller
         );
     }
 
+    /**
+     * Get a customer.
+     *
+     * Retrieves the details of a customer that belongs to the authenticated merchant.
+     *
+     * @pathParam customerKey string required The unique key of the customer. Example: cus_1a2b3c4d5e
+     */
     public function show(string $customerKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
@@ -56,7 +80,15 @@ final class CustomerController extends Controller
         );
     }
 
-    public function update(string $customerKey, Request $request): JsonResponse
+    /**
+     * Update a customer.
+     *
+     * Updates an existing customer's attributes such as name, email, phone, or metadata.
+     * Only the provided fields are updated; omitted fields remain unchanged.
+     *
+     * @pathParam customerKey string required The unique key of the customer. Example: cus_1a2b3c4d5e
+     */
+    public function update(string $customerKey, UpdateCustomerRequest $request): JsonResponse
     {
         $attributes = $request->input('data.attributes', []);
         $merchantAccountId = $request->attributes->get('merchant_id');
@@ -70,6 +102,14 @@ final class CustomerController extends Controller
         );
     }
 
+    /**
+     * Delete a customer.
+     *
+     * Permanently deletes a customer and disassociates any linked payment methods.
+     * This action cannot be undone.
+     *
+     * @pathParam customerKey string required The unique key of the customer. Example: cus_1a2b3c4d5e
+     */
     public function destroy(string $customerKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');

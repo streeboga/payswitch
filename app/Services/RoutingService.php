@@ -4,12 +4,19 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Repositories\Contracts\MerchantRepositoryInterface;
+use App\Repositories\Contracts\RoutingRuleRepositoryInterface;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\RoutingRule;
 
 final class RoutingService
 {
+    public function __construct(
+        private MerchantRepositoryInterface $merchantRepository,
+        private RoutingRuleRepositoryInterface $routingRuleRepository,
+    ) {}
+
     /**
      * Resolve the connector for a payment.
      *
@@ -23,10 +30,7 @@ final class RoutingService
     {
         // 1. Explicit connector (highest priority)
         if ($explicitConnector) {
-            $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                ->where('disabled', false)
-                ->where('connector_name', $explicitConnector)
-                ->first();
+            $mca = $this->merchantRepository->findActiveConnectorByMerchantAndName($merchantAccountId, $explicitConnector);
 
             if ($mca) {
                 return $mca;
@@ -41,10 +45,7 @@ final class RoutingService
         }
 
         // 2. Check routing rules
-        $rules = RoutingRule::where('merchant_account_id', $merchantAccountId)
-            ->where('active', true)
-            ->orderByDesc('priority')
-            ->get();
+        $rules = $this->routingRuleRepository->getActiveByMerchant($merchantAccountId);
 
         foreach ($rules as $rule) {
             $connector = $this->evaluateRule($rule, $paymentMethod, $currency, $amount, $merchantAccountId);
@@ -55,9 +56,7 @@ final class RoutingService
 
         // 3. Auto-select by payment method (check payment_methods_enabled JSON)
         if ($paymentMethod) {
-            $connectors = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                ->where('disabled', false)
-                ->get();
+            $connectors = $this->merchantRepository->getActiveConnectorsByMerchant($merchantAccountId);
 
             foreach ($connectors as $mca) {
                 $methods = $mca->payment_methods_enabled ?? [];
@@ -70,9 +69,7 @@ final class RoutingService
         }
 
         // 4. First active connector
-        $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-            ->where('disabled', false)
-            ->first();
+        $mca = $this->merchantRepository->getFirstActiveConnector($merchantAccountId);
 
         if ($mca) {
             return $mca;
@@ -91,14 +88,7 @@ final class RoutingService
      */
     public function fallback(int|string $merchantAccountId, array $excludeConnectors): ?MerchantConnectorAccount
     {
-        $query = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-            ->where('disabled', false);
-
-        if (! empty($excludeConnectors)) {
-            $query->whereNotIn('connector_name', $excludeConnectors);
-        }
-
-        return $query->first();
+        return $this->merchantRepository->getFirstActiveConnector($merchantAccountId, $excludeConnectors);
     }
 
     private function evaluateRule(RoutingRule $rule, ?string $paymentMethod, ?string $currency, ?int $amount, int|string $merchantAccountId): ?MerchantConnectorAccount
@@ -121,10 +111,7 @@ final class RoutingService
         $connectorNames = array_filter($config['connectors'] ?? [], fn ($n) => ! empty($n));
 
         foreach ($connectorNames as $name) {
-            $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                ->where('connector_name', $name)
-                ->where('disabled', false)
-                ->first();
+            $mca = $this->merchantRepository->findActiveConnectorByMerchantAndName($merchantAccountId, $name);
 
             if ($mca) {
                 return $mca;
@@ -165,19 +152,13 @@ final class RoutingService
             };
 
             if ($matches) {
-                return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                    ->where('connector_name', $condition['connector'])
-                    ->where('disabled', false)
-                    ->first();
+                return $this->merchantRepository->findActiveConnectorByMerchantAndName($merchantAccountId, $condition['connector']);
             }
         }
 
         // Default connector
         if (isset($config['default_connector'])) {
-            return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                ->where('connector_name', $config['default_connector'])
-                ->where('disabled', false)
-                ->first();
+            return $this->merchantRepository->findActiveConnectorByMerchantAndName($merchantAccountId, $config['default_connector']);
         }
 
         return null;
@@ -201,10 +182,7 @@ final class RoutingService
         foreach ($splits as $split) {
             $cumulative += $split['weight'];
             if ($random <= $cumulative) {
-                $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                    ->where('connector_name', $split['connector'])
-                    ->where('disabled', false)
-                    ->first();
+                $mca = $this->merchantRepository->findActiveConnectorByMerchantAndName($merchantAccountId, $split['connector']);
                 if ($mca) {
                     return $mca;
                 }

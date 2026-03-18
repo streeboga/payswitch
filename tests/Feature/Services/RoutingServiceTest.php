@@ -37,7 +37,7 @@ beforeEach(function () {
         'test_mode' => true,
     ]);
 
-    $this->routing = new RoutingService;
+    $this->routing = app(RoutingService::class);
 });
 
 test('resolves explicit connector by name', function () {

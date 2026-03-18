@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\Admin;
 
+use App\DataTransferObjects\Admin\CreateConnectorData;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreConnectorRequest extends FormRequest
@@ -23,5 +24,10 @@ class StoreConnectorRequest extends FormRequest
     public function validatedAttributes(): array
     {
         return $this->validated('data.attributes');
+    }
+
+    public function toDto(): CreateConnectorData
+    {
+        return CreateConnectorData::from($this->validated('data.attributes'));
     }
 }

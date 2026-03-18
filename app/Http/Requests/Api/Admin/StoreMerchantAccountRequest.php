@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\Admin;
 
+use App\DataTransferObjects\Admin\CreateMerchantAccountData;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreMerchantAccountRequest extends FormRequest
@@ -19,5 +20,10 @@ class StoreMerchantAccountRequest extends FormRequest
     public function validatedAttributes(): array
     {
         return $this->validated('data.attributes');
+    }
+
+    public function toDto(): CreateMerchantAccountData
+    {
+        return CreateMerchantAccountData::from($this->validated('data.attributes'));
     }
 }
