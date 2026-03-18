@@ -49,6 +49,11 @@ class MerchantAccount extends Model
         return $this->hasMany(BusinessProfile::class);
     }
 
+    public function connectorAccounts(): HasMany
+    {
+        return $this->hasMany(MerchantConnectorAccount::class);
+    }
+
     public function apiKeys(): HasMany
     {
         return $this->hasMany(ApiKey::class);

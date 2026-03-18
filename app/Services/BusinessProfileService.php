@@ -51,4 +51,10 @@ final readonly class BusinessProfileService
 
         return $this->merchantRepository->updateProfile($profile, $attributes);
     }
+
+    public function delete(string $profileKey): void
+    {
+        $profile = $this->merchantRepository->findProfileByKey($profileKey);
+        $this->merchantRepository->deleteProfile($profile);
+    }
 }

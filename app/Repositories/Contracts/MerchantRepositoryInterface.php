@@ -76,4 +76,14 @@ interface MerchantRepositoryInterface
     public function listProfilesByMerchant(int|string $merchantAccountId): Collection;
 
     public function updateProfile(BusinessProfile $profile, array $attributes): BusinessProfile;
+
+    public function updateOrganization(Organization $org, array $attributes): Organization;
+
+    public function deleteOrganization(Organization $org): void;
+
+    public function updateMerchant(MerchantAccount $merchant, array $attributes): MerchantAccount;
+
+    public function deleteMerchant(MerchantAccount $merchant): void;
+
+    public function deleteProfile(BusinessProfile $profile): void;
 }

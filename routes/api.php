@@ -42,11 +42,15 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'throttle:300,1'])->g
     Route::post('/organizations', [DashboardOrganizationController::class, 'store']);
     Route::get('/organizations/{orgKey}', [DashboardOrganizationController::class, 'show']);
     Route::get('/organizations/{orgKey}/merchants', [DashboardOrganizationController::class, 'merchants']);
+    Route::patch('/organizations/{orgKey}', [DashboardOrganizationController::class, 'update']);
+    Route::delete('/organizations/{orgKey}', [DashboardOrganizationController::class, 'destroy']);
 
     // Merchants
     Route::get('/merchants', [DashboardMerchantController::class, 'index']);
     Route::get('/merchants/{merchantKey}', [DashboardMerchantController::class, 'show']);
     Route::post('/merchants', [DashboardMerchantController::class, 'store']);
+    Route::patch('/merchants/{merchantKey}', [DashboardMerchantController::class, 'update']);
+    Route::delete('/merchants/{merchantKey}', [DashboardMerchantController::class, 'destroy']);
 
     // Profiles by merchant key (context switcher)
     Route::get('/merchants/{merchantKey}/profiles', [DashboardBusinessProfileController::class, 'indexByMerchant']);
@@ -135,6 +139,7 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     Route::post('/profiles', [DashboardBusinessProfileController::class, 'store']);
     Route::get('/profiles/{profileKey}', [DashboardBusinessProfileController::class, 'show']);
     Route::patch('/profiles/{profileKey}', [DashboardBusinessProfileController::class, 'update']);
+    Route::delete('/profiles/{profileKey}', [DashboardBusinessProfileController::class, 'destroy']);
 
     // Disputes (Story 16-1)
     Route::get('/disputes', [DisputeController::class, 'index']);

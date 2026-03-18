@@ -19,6 +19,8 @@ final class BusinessProfileResource extends JsonApiResource
             'merchant_id' => $this->merchantAccount?->key,
             'webhook_url' => $this->webhook_url,
             'payment_response_hash_key' => $this->payment_response_hash_key,
+            'connectors_count' => $this->connectorAccounts_count ?? 0,
+            'routing_rules_count' => $this->routingRules_count ?? 0,
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

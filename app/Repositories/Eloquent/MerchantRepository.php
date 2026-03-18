@@ -49,12 +49,15 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function findOrganizationByKey(string $key): Organization
     {
-        return Organization::where('key', $key)->firstOrFail();
+        return Organization::withCount('merchantAccounts')->where('key', $key)->firstOrFail();
     }
 
     public function findMerchantByKey(string $key): MerchantAccount
     {
-        return MerchantAccount::where('key', $key)->firstOrFail();
+        return MerchantAccount::with('organization')
+            ->withCount(['businessProfiles', 'connectorAccounts'])
+            ->where('key', $key)
+            ->firstOrFail();
     }
 
     public function findProfileByKey(string $key): BusinessProfile
@@ -138,12 +141,15 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function listOrganizations(): Collection
     {
-        return Organization::orderByDesc('created_at')->get();
+        return Organization::withCount('merchantAccounts')->orderByDesc('created_at')->get();
     }
 
     public function listAllMerchants(): Collection
     {
-        return MerchantAccount::with('organization')->orderByDesc('created_at')->get();
+        return MerchantAccount::with('organization')
+            ->withCount(['businessProfiles', 'connectorAccounts'])
+            ->orderByDesc('created_at')
+            ->get();
     }
 
     public function listApiKeysByMerchant(int|string $merchantAccountId): Collection
@@ -173,5 +179,34 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
         $profile->update($attributes);
 
         return $profile->fresh('merchantAccount');
+    }
+
+    public function updateOrganization(Organization $org, array $attributes): Organization
+    {
+        $org->update($attributes);
+
+        return $org->fresh();
+    }
+
+    public function deleteOrganization(Organization $org): void
+    {
+        $org->delete();
+    }
+
+    public function updateMerchant(MerchantAccount $merchant, array $attributes): MerchantAccount
+    {
+        $merchant->update($attributes);
+
+        return $merchant->fresh('organization');
+    }
+
+    public function deleteMerchant(MerchantAccount $merchant): void
+    {
+        $merchant->delete();
+    }
+
+    public function deleteProfile(BusinessProfile $profile): void
+    {
+        $profile->delete();
     }
 }

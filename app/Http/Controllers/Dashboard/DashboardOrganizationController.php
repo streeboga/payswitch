@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\StoreDashboardOrganizationRequest;
+use App\Http\Requests\Dashboard\UpdateDashboardOrganizationRequest;
 use App\Http\Resources\MerchantAccountResource;
 use App\Http\Resources\OrganizationResource;
 use App\Services\MerchantService;
@@ -65,6 +66,37 @@ final class DashboardOrganizationController extends Controller
         $org = $this->merchantService->findOrganization($orgKey);
 
         return (new OrganizationResource($org))->toResponse($request);
+    }
+
+    /**
+     * Update organization
+     *
+     * Update an existing organization.
+     */
+    #[PathParameter('orgKey', description: 'Organization public key', example: 'org_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Organization updated')]
+    #[Response(404, description: 'Organization not found')]
+    #[Response(422, description: 'Validation error')]
+    public function update(string $orgKey, UpdateDashboardOrganizationRequest $request): JsonResponse
+    {
+        $org = $this->merchantService->updateOrganization($orgKey, $request->toDto());
+
+        return (new OrganizationResource($org))->toResponse($request);
+    }
+
+    /**
+     * Delete organization
+     *
+     * Delete an organization.
+     */
+    #[PathParameter('orgKey', description: 'Organization public key', example: 'org_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(204, description: 'Organization deleted')]
+    #[Response(404, description: 'Organization not found')]
+    public function destroy(string $orgKey): JsonResponse
+    {
+        $this->merchantService->deleteOrganization($orgKey);
+
+        return response()->json(null, 204);
     }
 
     /**

@@ -6,6 +6,7 @@ namespace Streeboga\PaymentData\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use Streeboga\PaymentData\Support\IdGenerator;
 
@@ -41,5 +42,15 @@ class BusinessProfile extends Model
     public function merchantAccount(): BelongsTo
     {
         return $this->belongsTo(MerchantAccount::class);
+    }
+
+    public function connectorAccounts(): HasMany
+    {
+        return $this->hasMany(MerchantConnectorAccount::class);
+    }
+
+    public function routingRules(): HasMany
+    {
+        return $this->hasMany(RoutingRule::class);
     }
 }

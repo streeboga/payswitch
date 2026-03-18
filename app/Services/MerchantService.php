@@ -8,6 +8,8 @@ use App\DataTransferObjects\Admin\CreateApiKeyData;
 use App\DataTransferObjects\Admin\CreateBusinessProfileData;
 use App\DataTransferObjects\Admin\CreateMerchantAccountData;
 use App\DataTransferObjects\Admin\CreateOrganizationData;
+use App\DataTransferObjects\Admin\UpdateMerchantAccountData;
+use App\DataTransferObjects\Admin\UpdateOrganizationData;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\ApiKey;
@@ -119,5 +121,31 @@ final readonly class MerchantService
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
         $this->merchantRepository->revokeApiKey($merchant->id, $keyId);
+    }
+
+    public function updateOrganization(string $orgKey, UpdateOrganizationData $dto): Organization
+    {
+        $org = $this->merchantRepository->findOrganizationByKey($orgKey);
+
+        return $this->merchantRepository->updateOrganization($org, $dto->toArray());
+    }
+
+    public function deleteOrganization(string $orgKey): void
+    {
+        $org = $this->merchantRepository->findOrganizationByKey($orgKey);
+        $this->merchantRepository->deleteOrganization($org);
+    }
+
+    public function updateMerchant(string $merchantKey, UpdateMerchantAccountData $dto): MerchantAccount
+    {
+        $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
+
+        return $this->merchantRepository->updateMerchant($merchant, $dto->toArray());
+    }
+
+    public function deleteMerchant(string $merchantKey): void
+    {
+        $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
+        $this->merchantRepository->deleteMerchant($merchant);
     }
 }

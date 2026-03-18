@@ -117,4 +117,22 @@ final class DashboardBusinessProfileController extends Controller
 
         return (new BusinessProfileResource($profile))->toResponse($request);
     }
+
+    /**
+     * Delete business profile
+     *
+     * Delete a business profile.
+     */
+    #[PathParameter('profileKey', description: 'Business profile public key', example: 'bp_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(204, description: 'Profile deleted')]
+    #[Response(404, description: 'Profile not found')]
+    public function destroy(string $profileKey, Request $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('business-profile.delete', [$merchantId]);
+
+        $this->businessProfileService->delete($profileKey);
+
+        return response()->json(null, 204);
+    }
 }
