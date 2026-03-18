@@ -27,8 +27,7 @@ final class ConnectorController extends Controller
      */
     public function store(StoreConnectorRequest $request, string $merchantKey): JsonResponse
     {
-        $attrs = $request->validatedAttributes();
-        $connector = $this->connectorService->create($merchantKey, $attrs);
+        $connector = $this->connectorService->create($merchantKey, $request->toDto());
 
         return (new ConnectorResource($connector))
             ->withStatus(201)
@@ -67,8 +66,7 @@ final class ConnectorController extends Controller
      */
     public function update(UpdateConnectorRequest $request, string $merchantKey, string $connectorKey): JsonResponse
     {
-        $attrs = $request->validatedAttributes();
-        $connector = $this->connectorService->update($merchantKey, $connectorKey, $attrs);
+        $connector = $this->connectorService->update($merchantKey, $connectorKey, $request->toDto());
 
         return (new ConnectorResource($connector))->toResponse($request);
     }

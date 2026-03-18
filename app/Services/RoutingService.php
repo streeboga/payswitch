@@ -11,7 +11,7 @@ use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\RoutingRule;
 
-final class RoutingService
+final readonly class RoutingService
 {
     public function __construct(
         private MerchantRepositoryInterface $merchantRepository,

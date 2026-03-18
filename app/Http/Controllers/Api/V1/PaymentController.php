@@ -29,12 +29,13 @@ final class PaymentController extends Controller
      */
     public function store(StorePaymentRequest $request): JsonResponse
     {
-        $attributes = $request->validated('data.attributes') ?? [];
+        $dto = $request->toDto();
         $merchantAccountId = $request->attributes->get('merchant_id');
 
-        $payment = $this->paymentService->create($attributes, $merchantAccountId);
+        $payment = $this->paymentService->create($dto, $merchantAccountId);
 
-        if ($request->boolean('data.attributes.confirm')) {
+        if ($dto->confirm) {
+            $attributes = $request->validated('data.attributes') ?? [];
             $payment = $this->paymentService->confirm($payment->key, $attributes, $merchantAccountId);
         }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DataTransferObjects\Refund\CreateRefundData;
 use App\Enums\WebhookEventType;
 use App\Jobs\DeliverWebhookJob;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
@@ -17,7 +18,7 @@ use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\Refund;
 
-final class RefundService
+final readonly class RefundService
 {
     public function __construct(
         private RefundRepositoryInterface $refundRepository,
@@ -26,17 +27,10 @@ final class RefundService
         private WebhookEventRepositoryInterface $webhookRepository,
     ) {}
 
-    public function create(array $data, int|string $merchantAccountId): Refund
+    public function create(CreateRefundData $dto, int|string $merchantAccountId): Refund
     {
-        if (! isset($data['payment_id'])) {
-            throw new PaymentException('payment_id is required', 'missing_payment_id', 'invalid_request_error', 400);
-        }
-        if (! isset($data['amount']) || ! is_numeric($data['amount'])) {
-            throw new PaymentException('Amount is required and must be numeric', 'missing_amount', 'invalid_request_error', 400);
-        }
-
-        return DB::transaction(function () use ($data, $merchantAccountId) {
-            $payment = $this->paymentRepository->findByKeyLocked($data['payment_id'], $merchantAccountId);
+        return DB::transaction(function () use ($dto, $merchantAccountId) {
+            $payment = $this->paymentRepository->findByKeyLocked($dto->payment_id, $merchantAccountId);
 
             if (! in_array($payment->status, [PaymentStatus::Succeeded, PaymentStatus::PartiallyCaptured, PaymentStatus::PartiallyCapturedAndCapturable])) {
                 throw new PaymentException(
@@ -47,7 +41,7 @@ final class RefundService
                 );
             }
 
-            if ($data['amount'] <= 0) {
+            if ($dto->amount <= 0) {
                 throw new PaymentException(
                     'Refund amount must be positive',
                     'invalid_amount',
@@ -58,13 +52,13 @@ final class RefundService
 
             $totalRefunded = $this->refundRepository->sumPendingAndSucceededForPayment($payment->id);
 
-            if ($data['amount'] > PHP_INT_MAX - $totalRefunded) {
+            if ($dto->amount > PHP_INT_MAX - $totalRefunded) {
                 throw new PaymentException('Amount overflow', 'amount_overflow', 'invalid_request_error', 400);
             }
 
-            if ($payment->amount_received < $data['amount'] + $totalRefunded) {
+            if ($payment->amount_received < $dto->amount + $totalRefunded) {
                 throw new PaymentException(
-                    "Refund amount ({$data['amount']}) plus already refunded ({$totalRefunded}) exceeds payment amount ({$payment->amount_received})",
+                    "Refund amount ({$dto->amount}) plus already refunded ({$totalRefunded}) exceeds payment amount ({$payment->amount_received})",
                     'refund_exceeds_payment',
                     'invalid_request_error',
                     400,
@@ -87,7 +81,7 @@ final class RefundService
 
             $connector = ConnectorFactory::resolve($mca);
             $refundResult = $connector->refund([
-                'amount' => $data['amount'],
+                'amount' => $dto->amount,
                 'currency' => $payment->currency,
                 'transaction_id' => $lastAttempt->connector_transaction_id,
             ]);
@@ -97,15 +91,15 @@ final class RefundService
             $refund = $this->refundRepository->create([
                 'payment_intent_id' => $payment->id,
                 'merchant_account_id' => $merchantAccountId,
-                'amount' => $data['amount'],
+                'amount' => $dto->amount,
                 'currency' => $payment->currency,
                 'status' => $refundStatus,
-                'reason' => $data['reason'] ?? null,
+                'reason' => $dto->reason,
                 'connector' => $connectorName,
                 'connector_refund_id' => $refundResult['transaction_id'] ?? null,
                 'error_code' => $refundResult['success'] ? null : ($refundResult['code'] ?? null),
                 'error_message' => $refundResult['success'] ? null : ($refundResult['message'] ?? null),
-                'metadata' => $data['metadata'] ?? null,
+                'metadata' => $dto->metadata,
             ]);
 
             // Webhook event

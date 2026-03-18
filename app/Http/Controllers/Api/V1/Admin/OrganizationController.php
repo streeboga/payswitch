@@ -25,8 +25,7 @@ final class OrganizationController extends Controller
      */
     public function store(StoreOrganizationRequest $request): JsonResponse
     {
-        $attrs = $request->validatedAttributes();
-        $organization = $this->merchantService->createOrganization($attrs);
+        $organization = $this->merchantService->createOrganization($request->toDto());
 
         return (new OrganizationResource($organization))
             ->withStatus(201)

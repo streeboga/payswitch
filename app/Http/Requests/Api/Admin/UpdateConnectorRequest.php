@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\Admin;
 
+use App\DataTransferObjects\Admin\UpdateConnectorData;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class UpdateConnectorRequest extends FormRequest
@@ -23,5 +24,10 @@ final class UpdateConnectorRequest extends FormRequest
     public function validatedAttributes(): array
     {
         return $this->validated('data.attributes') ?? [];
+    }
+
+    public function toDto(): UpdateConnectorData
+    {
+        return UpdateConnectorData::from($this->validated('data.attributes') ?? []);
     }
 }

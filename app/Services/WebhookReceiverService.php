@@ -15,7 +15,7 @@ use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
-final class WebhookReceiverService
+final readonly class WebhookReceiverService
 {
     public function __construct(
         private MerchantRepositoryInterface $merchantRepository,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\Admin;
 
+use App\DataTransferObjects\Admin\CreateRoutingRuleData;
 use App\Enums\RoutingRuleType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,5 +26,10 @@ final class StoreRoutingRuleRequest extends FormRequest
     public function validatedAttributes(): array
     {
         return $this->validated('data.attributes');
+    }
+
+    public function toDto(): CreateRoutingRuleData
+    {
+        return CreateRoutingRuleData::from($this->validated('data.attributes'));
     }
 }

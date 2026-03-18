@@ -30,22 +30,22 @@ final class RoutingRuleController extends Controller
     public function store(StoreRoutingRuleRequest $request, string $merchantKey): JsonResponse
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
-        $attrs = $request->validatedAttributes();
+        $dto = $request->toDto();
 
         $profileId = null;
-        if (! empty($attrs['business_profile_id'])) {
-            $profile = $this->merchantRepository->findProfileByKey($attrs['business_profile_id']);
+        if ($dto->business_profile_id) {
+            $profile = $this->merchantRepository->findProfileByKey($dto->business_profile_id);
             $profileId = $profile->id;
         }
 
         $rule = $this->routingRuleRepository->create([
             'merchant_account_id' => $merchant->id,
             'business_profile_id' => $profileId,
-            'type' => $attrs['type'],
-            'name' => $attrs['name'],
-            'rules' => $attrs['rules'],
-            'active' => $attrs['active'] ?? true,
-            'priority' => $attrs['priority'] ?? 0,
+            'type' => $dto->type,
+            'name' => $dto->name,
+            'rules' => $dto->rules,
+            'active' => $dto->active,
+            'priority' => $dto->priority,
         ]);
 
         return (new RoutingRuleResource($rule))
@@ -90,11 +90,11 @@ final class RoutingRuleController extends Controller
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
         $rule = $this->routingRuleRepository->findByKey($ruleKey, $merchant->id);
 
-        $attrs = $request->validatedAttributes();
-        $updateData = collect($attrs)->only(['type', 'name', 'rules', 'active', 'priority'])->toArray();
+        $dto = $request->toDto();
+        $updateData = $dto->toUpdateArray();
 
-        if (isset($attrs['business_profile_id'])) {
-            $profile = $this->merchantRepository->findProfileByKey($attrs['business_profile_id']);
+        if (isset($updateData['business_profile_id'])) {
+            $profile = $this->merchantRepository->findProfileByKey($updateData['business_profile_id']);
             $updateData['business_profile_id'] = $profile->id;
         }
 

@@ -26,10 +26,9 @@ final class RefundController extends Controller
      */
     public function store(StoreRefundRequest $request): JsonResponse
     {
-        $attributes = $request->validated('data.attributes') ?? [];
         $merchantAccountId = $request->attributes->get('merchant_id');
 
-        $refund = $this->refundService->create($attributes, $merchantAccountId);
+        $refund = $this->refundService->create($request->toDto(), $merchantAccountId);
 
         return (new RefundResource($refund))
             ->withStatus(201)
