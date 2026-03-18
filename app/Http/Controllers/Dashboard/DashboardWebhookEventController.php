@@ -7,16 +7,21 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\WebhookEventResource;
 use App\Jobs\DeliverWebhookJob;
+use App\Repositories\Contracts\WebhookEventRepositoryInterface;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Streeboga\PaymentData\Models\WebhookEvent;
 
 #[Group('Dashboard Webhook Events', description: 'Webhook event monitoring and retry', weight: 16)]
 final class DashboardWebhookEventController extends Controller
 {
+    public function __construct(
+        private readonly WebhookEventRepositoryInterface $webhookEventRepository,
+    ) {}
+
     /**
      * List webhook events
      *
@@ -30,24 +35,11 @@ final class DashboardWebhookEventController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-        $perPage = (int) $request->input('page.size', 20);
 
-        $query = WebhookEvent::where('merchant_account_id', $merchantId);
-
-        $status = $request->input('filter.status');
-        if ($status === 'delivered') {
-            $query->where('delivered', true);
-        } elseif ($status === 'failed') {
-            $query->where('delivered', false)->where('delivery_attempts', '>', 0);
-        } elseif ($status === 'pending') {
-            $query->where('delivered', false)->where('delivery_attempts', 0);
-        }
-
-        if ($eventType = $request->input('filter.event_type')) {
-            $query->where('event_type', $eventType);
-        }
-
-        $paginator = $query->orderByDesc('created_at')->paginate(min($perPage, 100));
+        $paginator = $this->webhookEventRepository->paginateForMerchant($merchantId, [
+            'status' => $request->input('filter.status'),
+            'event_type' => $request->input('filter.event_type'),
+        ], (int) $request->input('page.size', 20));
 
         return WebhookEventResource::jsonApiCollection($paginator, $request);
     }
@@ -57,15 +49,13 @@ final class DashboardWebhookEventController extends Controller
      *
      * Manually retry delivering a failed webhook event.
      */
+    #[PathParameter('eventKey', description: 'Webhook event public key', example: 'evt_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(202, description: 'Retry dispatched')]
     #[Response(404, description: 'Webhook event not found')]
     public function retry(string $eventKey, Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-
-        $event = WebhookEvent::where('merchant_account_id', $merchantId)
-            ->where('key', $eventKey)
-            ->firstOrFail();
+        $event = $this->webhookEventRepository->findByKeyForMerchant($eventKey, $merchantId);
 
         DeliverWebhookJob::dispatch($event->id);
 

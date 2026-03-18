@@ -9,10 +9,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ApiKeyResource;
 use App\Services\MerchantService;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Streeboga\PaymentData\Models\ApiKey;
 
 #[Group('Dashboard API Keys', description: 'API key management for the dashboard', weight: 15)]
 final class DashboardApiKeyController extends Controller
@@ -30,11 +30,11 @@ final class DashboardApiKeyController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-        $keys = ApiKey::where('merchant_account_id', $merchantId)
-            ->orderByDesc('created_at')
-            ->get();
 
-        return ApiKeyResource::jsonApiList($keys, $request);
+        return ApiKeyResource::jsonApiList(
+            $this->merchantService->listApiKeys($merchantId),
+            $request,
+        );
     }
 
     /**
@@ -68,6 +68,7 @@ final class DashboardApiKeyController extends Controller
      *
      * Revoke an existing API key.
      */
+    #[PathParameter('keyId', description: 'API key numeric ID')]
     #[Response(204, description: 'API key revoked')]
     #[Response(404, description: 'API key not found')]
     public function destroy(string $keyId, Request $request): JsonResponse

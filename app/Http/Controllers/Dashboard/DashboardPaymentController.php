@@ -10,6 +10,7 @@ use App\Http\Resources\PaymentIntentResource;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Services\DashboardPaymentService;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
@@ -61,6 +62,7 @@ final class DashboardPaymentController extends Controller
      *
      * Retrieve a single payment with full details.
      */
+    #[PathParameter('paymentKey', description: 'Payment public key', example: 'pay_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Payment details')]
     #[Response(404, description: 'Payment not found')]
     public function show(string $paymentKey, Request $request): JsonResponse

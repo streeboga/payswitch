@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ConnectorResource;
 use App\Services\ConnectorService;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -64,6 +65,7 @@ final class DashboardConnectorController extends Controller
 
         return (new ConnectorResource($connector))
             ->withStatus(201)
+            ->withHeader('Location', "/api/v1/dashboard/connectors/{$connector->key}")
             ->toResponse($request);
     }
 
@@ -72,6 +74,7 @@ final class DashboardConnectorController extends Controller
      *
      * Retrieve connector details.
      */
+    #[PathParameter('connectorKey', description: 'Connector public key', example: 'mca_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Connector details')]
     #[Response(404, description: 'Connector not found')]
     public function show(string $connectorKey, Request $request): JsonResponse
@@ -87,6 +90,7 @@ final class DashboardConnectorController extends Controller
      *
      * Update connector configuration.
      */
+    #[PathParameter('connectorKey', description: 'Connector public key', example: 'mca_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Connector updated')]
     #[Response(404, description: 'Connector not found')]
     public function update(string $connectorKey, Request $request): JsonResponse
@@ -116,6 +120,7 @@ final class DashboardConnectorController extends Controller
      *
      * Remove a connector from the current merchant.
      */
+    #[PathParameter('connectorKey', description: 'Connector public key', example: 'mca_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(204, description: 'Connector deleted')]
     #[Response(404, description: 'Connector not found')]
     public function destroy(string $connectorKey, Request $request): JsonResponse

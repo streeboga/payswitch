@@ -9,6 +9,7 @@ use App\DataTransferObjects\Admin\CreateBusinessProfileData;
 use App\DataTransferObjects\Admin\CreateMerchantAccountData;
 use App\DataTransferObjects\Admin\CreateOrganizationData;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -54,6 +55,16 @@ final readonly class MerchantService
             'merchant_account_id' => $merchant->id,
             'webhook_url' => $dto->webhook_url,
         ]);
+    }
+
+    /**
+     * @return Collection<int, ApiKey>
+     */
+    public function listApiKeys(int|string $merchantId): Collection
+    {
+        return ApiKey::where('merchant_account_id', $merchantId)
+            ->orderByDesc('created_at')
+            ->get();
     }
 
     /**

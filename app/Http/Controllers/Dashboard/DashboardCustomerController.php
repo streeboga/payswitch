@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CustomerResource;
 use App\Services\CustomerService;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,7 @@ final class DashboardCustomerController extends Controller
      *
      * Retrieve a single customer with details.
      */
+    #[PathParameter('customerKey', description: 'Customer public key', example: 'cus_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Customer details')]
     #[Response(404, description: 'Customer not found')]
     public function show(string $customerKey, Request $request): JsonResponse

@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RoutingRuleResource;
 use App\Repositories\Contracts\RoutingRuleRepositoryInterface;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -63,6 +64,7 @@ final class DashboardRoutingRuleController extends Controller
 
         return (new RoutingRuleResource($rule))
             ->withStatus(201)
+            ->withHeader('Location', "/api/v1/dashboard/routing-rules/{$rule->key}")
             ->toResponse($request);
     }
 
@@ -71,6 +73,7 @@ final class DashboardRoutingRuleController extends Controller
      *
      * Retrieve a single routing rule.
      */
+    #[PathParameter('ruleKey', description: 'Routing rule public key', example: 'rr_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Routing rule details')]
     #[Response(404, description: 'Routing rule not found')]
     public function show(string $ruleKey, Request $request): JsonResponse
@@ -86,6 +89,7 @@ final class DashboardRoutingRuleController extends Controller
      *
      * Update routing rule configuration.
      */
+    #[PathParameter('ruleKey', description: 'Routing rule public key', example: 'rr_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Routing rule updated')]
     #[Response(404, description: 'Routing rule not found')]
     public function update(string $ruleKey, Request $request): JsonResponse
@@ -111,6 +115,7 @@ final class DashboardRoutingRuleController extends Controller
      *
      * Remove a routing rule.
      */
+    #[PathParameter('ruleKey', description: 'Routing rule public key', example: 'rr_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(204, description: 'Routing rule deleted')]
     #[Response(404, description: 'Routing rule not found')]
     public function destroy(string $ruleKey, Request $request): JsonResponse
