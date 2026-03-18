@@ -48,4 +48,8 @@ interface MerchantRepositoryInterface
     public function updateConnector(MerchantConnectorAccount $connector, array $attributes): MerchantConnectorAccount;
 
     public function findProfileByMerchant(int|string $merchantAccountId): ?BusinessProfile;
+
+    public function findMerchantByKeyOrNull(string $key): ?MerchantAccount;
+
+    public function findConnectorByMerchantAndKeyOrNull(int|string $merchantAccountId, string $connectorKey): ?MerchantConnectorAccount;
 }

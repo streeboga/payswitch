@@ -121,4 +121,16 @@ final class MerchantRepository implements MerchantRepositoryInterface
     {
         return BusinessProfile::where('merchant_account_id', $merchantAccountId)->first();
     }
+
+    public function findMerchantByKeyOrNull(string $key): ?MerchantAccount
+    {
+        return MerchantAccount::where('key', $key)->first();
+    }
+
+    public function findConnectorByMerchantAndKeyOrNull(int|string $merchantAccountId, string $connectorKey): ?MerchantConnectorAccount
+    {
+        return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+            ->where('key', $connectorKey)
+            ->first();
+    }
 }

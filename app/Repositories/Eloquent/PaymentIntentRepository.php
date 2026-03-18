@@ -72,4 +72,9 @@ final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
     {
         return PaymentIntent::where('key', $key)->firstOrFail();
     }
+
+    public function findByIdLocked(int $id): ?PaymentIntent
+    {
+        return PaymentIntent::where('id', $id)->lockForUpdate()->first();
+    }
 }

@@ -24,4 +24,6 @@ interface PaymentIntentRepositoryInterface
     public function paginateAll(int $perPage = 20): LengthAwarePaginator;
 
     public function findByKeyGlobal(string $key): PaymentIntent;
+
+    public function findByIdLocked(int $id): ?PaymentIntent;
 }
