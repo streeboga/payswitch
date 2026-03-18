@@ -7,6 +7,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { AlertCircle } from 'lucide-react'
 import { auth } from '@/api/endpoints/auth'
 import { useAuthStore } from '@/stores/auth'
+import { useContextStore } from '@/stores/context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -51,6 +52,11 @@ export function LoginPage() {
         await navigate({ to: '/two-factor-challenge' })
         return
       }
+
+      // Reset stale org/merchant/profile context from previous session
+      // so the context switcher picks from fresh data.
+      const ctx = useContextStore.getState()
+      ctx.setOrg(null)
 
       const user = await auth.user()
       setUser(user)

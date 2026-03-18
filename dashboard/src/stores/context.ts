@@ -10,6 +10,7 @@ interface ContextState {
   setMerchant: (key: string | null) => void
   setProfile: (key: string | null) => void
   setTestMode: (testMode: boolean) => void
+  resetContext: () => void
 }
 
 export const useContextStore = create<ContextState>()(
@@ -25,6 +26,8 @@ export const useContextStore = create<ContextState>()(
         set({ currentMerchantKey, currentProfileKey: null }),
       setProfile: (currentProfileKey) => set({ currentProfileKey }),
       setTestMode: (testMode) => set({ testMode }),
+      resetContext: () =>
+        set({ currentOrgKey: null, currentMerchantKey: null, currentProfileKey: null }),
     }),
     { name: 'payswitch-context', version: 1 },
   ),

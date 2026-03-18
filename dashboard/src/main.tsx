@@ -7,9 +7,9 @@ import { i18nReady } from './lib/i18n'
 import './app.css'
 
 // Only attempt to fetch the current user if a session cookie exists.
-// Without a session there is no point hitting /api/v1/user — it will
-// always return 401 and pollute the console with an error.
-const hasSession = document.cookie.includes('XSRF-TOKEN')
+// Check for laravel_session (not XSRF-TOKEN which can linger after logout).
+const hasSession = document.cookie.includes('laravel_session') ||
+  document.cookie.includes('laravel-session')
 
 if (hasSession) {
   auth

@@ -90,7 +90,7 @@ export const api: KyInstance = ky.create({
       },
     ],
     afterResponse: [
-      async (_request, _options, response) => {
+      async (request, _options, response) => {
         if (response.status === 401) {
           window.location.href = '/login'
           throw new ApiError({
@@ -100,6 +100,15 @@ export const api: KyInstance = ky.create({
             detail: 'Your session has expired. Please log in again.',
             errors: [{ status: 401, code: 'unauthenticated', title: 'Unauthenticated' }],
           })
+        }
+
+        // If merchant context returns 404, the stored merchant key is stale
+        // (e.g. after DB reseed). Reset context so the user can re-select.
+        if (response.status === 404 && request.headers.get('X-Merchant-Key')) {
+          const { currentMerchantKey, setMerchant } = useContextStore.getState()
+          if (currentMerchantKey) {
+            setMerchant(null)
+          }
         }
       },
     ],
