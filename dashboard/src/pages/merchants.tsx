@@ -5,12 +5,17 @@ import { Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Store, Plus } from 'lucide-react'
+import { Store, Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 
 import type { MerchantAccountAttributes } from '@/api/types'
 import { type OrgListParams } from '@/api/endpoints/dashboard-orgs'
 import { useMerchantsList } from '@/hooks/use-merchants'
-import { useOrganizationsList, useCreateMerchant } from '@/hooks/use-organizations'
+import {
+  useOrganizationsList,
+  useCreateMerchant,
+  useUpdateMerchant,
+  useDeleteMerchant,
+} from '@/hooks/use-organizations'
 import {
   DataTable,
   ColumnHeader,
@@ -49,6 +54,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 // ─── Row Type ────────────────────────────────────────────────
 
@@ -64,6 +85,10 @@ export function MerchantsPage() {
   const { t } = useTranslation()
   const density = usePreferencesStore((s) => s.density)
   const [createOpen, setCreateOpen] = useState(false)
+  const [editMerchant, setEditMerchant] = useState<MerchantRow | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteMerchant, setDeleteMerchant] = useState<MerchantRow | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   // ─── Filter Definitions ─────────────────────────────────────
 
@@ -146,6 +171,41 @@ export function MerchantsPage() {
       header: ({ column }) => <ColumnHeader column={column} title={t('merchants.columnDate')} />,
       cell: ({ row }) => <DateFormat date={row.original.created_at} />,
       enableSorting: true,
+    },
+    {
+      id: 'actions',
+      size: 50,
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                setEditMerchant(row.original)
+                setEditOpen(true)
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              {t('common.edit')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => {
+                setDeleteMerchant(row.original)
+                setDeleteOpen(true)
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('common.delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      enableSorting: false,
     },
   ]
 
@@ -248,6 +308,22 @@ export function MerchantsPage() {
       />
 
       <CreateMerchantDialog open={createOpen} onOpenChange={setCreateOpen} />
+
+      {editMerchant && (
+        <EditMerchantDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          merchant={editMerchant}
+        />
+      )}
+
+      {deleteMerchant && (
+        <DeleteMerchantDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          merchant={deleteMerchant}
+        />
+      )}
     </div>
   )
 }
@@ -354,5 +430,123 @@ function CreateMerchantDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ─── Edit Merchant Dialog ───────────────────────────────────
+
+function EditMerchantDialog({
+  open,
+  onOpenChange,
+  merchant,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  merchant: MerchantRow
+}) {
+  const { t } = useTranslation()
+  const updateMutation = useUpdateMerchant()
+
+  const editSchema = z.object({
+    name: z.string().min(1, t('merchants.nameRequired')),
+  })
+
+  type EditForm = z.infer<typeof editSchema>
+
+  const form = useForm<EditForm>({
+    resolver: zodResolver(editSchema),
+    defaultValues: { name: merchant.name },
+  })
+
+  function onSubmit(values: EditForm) {
+    updateMutation.mutate(
+      { merchantKey: merchant.id, data: { name: values.name } },
+      {
+        onSuccess: () => {
+          onOpenChange(false)
+        },
+      },
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('merchants.editTitle')}</DialogTitle>
+          <DialogDescription>{t('merchants.editDesc')}</DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('common.name')}</FormLabel>
+                  <FormControl>
+                    <Input placeholder={t('merchants.namePlaceholder')} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? t('common.saving') : t('common.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Delete Merchant Dialog ─────────────────────────────────
+
+function DeleteMerchantDialog({
+  open,
+  onOpenChange,
+  merchant,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  merchant: MerchantRow
+}) {
+  const { t } = useTranslation()
+  const deleteMutation = useDeleteMerchant()
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('merchants.deleteTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('merchants.deleteDesc')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deleteMutation.isPending}
+            onClick={(e) => {
+              e.preventDefault()
+              deleteMutation.mutate(merchant.id, {
+                onSuccess: () => onOpenChange(false),
+              })
+            }}
+          >
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

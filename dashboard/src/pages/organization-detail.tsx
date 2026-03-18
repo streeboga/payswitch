@@ -1,13 +1,18 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, Link } from '@tanstack/react-router'
+import { useParams, Link, useNavigate } from '@tanstack/react-router'
 import { useReactTable, getCoreRowModel, type ColumnDef } from '@tanstack/react-table'
-import { ArrowLeft, Building2 } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { ArrowLeft, Building2, Pencil, Trash2 } from 'lucide-react'
 
 import type { MerchantAccountAttributes } from '@/api/types'
 import {
   useOrganizationDetail,
   useOrganizationMerchants,
+  useUpdateOrganization,
+  useDeleteOrganization,
 } from '@/hooks/use-organizations'
 import { DataTable } from '@/components/data-table'
 import { DateFormat } from '@/components/shared/date-format'
@@ -15,6 +20,34 @@ import { CopyButton } from '@/components/shared/copy-button'
 import { ErrorState } from '@/components/shared/error-state'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { usePreferencesStore } from '@/stores/preferences'
 
 // ─── Row Type ────────────────────────────────────────────────
@@ -40,8 +73,11 @@ function OrgDetailSkeleton() {
 
 export function OrganizationDetailPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { orgKey } = useParams({ strict: false }) as { orgKey: string }
   const density = usePreferencesStore((s) => s.density)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   const {
     data: orgData,
@@ -170,9 +206,25 @@ export function OrganizationDetailPage() {
 
       <div className="flex items-center gap-3">
         <Building2 className="text-muted-foreground h-7 w-7" />
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">{org.name}</h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive h-7 w-7"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground font-mono text-sm">{org.id}</span>
@@ -206,6 +258,20 @@ export function OrganizationDetailPage() {
           density={density}
         />
       </div>
+
+      <EditOrgDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        orgKey={org.id}
+        orgName={org.name}
+      />
+
+      <DeleteOrgDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        orgKey={org.id}
+        onDeleted={() => void navigate({ to: '/organizations' })}
+      />
     </div>
   )
 }
@@ -216,5 +282,130 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
       <span className="text-muted-foreground text-sm">{label}</span>
       <div className="text-right text-sm">{children}</div>
     </div>
+  )
+}
+
+// ─── Edit Org Dialog ────────────────────────────────────────
+
+function EditOrgDialog({
+  open,
+  onOpenChange,
+  orgKey,
+  orgName,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  orgKey: string
+  orgName: string
+}) {
+  const { t } = useTranslation()
+  const updateMutation = useUpdateOrganization()
+
+  const editOrgSchema = z.object({
+    name: z.string().min(1, t('organizations.nameRequired')),
+  })
+
+  type EditOrgForm = z.infer<typeof editOrgSchema>
+
+  const form = useForm<EditOrgForm>({
+    resolver: zodResolver(editOrgSchema),
+    defaultValues: { name: orgName },
+  })
+
+  function onSubmit(values: EditOrgForm) {
+    updateMutation.mutate(
+      { orgKey, data: { name: values.name } },
+      {
+        onSuccess: () => {
+          onOpenChange(false)
+        },
+      },
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('organizations.editTitle')}</DialogTitle>
+          <DialogDescription>{t('organizations.editDesc')}</DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('common.name')}</FormLabel>
+                  <FormControl>
+                    <Input placeholder={t('organizations.namePlaceholder')} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? t('common.saving') : t('common.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Delete Org Dialog ──────────────────────────────────────
+
+function DeleteOrgDialog({
+  open,
+  onOpenChange,
+  orgKey,
+  onDeleted,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  orgKey: string
+  onDeleted: () => void
+}) {
+  const { t } = useTranslation()
+  const deleteMutation = useDeleteOrganization()
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('organizations.deleteTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('organizations.deleteDesc')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deleteMutation.isPending}
+            onClick={(e) => {
+              e.preventDefault()
+              deleteMutation.mutate(orgKey, {
+                onSuccess: () => {
+                  onOpenChange(false)
+                  onDeleted()
+                },
+              })
+            }}
+          >
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

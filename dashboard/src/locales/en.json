@@ -3,6 +3,7 @@
     "loading": "Loading...",
     "save": "Save",
     "saving": "Saving...",
+    "deleting": "Deleting...",
     "cancel": "Cancel",
     "create": "Create",
     "creating": "Creating...",
@@ -589,7 +590,11 @@
     "createTitle": "Create organization",
     "createDesc": "Enter the name of the new organization.",
     "nameRequired": "Name is required",
-    "namePlaceholder": "My Organization"
+    "namePlaceholder": "My Organization",
+    "editTitle": "Edit organization",
+    "editDesc": "Change the organization name.",
+    "deleteTitle": "Delete organization",
+    "deleteDesc": "This action cannot be undone. All merchants and their data will be permanently deleted."
   },
   "organizationDetail": {
     "backToOrganizations": "Back to organizations",
@@ -621,7 +626,11 @@
     "orgRequired": "Select an organization",
     "namePlaceholder": "My Store",
     "orgLabel": "Organization",
-    "orgPlaceholder": "Select organization"
+    "orgPlaceholder": "Select organization",
+    "editTitle": "Edit merchant",
+    "editDesc": "Change the merchant name.",
+    "deleteTitle": "Delete merchant",
+    "deleteDesc": "This action cannot be undone. All profiles, API keys, and connectors will be permanently deleted."
   },
   "merchantDetail": {
     "backToMerchants": "Back to merchants",
@@ -649,7 +658,30 @@
     "connectorsDesc": "Connector management is available on a separate page.",
     "routingSection": "Routing rules",
     "routingLink": "Go to routing",
-    "routingDesc": "Routing rule management is available on a separate page."
+    "routingDesc": "Routing rule management is available on a separate page.",
+    "profilesColumnWebhook": "Webhook URL",
+    "profilesColumnConnectors": "Connectors",
+    "profilesColumnRules": "Rules",
+    "profilesColumnDate": "Created",
+    "profilesEmpty": "No profiles yet.",
+    "keysColumnName": "Name",
+    "keysColumnPrefix": "Prefix",
+    "keysColumnType": "Type",
+    "keysColumnStatus": "Status",
+    "keysColumnDate": "Created",
+    "keysEmpty": "No API keys yet.",
+    "connectorsColumnName": "Name",
+    "connectorsColumnType": "Type",
+    "connectorsColumnTestMode": "Test mode",
+    "connectorsColumnDisabled": "Disabled",
+    "connectorsColumnDate": "Created",
+    "connectorsEmpty": "No connectors yet.",
+    "routingColumnName": "Name",
+    "routingColumnType": "Type",
+    "routingColumnActive": "Active",
+    "routingColumnPriority": "Priority",
+    "routingColumnDate": "Created",
+    "routingEmpty": "No routing rules yet."
   },
   "profiles": {
     "title": "Business Profiles",
@@ -666,7 +698,9 @@
     "createDesc": "Specify the Webhook URL for the new profile.",
     "webhookUrlLabel": "Webhook URL",
     "webhookUrlPlaceholder": "https://example.com/webhooks",
-    "webhookUrlInvalid": "Invalid URL"
+    "webhookUrlInvalid": "Invalid URL",
+    "deleteTitle": "Delete profile",
+    "deleteDesc": "This action cannot be undone. All connectors and routing rules linked to this profile will be affected."
   },
   "profileDetail": {
     "backToProfiles": "Back to profiles",

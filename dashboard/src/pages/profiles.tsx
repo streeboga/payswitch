@@ -5,13 +5,13 @@ import { Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { FolderOpen, Plus } from 'lucide-react'
+import { FolderOpen, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 
 import {
   type ProfileListItem,
   type ProfileListParams,
 } from '@/api/endpoints/dashboard-profiles'
-import { useProfilesList, useCreateProfile } from '@/hooks/use-profiles'
+import { useProfilesList, useCreateProfile, useDeleteProfile } from '@/hooks/use-profiles'
 import {
   DataTable,
   ColumnHeader,
@@ -43,6 +43,22 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 // ─── Row Type ────────────────────────────────────────────────
 
@@ -54,6 +70,8 @@ export function ProfilesPage() {
   const { t } = useTranslation()
   const density = usePreferencesStore((s) => s.density)
   const [createOpen, setCreateOpen] = useState(false)
+  const [deleteProfile, setDeleteProfile] = useState<ProfileRow | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   // ─── Filter Definitions ─────────────────────────────────────
 
@@ -126,6 +144,32 @@ export function ProfilesPage() {
       header: ({ column }) => <ColumnHeader column={column} title={t('profiles.columnDate')} />,
       cell: ({ row }) => <DateFormat date={row.original.created_at} />,
       enableSorting: true,
+    },
+    {
+      id: 'actions',
+      size: 50,
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => {
+                setDeleteProfile(row.original)
+                setDeleteOpen(true)
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('common.delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      enableSorting: false,
     },
   ]
 
@@ -228,6 +272,14 @@ export function ProfilesPage() {
       />
 
       <CreateProfileDialog open={createOpen} onOpenChange={setCreateOpen} />
+
+      {deleteProfile && (
+        <DeleteProfileDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          profile={deleteProfile}
+        />
+      )}
     </div>
   )
 }
@@ -303,5 +355,48 @@ function CreateProfileDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ─── Delete Profile Dialog ──────────────────────────────────
+
+function DeleteProfileDialog({
+  open,
+  onOpenChange,
+  profile,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  profile: ProfileRow
+}) {
+  const { t } = useTranslation()
+  const deleteMutation = useDeleteProfile()
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('profiles.deleteTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('profiles.deleteDesc')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deleteMutation.isPending}
+            onClick={(e) => {
+              e.preventDefault()
+              deleteMutation.mutate(profile.id, {
+                onSuccess: () => onOpenChange(false),
+              })
+            }}
+          >
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

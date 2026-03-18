@@ -3,6 +3,7 @@
     "loading": "Загрузка...",
     "save": "Сохранить",
     "saving": "Сохранение...",
+    "deleting": "Удаление...",
     "cancel": "Отмена",
     "create": "Создать",
     "creating": "Создание...",
@@ -589,7 +590,11 @@
     "createTitle": "Создать организацию",
     "createDesc": "Введите название новой организации.",
     "nameRequired": "Название обязательно",
-    "namePlaceholder": "Моя организация"
+    "namePlaceholder": "Моя организация",
+    "editTitle": "Редактирование организации",
+    "editDesc": "Изменить название организации.",
+    "deleteTitle": "Удаление организации",
+    "deleteDesc": "Это действие нельзя отменить. Все мерчанты и их данные будут удалены безвозвратно."
   },
   "organizationDetail": {
     "backToOrganizations": "Назад к организациям",
@@ -621,7 +626,11 @@
     "orgRequired": "Выберите организацию",
     "namePlaceholder": "Мой магазин",
     "orgLabel": "Организация",
-    "orgPlaceholder": "Выберите организацию"
+    "orgPlaceholder": "Выберите организацию",
+    "editTitle": "Редактирование мерчанта",
+    "editDesc": "Изменить название мерчанта.",
+    "deleteTitle": "Удаление мерчанта",
+    "deleteDesc": "Это действие нельзя отменить. Все профили, API-ключи и коннекторы будут удалены безвозвратно."
   },
   "merchantDetail": {
     "backToMerchants": "Назад к мерчантам",
@@ -649,7 +658,30 @@
     "connectorsDesc": "Управление коннекторами доступно на отдельной странице.",
     "routingSection": "Правила маршрутизации",
     "routingLink": "Перейти к маршрутизации",
-    "routingDesc": "Управление правилами маршрутизации доступно на отдельной странице."
+    "routingDesc": "Управление правилами маршрутизации доступно на отдельной странице.",
+    "profilesColumnWebhook": "Webhook URL",
+    "profilesColumnConnectors": "Коннекторов",
+    "profilesColumnRules": "Правил",
+    "profilesColumnDate": "Создан",
+    "profilesEmpty": "Профилей пока нет.",
+    "keysColumnName": "Название",
+    "keysColumnPrefix": "Префикс",
+    "keysColumnType": "Тип",
+    "keysColumnStatus": "Статус",
+    "keysColumnDate": "Создан",
+    "keysEmpty": "API-ключей пока нет.",
+    "connectorsColumnName": "Название",
+    "connectorsColumnType": "Тип",
+    "connectorsColumnTestMode": "Тест-режим",
+    "connectorsColumnDisabled": "Отключён",
+    "connectorsColumnDate": "Создан",
+    "connectorsEmpty": "Коннекторов пока нет.",
+    "routingColumnName": "Название",
+    "routingColumnType": "Тип",
+    "routingColumnActive": "Активно",
+    "routingColumnPriority": "Приоритет",
+    "routingColumnDate": "Создан",
+    "routingEmpty": "Правил маршрутизации пока нет."
   },
   "profiles": {
     "title": "Бизнес-профили",
@@ -666,7 +698,9 @@
     "createDesc": "Укажите Webhook URL для нового профиля.",
     "webhookUrlLabel": "Webhook URL",
     "webhookUrlPlaceholder": "https://example.com/webhooks",
-    "webhookUrlInvalid": "Некорректный URL"
+    "webhookUrlInvalid": "Некорректный URL",
+    "deleteTitle": "Удаление профиля",
+    "deleteDesc": "Это действие нельзя отменить. Коннекторы и правила маршрутизации, связанные с этим профилем, будут затронуты."
   },
   "profileDetail": {
     "backToProfiles": "Назад к профилям",

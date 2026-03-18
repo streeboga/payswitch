@@ -5,11 +5,16 @@ import { Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Building2, Plus } from 'lucide-react'
+import { Building2, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 
 import type { OrganizationAttributes } from '@/api/types'
 import { type OrgListParams } from '@/api/endpoints/dashboard-orgs'
-import { useOrganizationsList, useCreateOrganization } from '@/hooks/use-organizations'
+import {
+  useOrganizationsList,
+  useCreateOrganization,
+  useUpdateOrganization,
+  useDeleteOrganization,
+} from '@/hooks/use-organizations'
 import {
   DataTable,
   ColumnHeader,
@@ -41,6 +46,22 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 // ─── Row Type ────────────────────────────────────────────────
 
@@ -52,6 +73,10 @@ export function OrganizationsPage() {
   const { t } = useTranslation()
   const density = usePreferencesStore((s) => s.density)
   const [createOpen, setCreateOpen] = useState(false)
+  const [editOrg, setEditOrg] = useState<OrgRow | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOrg, setDeleteOrg] = useState<OrgRow | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   // ─── Filter Definitions ─────────────────────────────────────
 
@@ -114,6 +139,41 @@ export function OrganizationsPage() {
       header: ({ column }) => <ColumnHeader column={column} title={t('organizations.columnDate')} />,
       cell: ({ row }) => <DateFormat date={row.original.created_at} />,
       enableSorting: true,
+    },
+    {
+      id: 'actions',
+      size: 50,
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                setEditOrg(row.original)
+                setEditOpen(true)
+              }}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              {t('common.edit')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => {
+                setDeleteOrg(row.original)
+                setDeleteOpen(true)
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('common.delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      enableSorting: false,
     },
   ]
 
@@ -216,6 +276,22 @@ export function OrganizationsPage() {
       />
 
       <CreateOrgDialog open={createOpen} onOpenChange={setCreateOpen} />
+
+      {editOrg && (
+        <EditOrgDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          org={editOrg}
+        />
+      )}
+
+      {deleteOrg && (
+        <DeleteOrgDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          org={deleteOrg}
+        />
+      )}
     </div>
   )
 }
@@ -291,5 +367,123 @@ function CreateOrgDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+// ─── Edit Org Dialog ────────────────────────────────────────
+
+function EditOrgDialog({
+  open,
+  onOpenChange,
+  org,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  org: OrgRow
+}) {
+  const { t } = useTranslation()
+  const updateMutation = useUpdateOrganization()
+
+  const editOrgSchema = z.object({
+    name: z.string().min(1, t('organizations.nameRequired')),
+  })
+
+  type EditOrgForm = z.infer<typeof editOrgSchema>
+
+  const form = useForm<EditOrgForm>({
+    resolver: zodResolver(editOrgSchema),
+    defaultValues: { name: org.name },
+  })
+
+  function onSubmit(values: EditOrgForm) {
+    updateMutation.mutate(
+      { orgKey: org.id, data: { name: values.name } },
+      {
+        onSuccess: () => {
+          onOpenChange(false)
+        },
+      },
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('organizations.editTitle')}</DialogTitle>
+          <DialogDescription>{t('organizations.editDesc')}</DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('common.name')}</FormLabel>
+                  <FormControl>
+                    <Input placeholder={t('organizations.namePlaceholder')} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? t('common.saving') : t('common.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Delete Org Dialog ──────────────────────────────────────
+
+function DeleteOrgDialog({
+  open,
+  onOpenChange,
+  org,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  org: OrgRow
+}) {
+  const { t } = useTranslation()
+  const deleteMutation = useDeleteOrganization()
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('organizations.deleteTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('organizations.deleteDesc')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deleteMutation.isPending}
+            onClick={(e) => {
+              e.preventDefault()
+              deleteMutation.mutate(org.id, {
+                onSuccess: () => onOpenChange(false),
+              })
+            }}
+          >
+            {deleteMutation.isPending ? t('common.deleting') : t('common.delete')}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
