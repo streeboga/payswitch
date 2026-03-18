@@ -91,15 +91,22 @@ final class RoutingService
      */
     public function fallback(int|string $merchantAccountId, array $excludeConnectors): ?MerchantConnectorAccount
     {
-        return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-            ->where('disabled', false)
-            ->whereNotIn('connector_name', $excludeConnectors)
-            ->first();
+        $query = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+            ->where('disabled', false);
+
+        if (! empty($excludeConnectors)) {
+            $query->whereNotIn('connector_name', $excludeConnectors);
+        }
+
+        return $query->first();
     }
 
     private function evaluateRule(RoutingRule $rule, ?string $paymentMethod, ?string $currency, ?int $amount, int|string $merchantAccountId): ?MerchantConnectorAccount
     {
         $config = $rule->rules;
+        if (! is_array($config)) {
+            return null;
+        }
 
         return match ($rule->type) {
             'priority' => $this->evaluatePriorityRule($config, $merchantAccountId),
@@ -132,6 +139,10 @@ final class RoutingService
         $conditions = $config['conditions'] ?? [];
 
         foreach ($conditions as $condition) {
+            if (! isset($condition['field'], $condition['operator'], $condition['value'], $condition['connector'])) {
+                continue;
+            }
+
             $value = match ($condition['field']) {
                 'currency' => $currency,
                 'amount' => $amount,
@@ -174,9 +185,12 @@ final class RoutingService
 
     private function evaluateVolumeSplitRule(array $config, int|string $merchantAccountId): ?MerchantConnectorAccount
     {
-        $splits = $config['split'] ?? [];
-        $totalWeight = array_sum(array_column($splits, 'weight'));
+        $splits = array_filter($config['split'] ?? [], fn ($s) => isset($s['weight']) && $s['weight'] > 0 && isset($s['connector']));
+        if (empty($splits)) {
+            return null;
+        }
 
+        $totalWeight = array_sum(array_column($splits, 'weight'));
         if ($totalWeight <= 0) {
             return null;
         }
@@ -187,10 +201,15 @@ final class RoutingService
         foreach ($splits as $split) {
             $cumulative += $split['weight'];
             if ($random <= $cumulative) {
-                return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+                $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
                     ->where('connector_name', $split['connector'])
                     ->where('disabled', false)
                     ->first();
+                if ($mca) {
+                    return $mca;
+                }
+                // If disabled, continue to next split entry instead of returning null
+                continue;
             }
         }
 

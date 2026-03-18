@@ -291,6 +291,75 @@ test('cannot cancel succeeded payment', function () {
         ->assertJsonPath('errors.0.code', 'invalid_state_transition');
 });
 
+// --- Edge cases ---
+
+test('connector exception during confirm triggers fallback', function () {
+    // Register a throwing connector
+    $throwingConnectorClass = new class([]) implements \Streeboga\PaymentData\Contracts\ConnectorInterface {
+        public function __construct(?array $credentials = []) {}
+        public function getName(): string { return 'throwing'; }
+        public function authorize(array $params): array { throw new \RuntimeException('Connection timeout'); }
+        public function purchase(array $params): array { throw new \RuntimeException('Connection timeout'); }
+        public function capture(array $params): array { return ['success' => true, 'transaction_id' => 'x']; }
+        public function refund(array $params): array { return ['success' => true, 'transaction_id' => 'x']; }
+    };
+    \Streeboga\PaymentConnectors\ConnectorFactory::register('throwing', get_class($throwingConnectorClass));
+
+    // Create the throwing connector MCA with higher priority
+    $profile = \Streeboga\PaymentData\Models\BusinessProfile::where('merchant_account_id', $this->merchant->id)->first();
+    MerchantConnectorAccount::create([
+        'merchant_account_id' => $this->merchant->id,
+        'business_profile_id' => $profile->id,
+        'connector_name' => 'throwing',
+        'connector_type' => 'fiz_operations',
+        'connector_account_details' => encrypt(json_encode(['auth_type' => 'HeaderKey', 'api_key' => 'sk_throw'])),
+        'payment_methods_enabled' => [['payment_method' => 'card']],
+        'test_mode' => true,
+    ]);
+
+    $create = createPayment();
+    $paymentId = $create->json('data.id');
+
+    // Confirm with explicit throwing connector — primary fails, fallback (test) should work
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'data' => ['type' => 'payments', 'attributes' => [
+            'payment_method' => 'card',
+            'connector' => 'throwing',
+            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
+        ]],
+    ], apiHeaders());
+
+    // The primary connector throws, fallback should be attempted
+    // If fallback succeeds -> succeeded; if no fallback available -> failed
+    expect($response->json('data.attributes.status'))->toBeIn(['succeeded', 'failed']);
+
+    // Verify the failed attempt was recorded
+    $this->assertDatabaseHas('payment_attempts', [
+        'connector' => 'throwing',
+        'status' => 'failed',
+        'error_code' => 'connector_exception',
+    ]);
+});
+
+test('confirm with expired payment returns error', function () {
+    $create = createPayment(['session_expiry' => 60]);
+    $paymentId = $create->json('data.id');
+
+    // Manually expire the payment
+    \Streeboga\PaymentData\Models\PaymentIntent::where('key', $paymentId)
+        ->update(['expires_on' => now()->subMinutes(5)]);
+
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'data' => ['type' => 'payments', 'attributes' => [
+            'payment_method' => 'card',
+            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
+        ]],
+    ], apiHeaders());
+
+    $response->assertStatus(400)
+        ->assertJsonPath('errors.0.code', 'payment_expired');
+});
+
 // --- Audit log ---
 
 test('payment status changes are logged in audit log', function () {

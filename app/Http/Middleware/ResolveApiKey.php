@@ -18,15 +18,20 @@ class ResolveApiKey
     {
         $apiKey = $request->header('api-key');
 
-        if (! $apiKey) {
+        if (! $apiKey || ! is_string($apiKey)) {
             throw new ApiAuthenticationException('API key is required', 'api_key_missing', 'authentication_error');
         }
 
+        // Check admin key before length validation (admin keys may have any length)
         $adminKey = config('payswitch.admin_api_key');
-        if ($adminKey && hash_equals($adminKey, $apiKey)) {
+        if ($adminKey && is_string($adminKey) && hash_equals($adminKey, $apiKey)) {
             $request->attributes->set('api_key_type', 'admin');
 
             return $next($request);
+        }
+
+        if (strlen($apiKey) < 10) {
+            throw new ApiAuthenticationException('Invalid API key format', 'invalid_api_key', 'authentication_error');
         }
 
         $keyPrefix = substr($apiKey, 0, 20);

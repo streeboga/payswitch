@@ -19,6 +19,13 @@ final class RefundService
 {
     public function create(array $data, int|string $merchantAccountId): Refund
     {
+        if (!isset($data['payment_id'])) {
+            throw new PaymentException('payment_id is required', 'missing_payment_id', 'invalid_request_error', 400);
+        }
+        if (!isset($data['amount']) || !is_numeric($data['amount'])) {
+            throw new PaymentException('Amount is required and must be numeric', 'missing_amount', 'invalid_request_error', 400);
+        }
+
         return DB::transaction(function () use ($data, $merchantAccountId) {
             $payment = PaymentIntent::where('key', $data['payment_id'])
                 ->where('merchant_account_id', $merchantAccountId)
@@ -44,8 +51,12 @@ final class RefundService
             }
 
             $totalRefunded = Refund::where('payment_intent_id', $payment->id)
-                ->where('status', RefundStatus::Succeeded)
+                ->whereIn('status', [RefundStatus::Succeeded, RefundStatus::Pending])
                 ->sum('amount');
+
+            if ($data['amount'] > PHP_INT_MAX - $totalRefunded) {
+                throw new PaymentException('Amount overflow', 'amount_overflow', 'invalid_request_error', 400);
+            }
 
             if ($data['amount'] + $totalRefunded > $payment->amount_received) {
                 throw new PaymentException(
@@ -59,22 +70,25 @@ final class RefundService
             // Resolve connector from last successful attempt
             $lastAttempt = $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
             $connectorName = $payment->connector;
-            $refundResult = ['success' => true]; // default for test connector fallback
 
-            if ($lastAttempt && $connectorName) {
-                $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                    ->where('connector_name', $connectorName)
-                    ->first();
-
-                if ($mca) {
-                    $connector = ConnectorFactory::resolve($mca);
-                    $refundResult = $connector->refund([
-                        'amount' => $data['amount'],
-                        'currency' => $payment->currency,
-                        'transaction_id' => $lastAttempt->connector_transaction_id,
-                    ]);
-                }
+            if (!$lastAttempt || !$connectorName) {
+                throw new PaymentException('No successful payment attempt found for refund', 'missing_attempt', 'invalid_request_error', 400);
             }
+
+            $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+                ->where('connector_name', $connectorName)
+                ->first();
+
+            if (!$mca) {
+                throw new PaymentException('Connector no longer available for refund', 'connector_unavailable', 'invalid_request_error', 502);
+            }
+
+            $connector = ConnectorFactory::resolve($mca);
+            $refundResult = $connector->refund([
+                'amount' => $data['amount'],
+                'currency' => $payment->currency,
+                'transaction_id' => $lastAttempt->connector_transaction_id,
+            ]);
 
             $refundStatus = $refundResult['success'] ? RefundStatus::Succeeded : RefundStatus::Failed;
 

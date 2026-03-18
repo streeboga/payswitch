@@ -9,19 +9,19 @@ uses(RefreshDatabase::class);
 
 test('full payment flow: org → merchant → profile → key → connector → payment → confirm → capture → refund', function () {
     Queue::fake();
-    config(['payswitch.admin_api_key' => 'admin_key']);
+    config(['payswitch.admin_api_key' => 'admin_key_test_secret']);
 
     // 1. Create Organization
     $orgResponse = $this->postJson('/api/v1/organizations', [
         'data' => ['type' => 'organizations', 'attributes' => ['name' => 'Flow Test Org']],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
     $orgResponse->assertStatus(201);
     $orgId = $orgResponse->json('data.id');
 
     // 2. Create Merchant Account
     $merchantResponse = $this->postJson('/api/v1/merchants', [
         'data' => ['type' => 'merchants', 'attributes' => ['name' => 'Flow Merchant', 'organization_id' => $orgId]],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
     $merchantResponse->assertStatus(201);
     $merchantKey = $merchantResponse->json('data.id');
 
@@ -31,14 +31,14 @@ test('full payment flow: org → merchant → profile → key → connector → 
             'merchant_id' => $merchantKey,
             'webhook_url' => 'https://example.com/webhook',
         ]],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
     $profileResponse->assertStatus(201);
     $profileKey = $profileResponse->json('data.id');
 
     // 4. Generate API Key
     $keyResponse = $this->postJson("/api/v1/merchants/{$merchantKey}/api-keys", [
         'data' => ['type' => 'api-keys', 'attributes' => ['name' => 'Flow Key']],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
     $keyResponse->assertStatus(201);
     $rawApiKey = $keyResponse->json('data.attributes.api_key');
     expect($rawApiKey)->toStartWith('snd_');
@@ -53,7 +53,7 @@ test('full payment flow: org → merchant → profile → key → connector → 
             'payment_methods_enabled' => [['payment_method' => 'card', 'payment_method_types' => [['payment_method_type' => 'credit', 'card_networks' => ['Visa']]]]],
             'test_mode' => true,
         ]],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
     $connectorResponse->assertStatus(201);
 
     // 6. Create Payment (manual capture)
@@ -124,24 +124,24 @@ test('full payment flow: org → merchant → profile → key → connector → 
 
 test('full flow with automatic capture (create + confirm in one call)', function () {
     Queue::fake();
-    config(['payswitch.admin_api_key' => 'admin_key']);
+    config(['payswitch.admin_api_key' => 'admin_key_test_secret']);
 
     // Setup merchant (abbreviated)
     $org = $this->postJson('/api/v1/organizations', [
         'data' => ['type' => 'organizations', 'attributes' => ['name' => 'Auto Org']],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
 
     $merchant = $this->postJson('/api/v1/merchants', [
         'data' => ['type' => 'merchants', 'attributes' => ['name' => 'Auto Merchant', 'organization_id' => $org->json('data.id')]],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
 
     $profile = $this->postJson('/api/v1/profiles', [
         'data' => ['type' => 'profiles', 'attributes' => ['merchant_id' => $merchant->json('data.id')]],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
 
     $key = $this->postJson("/api/v1/merchants/{$merchant->json('data.id')}/api-keys", [
         'data' => ['type' => 'api-keys', 'attributes' => ['name' => 'Auto Key']],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
 
     $this->postJson("/api/v1/merchants/{$merchant->json('data.id')}/connectors", [
         'data' => ['type' => 'connectors', 'attributes' => [
@@ -150,7 +150,7 @@ test('full flow with automatic capture (create + confirm in one call)', function
             'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
             'test_mode' => true,
         ]],
-    ], ['api-key' => 'admin_key']);
+    ], ['api-key' => 'admin_key_test_secret']);
 
     $rawApiKey = $key->json('data.attributes.api_key');
 

@@ -95,10 +95,9 @@ final class WebhookReceiverController
 
             $webhookSecret = $credentials['webhook_secret'] ?? null;
             if (! $webhookSecret) {
-                // No webhook secret configured — log warning but accept
                 Log::warning("Stripe webhook secret not configured for MCA {$mca->key}");
 
-                return true;
+                return false; // Reject webhooks without configured secret
             }
 
             return $this->verifyStripeSignature($request->getContent(), $signature, $webhookSecret);
@@ -124,6 +123,9 @@ final class WebhookReceiverController
         $signatures = [];
 
         foreach ($elements as $element) {
+            if (! str_contains($element, '=')) {
+                continue;
+            }
             [$key, $value] = explode('=', $element, 2);
             if ($key === 't') {
                 $timestamp = $value;
@@ -177,17 +179,20 @@ final class WebhookReceiverController
         }
 
         $result = DB::transaction(function () use ($payment, $newStatus) {
-            $payment = PaymentIntent::where('id', $payment->id)->lockForUpdate()->first();
-            $previousStatus = $payment->status->value;
+            $lockedPayment = PaymentIntent::where('id', $payment->id)->lockForUpdate()->first();
+            if (! $lockedPayment) {
+                return null;
+            }
+            $previousStatus = $lockedPayment->status->value;
 
-            if (PaymentStateMachine::canTransition($payment->status, $newStatus)) {
-                $payment->update(['status' => $newStatus]);
+            if (PaymentStateMachine::canTransition($lockedPayment->status, $newStatus)) {
+                $lockedPayment->update(['status' => $newStatus]);
 
                 if ($newStatus === PaymentStatus::Succeeded) {
-                    $payment->update(['amount_received' => $payment->amount]);
+                    $lockedPayment->update(['amount_received' => $lockedPayment->amount]);
                 }
 
-                return ['payment' => $payment->fresh(), 'previousStatus' => $previousStatus];
+                return ['payment' => $lockedPayment->fresh(), 'previousStatus' => $previousStatus];
             }
 
             return null;

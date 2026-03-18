@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Concerns\JsonApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentData\Models\Customer;
 use Streeboga\PaymentData\Models\PaymentMethod;
@@ -18,6 +19,11 @@ final class PaymentMethodController extends Controller
 
     public function store(string $customerKey, Request $request): JsonResponse
     {
+        $request->validate([
+            'data.attributes.type' => ['required', 'string', 'in:card,bank_account'],
+            'data.attributes.connector_name' => ['required', 'string'],
+        ]);
+
         $merchantAccountId = $request->attributes->get('merchant_id');
         $customer = Customer::where('key', $customerKey)
             ->where('merchant_account_id', $merchantAccountId)
@@ -36,6 +42,10 @@ final class PaymentMethodController extends Controller
             $brand = $attributes['card_brand'] ?? null;
         }
 
+        $metadata = isset($attributes['metadata']) && is_array($attributes['metadata'])
+            ? array_slice($attributes['metadata'], 0, 50) // limit to 50 keys
+            : null;
+
         $pm = PaymentMethod::create([
             'customer_id' => $customer->id,
             'merchant_account_id' => $merchantAccountId,
@@ -48,7 +58,7 @@ final class PaymentMethodController extends Controller
             'connector_name' => $attributes['connector_name'],
             'connector_token' => $attributes['connector_token'] ?? 'tok_'.bin2hex(random_bytes(16)),
             'is_default' => $attributes['is_default'] ?? false,
-            'metadata' => $attributes['metadata'] ?? null,
+            'metadata' => $metadata,
         ]);
 
         return $this->jsonApiResource(
@@ -107,13 +117,15 @@ final class PaymentMethodController extends Controller
             ->where('merchant_account_id', $merchantAccountId)
             ->firstOrFail();
 
-        // Unmark all other payment methods for this customer
-        PaymentMethod::where('customer_id', $pm->customer_id)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->where('id', '!=', $pm->id)
-            ->update(['is_default' => false]);
+        DB::transaction(function () use ($pm, $merchantAccountId) {
+            // Unmark all other payment methods for this customer
+            PaymentMethod::where('customer_id', $pm->customer_id)
+                ->where('merchant_account_id', $merchantAccountId)
+                ->where('id', '!=', $pm->id)
+                ->update(['is_default' => false]);
 
-        $pm->update(['is_default' => true]);
+            $pm->update(['is_default' => true]);
+        });
 
         return $this->jsonApiResource(
             model: $pm->fresh(),

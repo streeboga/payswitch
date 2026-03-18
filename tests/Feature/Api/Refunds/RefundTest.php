@@ -183,6 +183,35 @@ test('concurrent refund requests do not exceed payment amount', function () {
     $third->assertStatus(201);
 });
 
+test('cannot refund without payment_id', function () {
+    $response = $this->postJson('/api/v1/refunds', [
+        'data' => [
+            'type' => 'refunds',
+            'attributes' => [
+                'amount' => 1000,
+            ],
+        ],
+    ], ['api-key' => $this->rawKey]);
+
+    $response->assertStatus(422);
+});
+
+test('cannot refund with zero amount', function () {
+    $paymentId = createAndConfirmPayment();
+
+    $response = $this->postJson('/api/v1/refunds', [
+        'data' => [
+            'type' => 'refunds',
+            'attributes' => [
+                'payment_id' => $paymentId,
+                'amount' => 0,
+            ],
+        ],
+    ], ['api-key' => $this->rawKey]);
+
+    $response->assertStatus(422);
+});
+
 test('refund uses same connector as original payment', function () {
     $paymentId = createAndConfirmPayment();
 

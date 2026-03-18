@@ -11,6 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\WebhookEvent;
 use Streeboga\PaymentData\Support\WebhookSigner;
@@ -84,9 +85,10 @@ final class DeliverWebhookJob implements ShouldQueue
                 return;
             }
 
+            $error = Str::limit("HTTP {$response->status()}: {$response->body()}", 1000);
             $event->update([
                 'delivery_attempts' => $event->delivery_attempts + 1,
-                'last_error' => "HTTP {$response->status()}: {$response->body()}",
+                'last_error' => $error,
             ]);
         } catch (\Exception $e) {
             $event->update([
@@ -120,19 +122,32 @@ final class DeliverWebhookJob implements ShouldQueue
     private function isUrlSafe(string $url): bool
     {
         $parsed = parse_url($url);
-        $host = $parsed['host'] ?? '';
 
-        if (in_array($host, ['localhost', ''], true)) {
+        // Only allow http/https
+        $scheme = $parsed['scheme'] ?? '';
+        if (! in_array($scheme, ['http', 'https'], true)) {
             return false;
         }
 
-        $ip = gethostbyname($host);
+        // Block URLs with userinfo
+        if (isset($parsed['user']) || isset($parsed['pass'])) {
+            return false;
+        }
 
-        // Check if we have an IP to validate (either resolved or host was already an IP)
-        if (filter_var($ip, FILTER_VALIDATE_IP) !== false) {
-            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-                return false;
-            }
+        $host = $parsed['host'] ?? '';
+        if (empty($host) || $host === 'localhost') {
+            return false;
+        }
+
+        // Check if host is an IP address
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+        }
+
+        // Resolve hostname
+        $ip = gethostbyname($host);
+        if ($ip !== $host && filter_var($ip, FILTER_VALIDATE_IP)) {
+            return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
         }
 
         return true;
