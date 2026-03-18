@@ -122,15 +122,15 @@ final class DeliverWebhookJob implements ShouldQueue
         $parsed = parse_url($url);
         $host = $parsed['host'] ?? '';
 
-        // Block private/internal IPs
-        $ip = gethostbyname($host);
-        if ($ip === $host) {
-            return true; // hostname didn't resolve — let HTTP client handle it
+        if (in_array($host, ['localhost', ''], true)) {
+            return false;
         }
 
-        $blockedRanges = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.2', '172.30.', '172.31.', '192.168.', '127.', '169.254.', '0.'];
-        foreach ($blockedRanges as $range) {
-            if (str_starts_with($ip, $range)) {
+        $ip = gethostbyname($host);
+
+        // Check if we have an IP to validate (either resolved or host was already an IP)
+        if (filter_var($ip, FILTER_VALIDATE_IP) !== false) {
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
                 return false;
             }
         }
