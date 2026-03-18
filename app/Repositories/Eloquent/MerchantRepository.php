@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Builders\BusinessProfileQueryBuilder;
 use App\Builders\MerchantAccountQueryBuilder;
 use App\Builders\MerchantConnectorQueryBuilder;
 use App\Builders\OrganizationQueryBuilder;
@@ -31,6 +32,11 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
     private function connectorQuery(): MerchantConnectorQueryBuilder
     {
         return MerchantConnectorQueryBuilder::make();
+    }
+
+    private function profileQuery(): BusinessProfileQueryBuilder
+    {
+        return BusinessProfileQueryBuilder::make();
     }
 
     public function createOrganization(array $attributes): Organization
@@ -72,10 +78,7 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function findProfileByKey(string $key): BusinessProfile
     {
-        return BusinessProfile::with('merchantAccount')
-            ->withCount(['connectorAccounts', 'routingRules'])
-            ->where('key', $key)
-            ->firstOrFail();
+        return $this->profileQuery()->withMerchantAccount()->withCounts()->whereKey($key)->firstOrFail();
     }
 
     public function findConnectorByKey(string $key): MerchantConnectorAccount
@@ -139,7 +142,7 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function findProfileByMerchant(int|string $merchantAccountId): ?BusinessProfile
     {
-        return BusinessProfile::where('merchant_account_id', $merchantAccountId)->first();
+        return $this->profileQuery()->forMerchant($merchantAccountId)->first();
     }
 
     public function findMerchantByKeyOrNull(string $key): ?MerchantAccount
@@ -188,10 +191,7 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function listProfilesByMerchant(int|string $merchantAccountId): Collection
     {
-        return BusinessProfile::with('merchantAccount')
-            ->withCount(['connectorAccounts', 'routingRules'])
-            ->where('merchant_account_id', $merchantAccountId)
-            ->get();
+        return $this->profileQuery()->withMerchantAccount()->withCounts()->forMerchant($merchantAccountId)->get();
     }
 
     public function updateProfile(BusinessProfile $profile, array $attributes): BusinessProfile

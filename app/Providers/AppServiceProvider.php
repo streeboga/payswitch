@@ -15,6 +15,8 @@ use App\Policies\ConnectorPolicy;
 use App\Policies\CustomerPolicy;
 use App\Policies\DisputePolicy;
 use App\Policies\EventLogPolicy;
+use App\Policies\MerchantAccountPolicy;
+use App\Policies\OrganizationPolicy;
 use App\Policies\PaymentPolicy;
 use App\Policies\RoutingRulePolicy;
 use App\Policies\TestPaymentPolicy;
@@ -84,6 +86,8 @@ class AppServiceProvider extends ServiceProvider
     private function registerMerchantPolicies(): void
     {
         $map = [
+            'organization' => OrganizationPolicy::class,
+            'merchant-account' => MerchantAccountPolicy::class,
             'payment' => PaymentPolicy::class,
             'customer' => CustomerPolicy::class,
             'connector' => ConnectorPolicy::class,

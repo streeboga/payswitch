@@ -14,6 +14,7 @@ use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Merchants', description: 'Merchant account management for the dashboard', weight: 20)]
 final class DashboardMerchantController extends Controller
@@ -78,6 +79,8 @@ final class DashboardMerchantController extends Controller
     #[Response(422, description: 'Validation error')]
     public function update(string $merchantKey, UpdateDashboardMerchantRequest $request): JsonResponse
     {
+        Gate::authorize('merchant-account.update');
+
         $merchant = $this->merchantService->updateMerchant($merchantKey, $request->toDto());
 
         return (new MerchantAccountResource($merchant))->toResponse($request);
@@ -93,6 +96,8 @@ final class DashboardMerchantController extends Controller
     #[Response(404, description: 'Merchant not found')]
     public function destroy(string $merchantKey): JsonResponse
     {
+        Gate::authorize('merchant-account.delete');
+
         $this->merchantService->deleteMerchant($merchantKey);
 
         return response()->json(null, 204);

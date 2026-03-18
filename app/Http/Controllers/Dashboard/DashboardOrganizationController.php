@@ -15,6 +15,7 @@ use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Organizations', description: 'Organization management for the dashboard', weight: 19)]
 final class DashboardOrganizationController extends Controller
@@ -79,6 +80,8 @@ final class DashboardOrganizationController extends Controller
     #[Response(422, description: 'Validation error')]
     public function update(string $orgKey, UpdateDashboardOrganizationRequest $request): JsonResponse
     {
+        Gate::authorize('organization.update');
+
         $org = $this->merchantService->updateOrganization($orgKey, $request->toDto());
 
         return (new OrganizationResource($org))->toResponse($request);
@@ -94,6 +97,8 @@ final class DashboardOrganizationController extends Controller
     #[Response(404, description: 'Organization not found')]
     public function destroy(string $orgKey): JsonResponse
     {
+        Gate::authorize('organization.delete');
+
         $this->merchantService->deleteOrganization($orgKey);
 
         return response()->json(null, 204);
