@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Builders\MerchantAccountQueryBuilder;
 use App\Builders\MerchantConnectorQueryBuilder;
+use App\Builders\OrganizationQueryBuilder;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -16,6 +18,16 @@ use Streeboga\PaymentData\Models\Organization;
 
 final readonly class MerchantRepository implements MerchantRepositoryInterface
 {
+    private function orgQuery(): OrganizationQueryBuilder
+    {
+        return OrganizationQueryBuilder::make();
+    }
+
+    private function merchantQuery(): MerchantAccountQueryBuilder
+    {
+        return MerchantAccountQueryBuilder::make();
+    }
+
     private function connectorQuery(): MerchantConnectorQueryBuilder
     {
         return MerchantConnectorQueryBuilder::make();
@@ -50,15 +62,12 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function findOrganizationByKey(string $key): Organization
     {
-        return Organization::withCount('merchantAccounts')->where('key', $key)->firstOrFail();
+        return $this->orgQuery()->withMerchantCount()->whereKey($key)->firstOrFail();
     }
 
     public function findMerchantByKey(string $key): MerchantAccount
     {
-        return MerchantAccount::with('organization')
-            ->withCount(['businessProfiles', 'connectorAccounts'])
-            ->where('key', $key)
-            ->firstOrFail();
+        return $this->merchantQuery()->withOrganization()->withCounts()->whereKey($key)->firstOrFail();
     }
 
     public function findProfileByKey(string $key): BusinessProfile
@@ -135,7 +144,7 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function findMerchantByKeyOrNull(string $key): ?MerchantAccount
     {
-        return MerchantAccount::where('key', $key)->first();
+        return $this->merchantQuery()->whereKey($key)->first();
     }
 
     public function findConnectorByMerchantAndKeyOrNull(int|string $merchantAccountId, string $connectorKey): ?MerchantConnectorAccount
@@ -145,15 +154,12 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function listOrganizations(): Collection
     {
-        return Organization::withCount('merchantAccounts')->orderByDesc('created_at')->get();
+        return $this->orgQuery()->withMerchantCount()->latest()->get();
     }
 
     public function listAllMerchants(): Collection
     {
-        return MerchantAccount::with('organization')
-            ->withCount(['businessProfiles', 'connectorAccounts'])
-            ->orderByDesc('created_at')
-            ->get();
+        return $this->merchantQuery()->withOrganization()->withCounts()->latest()->get();
     }
 
     public function listApiKeysByMerchant(int|string $merchantAccountId): Collection
