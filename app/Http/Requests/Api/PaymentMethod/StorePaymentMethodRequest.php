@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\PaymentMethod;
 
+use App\DataTransferObjects\PaymentMethod\CreatePaymentMethodData;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class StorePaymentMethodRequest extends FormRequest
@@ -28,5 +29,10 @@ final class StorePaymentMethodRequest extends FormRequest
     public function validatedAttributes(): array
     {
         return $this->validated('data.attributes') ?? [];
+    }
+
+    public function toDto(): CreatePaymentMethodData
+    {
+        return CreatePaymentMethodData::from($this->validated('data.attributes') ?? []);
     }
 }
