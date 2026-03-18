@@ -10,6 +10,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\WebhookEvent;
 use Streeboga\PaymentData\Support\WebhookSigner;
@@ -42,12 +43,26 @@ final class DeliverWebhookJob implements ShouldQueue
             return;
         }
 
+        if (! $this->isUrlSafe($profile->webhook_url)) {
+            Log::warning("Blocked webhook delivery to unsafe URL for event {$this->webhookEventId}");
+            $event->update(['last_error' => 'Webhook URL blocked: internal/private address']);
+
+            return;
+        }
+
+        if (! $profile->payment_response_hash_key) {
+            Log::warning("No webhook signing key for merchant {$event->merchant_account_id}");
+            $event->update(['last_error' => 'No signing key configured']);
+
+            return;
+        }
+
         $payload = json_encode([
             'event_id' => $event->key,
             'event_type' => $event->event_type,
             'content' => $event->content,
             'updated' => $event->updated_at?->toIso8601String(),
-        ]);
+        ], JSON_THROW_ON_ERROR);
 
         $signature = WebhookSigner::sign($payload, $profile->payment_response_hash_key);
 
@@ -89,5 +104,37 @@ final class DeliverWebhookJob implements ShouldQueue
 
         // Rethrow to trigger retry with backoff
         throw new \RuntimeException("Webhook delivery failed for event {$event->key}");
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $event = WebhookEvent::find($this->webhookEventId);
+        if ($event) {
+            $event->update(['last_error' => 'Permanently failed: '.$e->getMessage()]);
+        }
+        Log::error("Webhook delivery permanently failed for event {$this->webhookEventId}", [
+            'error' => $e->getMessage(),
+        ]);
+    }
+
+    private function isUrlSafe(string $url): bool
+    {
+        $parsed = parse_url($url);
+        $host = $parsed['host'] ?? '';
+
+        // Block private/internal IPs
+        $ip = gethostbyname($host);
+        if ($ip === $host) {
+            return true; // hostname didn't resolve — let HTTP client handle it
+        }
+
+        $blockedRanges = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.2', '172.30.', '172.31.', '192.168.', '127.', '169.254.', '0.'];
+        foreach ($blockedRanges as $range) {
+            if (str_starts_with($ip, $range)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

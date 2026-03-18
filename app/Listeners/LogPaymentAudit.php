@@ -17,7 +17,7 @@ class LogPaymentAudit
             'payment_intent_id' => $payment->id,
             'merchant_account_id' => $payment->merchant_account_id,
             'action' => 'status_changed',
-            'previous_status' => $payment->getOriginal('status')?->value ?? $payment->status->value,
+            'previous_status' => $event->previousStatus ?? $payment->status->value,
             'new_status' => $payment->status->value,
             'created_at' => now(),
         ]);

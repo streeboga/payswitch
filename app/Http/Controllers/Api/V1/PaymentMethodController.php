@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Concerns\JsonApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentData\Models\Customer;
 use Streeboga\PaymentData\Models\PaymentMethod;
 
@@ -24,9 +25,16 @@ final class PaymentMethodController extends Controller
 
         $attributes = $request->input('data.attributes', []);
 
-        $cardNumber = $attributes['card_number'] ?? null;
-        $brand = $cardNumber ? self::detectBrand($cardNumber) : null;
-        $last4 = $cardNumber ? substr($cardNumber, -4) : null;
+        if (isset($attributes['card_number'])) {
+            Log::warning('Full card number received in payment method creation — should use client-side tokenization in production');
+            $cardNumber = $attributes['card_number'];
+            $last4 = substr($cardNumber, -4);
+            $brand = self::detectBrand($cardNumber);
+            // Don't store or pass card_number further
+        } else {
+            $last4 = $attributes['card_last4'] ?? null;
+            $brand = $attributes['card_brand'] ?? null;
+        }
 
         $pm = PaymentMethod::create([
             'customer_id' => $customer->id,

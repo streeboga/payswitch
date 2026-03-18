@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\Customer;
 
 final class CustomerService
@@ -21,6 +22,12 @@ final class CustomerService
         ];
 
         if ($customId !== null) {
+            if (strlen($customId) > 64 || strlen($customId) < 1) {
+                throw new PaymentException('Customer ID must be 1-64 characters', 'invalid_customer_id', 'invalid_request_error', 400);
+            }
+            if (Customer::where('key', $customId)->where('merchant_account_id', $merchantAccountId)->exists()) {
+                throw new PaymentException('Customer ID already exists', 'duplicate_customer_id', 'invalid_request_error', 409);
+            }
             $attributes['key'] = $customId;
         }
 

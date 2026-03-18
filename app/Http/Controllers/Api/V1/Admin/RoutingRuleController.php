@@ -18,6 +18,14 @@ final class RoutingRuleController extends Controller
 
     public function store(Request $request, string $merchantKey): JsonResponse
     {
+        $request->validate([
+            'data.attributes.type' => ['required', 'string', 'in:priority,rule_based,volume_split'],
+            'data.attributes.name' => ['required', 'string', 'max:255'],
+            'data.attributes.rules' => ['required', 'array'],
+            'data.attributes.active' => ['sometimes', 'boolean'],
+            'data.attributes.priority' => ['sometimes', 'integer', 'min:0'],
+        ]);
+
         $merchant = MerchantAccount::where('key', $merchantKey)->firstOrFail();
         $attrs = $request->input('data.attributes', []);
 

@@ -111,7 +111,7 @@ final class RoutingService
 
     private function evaluatePriorityRule(array $config, int|string $merchantAccountId): ?MerchantConnectorAccount
     {
-        $connectorNames = $config['connectors'] ?? [];
+        $connectorNames = array_filter($config['connectors'] ?? [], fn ($n) => ! empty($n));
 
         foreach ($connectorNames as $name) {
             $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
@@ -143,8 +143,8 @@ final class RoutingService
             }
 
             $matches = match ($condition['operator']) {
-                '==' => $value == $condition['value'],
-                '!=' => $value != $condition['value'],
+                '==' => $value === $condition['value'],
+                '!=' => $value !== $condition['value'],
                 '>' => $value > $condition['value'],
                 '<' => $value < $condition['value'],
                 '>=' => $value >= $condition['value'],

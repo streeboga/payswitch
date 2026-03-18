@@ -22,8 +22,18 @@ final class PaymentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'data.attributes.amount' => ['required', 'integer', 'min:1'],
+            'data.attributes.amount' => ['required', 'integer', 'min:1', 'max:999999999999'],
             'data.attributes.currency' => ['required', 'string', 'size:3'],
+            'data.attributes.capture_method' => ['sometimes', 'string', 'in:automatic,manual'],
+            'data.attributes.authentication_type' => ['sometimes', 'string', 'in:three_ds,no_three_ds'],
+            'data.attributes.customer_id' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'data.attributes.description' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'data.attributes.return_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
+            'data.attributes.metadata' => ['sometimes', 'nullable', 'array', 'max:50'],
+            'data.attributes.session_expiry' => ['sometimes', 'integer', 'min:60', 'max:86400'],
+            'data.attributes.confirm' => ['sometimes', 'boolean'],
+            'data.attributes.payment_method' => ['required_if:data.attributes.confirm,true', 'string'],
+            'data.attributes.payment_method_data' => ['required_if:data.attributes.confirm,true', 'array'],
         ]);
 
         $attributes = $request->input('data.attributes', []);
@@ -58,6 +68,11 @@ final class PaymentController extends Controller
 
     public function confirm(string $paymentKey, Request $request): JsonResponse
     {
+        $request->validate([
+            'data.attributes.payment_method' => ['required', 'string'],
+            'data.attributes.payment_method_data' => ['required', 'array'],
+        ]);
+
         $merchantAccountId = $request->attributes->get('merchant_id');
         $attributes = $request->input('data.attributes', []);
 

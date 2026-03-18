@@ -13,5 +13,6 @@ class PaymentStatusChanged
 
     public function __construct(
         public readonly PaymentIntent $payment,
+        public readonly ?string $previousStatus = null,
     ) {}
 }

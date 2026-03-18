@@ -47,11 +47,31 @@ final class PaymentService
 
     public function confirm(string $paymentKey, array $data, int|string $merchantAccountId): PaymentIntent
     {
-        return DB::transaction(function () use ($paymentKey, $data, $merchantAccountId) {
+        $result = DB::transaction(function () use ($paymentKey, $data, $merchantAccountId) {
             $payment = PaymentIntent::where('key', $paymentKey)
                 ->where('merchant_account_id', $merchantAccountId)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            $previousStatus = $payment->status->value;
+
+            if ($payment->expires_on && $payment->expires_on->isPast()) {
+                // Transition to expired
+                if (PaymentStateMachine::canTransition($payment->status, PaymentStatus::Expired)) {
+                    $payment->update(['status' => PaymentStatus::Expired]);
+                }
+                throw new PaymentException('Payment session has expired', 'payment_expired', 'invalid_request_error', 400);
+            }
+
+            // Check payment is in confirmable state BEFORE calling PSP
+            if (! in_array($payment->status, [PaymentStatus::RequiresPaymentMethod, PaymentStatus::RequiresConfirmation])) {
+                throw new PaymentException(
+                    "Payment cannot be confirmed in status '{$payment->status->value}'",
+                    'invalid_state_transition',
+                    'invalid_request_error',
+                    400,
+                );
+            }
 
             // Check for saved payment method
             $paymentMethodId = $data['payment_method_data']['payment_method_id'] ?? null;
@@ -163,19 +183,23 @@ final class PaymentService
                 }
             }
 
-            event(new PaymentStatusChanged($payment));
-
-            return $payment->fresh();
+            return ['payment' => $payment->fresh(), 'previousStatus' => $previousStatus];
         });
+
+        event(new PaymentStatusChanged($result['payment'], $result['previousStatus']));
+
+        return $result['payment'];
     }
 
     public function capture(string $paymentKey, int $amount, int|string $merchantAccountId): PaymentIntent
     {
-        return DB::transaction(function () use ($paymentKey, $amount, $merchantAccountId) {
+        $result = DB::transaction(function () use ($paymentKey, $amount, $merchantAccountId) {
             $payment = PaymentIntent::where('key', $paymentKey)
                 ->where('merchant_account_id', $merchantAccountId)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            $previousStatus = $payment->status->value;
 
             if ($payment->status !== PaymentStatus::RequiresCapture) {
                 throw new \Streeboga\PaymentData\Exceptions\InvalidStateTransitionException(
@@ -184,27 +208,61 @@ final class PaymentService
                 );
             }
 
+            if ($amount <= 0) {
+                throw new PaymentException(
+                    'Capture amount must be positive',
+                    'invalid_amount',
+                    'invalid_request_error',
+                    400,
+                );
+            }
+
             if ($amount > $payment->amount_capturable) {
                 throw new PaymentException(
                     "Capture amount ({$amount}) exceeds capturable amount ({$payment->amount_capturable})",
                     'amount_exceeds_capturable',
-                    'payment_error'
+                    'invalid_request_error',
+                    400,
                 );
             }
 
-            // Get the last successful attempt to find the connector
+            // Find connector from last successful attempt
             $lastAttempt = $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
-            if ($lastAttempt) {
-                $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-                    ->where('connector_name', $lastAttempt->connector)
-                    ->first();
-                if ($mca) {
-                    $connector = ConnectorFactory::resolve($mca);
-                    $connector->capture([
-                        'amount' => $amount,
-                        'transaction_id' => $lastAttempt->connector_transaction_id,
-                    ]);
-                }
+            if (! $lastAttempt) {
+                throw new PaymentException(
+                    'No successful payment attempt found for capture',
+                    'no_attempt',
+                    'invalid_request_error',
+                    400,
+                );
+            }
+
+            $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+                ->where('connector_name', $lastAttempt->connector)
+                ->first();
+
+            if (! $mca) {
+                throw new PaymentException(
+                    'Connector not found for capture',
+                    'connector_not_found',
+                    'invalid_request_error',
+                    400,
+                );
+            }
+
+            $connector = ConnectorFactory::resolve($mca);
+            $result = $connector->capture([
+                'amount' => $amount,
+                'transaction_id' => $lastAttempt->connector_transaction_id,
+            ]);
+
+            if (! $result['success']) {
+                throw new PaymentException(
+                    $result['message'] ?? 'Capture failed at connector',
+                    'capture_failed',
+                    'connector_error',
+                    502,
+                );
             }
 
             PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Succeeded);
@@ -214,26 +272,33 @@ final class PaymentService
                 'amount_capturable' => 0,
             ]);
 
-            event(new PaymentStatusChanged($payment));
-
-            return $payment->fresh();
+            return ['payment' => $payment->fresh(), 'previousStatus' => $previousStatus];
         });
+
+        event(new PaymentStatusChanged($result['payment'], $result['previousStatus']));
+
+        return $result['payment'];
     }
 
     public function cancel(string $paymentKey, int|string $merchantAccountId): PaymentIntent
     {
-        return DB::transaction(function () use ($paymentKey, $merchantAccountId) {
+        $result = DB::transaction(function () use ($paymentKey, $merchantAccountId) {
             $payment = PaymentIntent::where('key', $paymentKey)
                 ->where('merchant_account_id', $merchantAccountId)
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            $previousStatus = $payment->status->value;
+
             PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Cancelled);
 
             $payment->update(['status' => PaymentStatus::Cancelled]);
-            event(new PaymentStatusChanged($payment));
 
-            return $payment->fresh();
+            return ['payment' => $payment->fresh(), 'previousStatus' => $previousStatus];
         });
+
+        event(new PaymentStatusChanged($result['payment'], $result['previousStatus']));
+
+        return $result['payment'];
     }
 }

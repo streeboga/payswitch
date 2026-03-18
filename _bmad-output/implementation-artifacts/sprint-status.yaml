@@ -1,0 +1,76 @@
+# Sprint Status — payswitch
+generated: "2026-03-18T00:00:00Z"
+last_updated: "2026-03-18T23:59:00Z"
+project: payswitch
+project_key: PS
+tracking_system: bmad-epics
+story_location: "_bmad-output/planning-artifacts/epics.md"
+
+development_status:
+  # Epic 1: API Key Authentication & Merchant Resolution
+  epic-1: done
+  1-1-db-schema-auth: done
+  1-2-api-key-middleware: done
+  1-3-admin-key-guard: done
+  1-4-secret-publishable-guard: done
+  1-5-config-error-format: done
+
+  # Epic 2: Merchant Provisioning
+  epic-2: done
+  2-1-create-organization: done
+  2-2-create-merchant-account: done
+  2-3-create-business-profile: done
+  2-4-api-key-management: done
+
+  # Epic 3: Connector Management & PSP Integration
+  epic-3: done
+  3-1-connector-crud: done
+  3-2-omnipay-abstraction: done
+  3-3-stripe-connector: done
+  3-4-yookassa-connector: backlog
+  3-5-cloudpayments-connector: done
+  3-6-test-connector: done
+
+  # Epic 4: Payment Creation & State Machine
+  epic-4: done
+  4-1-payment-state-machine: done
+  4-2-create-payment-endpoint: done
+
+  # Epic 5: Payment Lifecycle Operations
+  epic-5: done
+  5-1-confirm-payment: done
+  5-2-capture-payment: done
+  5-3-cancel-get-payment: done
+
+  # Epic 6: Customer Management
+  epic-6: done
+  6-1-customer-crud: done
+
+  # Epic 7: Refund Operations
+  epic-7: done
+  7-1-create-retrieve-refunds: done
+
+  # Epic 8: Payment Routing
+  epic-8: done
+  8-1-routing-service: done
+  8-2-smart-routing-rules: done
+
+  # Epic 9: Webhook Engine
+  epic-9: done
+  9-1-webhook-creation-signing: done
+  9-2-webhook-delivery-retry: done
+  9-3-incoming-webhook-handler: done
+
+  # Post-MVP Features (implemented)
+  saved-payment-methods: done
+  rate-limiting: done
+  scramble-api-docs: done
+  dashboard-overview: done
+  dashboard-payments: done
+  dashboard-merchants: done
+  seed-command: done
+
+  # Remaining
+  yookassa-connector: backlog
+  3ds-redirect-flow: backlog
+  epic-1-retrospective: optional

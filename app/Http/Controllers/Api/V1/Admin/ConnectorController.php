@@ -77,6 +77,14 @@ final class ConnectorController extends Controller
 
     public function update(Request $request, string $merchantKey, string $connectorKey): JsonResponse
     {
+        $request->validate([
+            'data.attributes.connector_name' => ['sometimes', 'string'],
+            'data.attributes.disabled' => ['sometimes', 'boolean'],
+            'data.attributes.test_mode' => ['sometimes', 'boolean'],
+            'data.attributes.connector_account_details' => ['sometimes', 'array'],
+            'data.attributes.payment_methods_enabled' => ['sometimes', 'array'],
+        ]);
+
         $merchant = MerchantAccount::where('key', $merchantKey)->firstOrFail();
 
         $connector = MerchantConnectorAccount::where('merchant_account_id', $merchant->id)

@@ -139,6 +139,50 @@ test('can retrieve refund', function () {
         ->assertJsonPath('data.attributes.amount', 1000);
 });
 
+test('cannot over-refund with multiple partial refunds', function () {
+    $paymentId = createAndConfirmPayment();
+
+    // First partial refund: 4000 out of 6540
+    $first = $this->postJson('/api/v1/refunds', [
+        'data' => ['type' => 'refunds', 'attributes' => ['payment_id' => $paymentId, 'amount' => 4000]],
+    ], ['api-key' => $this->rawKey]);
+    $first->assertStatus(201);
+
+    // Second partial refund: 2540 out of 6540 — should succeed (total = 6540)
+    $second = $this->postJson('/api/v1/refunds', [
+        'data' => ['type' => 'refunds', 'attributes' => ['payment_id' => $paymentId, 'amount' => 2540]],
+    ], ['api-key' => $this->rawKey]);
+    $second->assertStatus(201);
+
+    // Third refund: 1 more — should fail (total would be 6541 > 6540)
+    $third = $this->postJson('/api/v1/refunds', [
+        'data' => ['type' => 'refunds', 'attributes' => ['payment_id' => $paymentId, 'amount' => 1]],
+    ], ['api-key' => $this->rawKey]);
+    $third->assertStatus(400);
+});
+
+test('concurrent refund requests do not exceed payment amount', function () {
+    $paymentId = createAndConfirmPayment();
+
+    // First refund takes most of the amount
+    $first = $this->postJson('/api/v1/refunds', [
+        'data' => ['type' => 'refunds', 'attributes' => ['payment_id' => $paymentId, 'amount' => 5000]],
+    ], ['api-key' => $this->rawKey]);
+    $first->assertStatus(201);
+
+    // Second refund tries to take more than remaining — should fail
+    $second = $this->postJson('/api/v1/refunds', [
+        'data' => ['type' => 'refunds', 'attributes' => ['payment_id' => $paymentId, 'amount' => 2000]],
+    ], ['api-key' => $this->rawKey]);
+    $second->assertStatus(400);
+
+    // Verify remaining can still be refunded
+    $third = $this->postJson('/api/v1/refunds', [
+        'data' => ['type' => 'refunds', 'attributes' => ['payment_id' => $paymentId, 'amount' => 1540]],
+    ], ['api-key' => $this->rawKey]);
+    $third->assertStatus(201);
+});
+
 test('refund uses same connector as original payment', function () {
     $paymentId = createAndConfirmPayment();
 
