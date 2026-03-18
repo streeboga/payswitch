@@ -21,7 +21,7 @@ test('ConnectorFactory throws for unknown connector', function () {
     $mca->shouldReceive('getAttribute')->with('connector_name')->andReturn('unknown_gateway');
 
     ConnectorFactory::resolve($mca);
-})->throws(\InvalidArgumentException::class, 'Unknown connector: unknown_gateway');
+})->throws(InvalidArgumentException::class, 'Unknown connector: unknown_gateway');
 
 test('StripeConnector getName returns stripe', function () {
     $mca = Mockery::mock(MerchantConnectorAccount::class)->makePartial();

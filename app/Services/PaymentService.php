@@ -5,26 +5,26 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Events\PaymentStatusChanged;
-use App\Services\RoutingService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Exceptions\InvalidStateTransitionException;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
-use Illuminate\Support\Facades\Log;
 
 final class PaymentService
 {
     public function create(array $data, int|string $merchantAccountId): PaymentIntent
     {
-        if (!isset($data['amount']) || !is_int($data['amount']) || $data['amount'] <= 0) {
+        if (! isset($data['amount']) || ! is_int($data['amount']) || $data['amount'] <= 0) {
             throw new PaymentException('Amount must be a positive integer', 'invalid_amount', 'invalid_request_error', 400);
         }
-        if (empty($data['currency']) || !preg_match('/^[A-Z]{3}$/i', $data['currency'])) {
+        if (empty($data['currency']) || ! preg_match('/^[A-Z]{3}$/i', $data['currency'])) {
             throw new PaymentException('Currency must be a valid 3-letter ISO code', 'invalid_currency', 'invalid_request_error', 400);
         }
         $expiry = (int) ($data['session_expiry'] ?? config('payswitch.payment.session_expiry', 900));
@@ -240,8 +240,8 @@ final class PaymentService
 
             $previousStatus = $payment->status->value;
 
-            if (!in_array($payment->status, [PaymentStatus::RequiresCapture, PaymentStatus::PartiallyCapturedAndCapturable], true)) {
-                throw new \Streeboga\PaymentData\Exceptions\InvalidStateTransitionException(
+            if (! in_array($payment->status, [PaymentStatus::RequiresCapture, PaymentStatus::PartiallyCapturedAndCapturable], true)) {
+                throw new InvalidStateTransitionException(
                     $payment->status->value,
                     PaymentStatus::Succeeded->value,
                 );
@@ -276,7 +276,7 @@ final class PaymentService
                 );
             }
 
-            if (!$lastAttempt->connector_transaction_id) {
+            if (! $lastAttempt->connector_transaction_id) {
                 throw new PaymentException('Missing transaction ID for capture', 'missing_transaction_id', 'invalid_request_error', 500);
             }
 

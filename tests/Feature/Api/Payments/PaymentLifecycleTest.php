@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use Streeboga\PaymentConnectors\ConnectorFactory;
+use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
+use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Support\IdGenerator;
 
 uses(RefreshDatabase::class);
@@ -295,18 +298,39 @@ test('cannot cancel succeeded payment', function () {
 
 test('connector exception during confirm triggers fallback', function () {
     // Register a throwing connector
-    $throwingConnectorClass = new class([]) implements \Streeboga\PaymentData\Contracts\ConnectorInterface {
+    $throwingConnectorClass = new class([]) implements ConnectorInterface
+    {
         public function __construct(?array $credentials = []) {}
-        public function getName(): string { return 'throwing'; }
-        public function authorize(array $params): array { throw new \RuntimeException('Connection timeout'); }
-        public function purchase(array $params): array { throw new \RuntimeException('Connection timeout'); }
-        public function capture(array $params): array { return ['success' => true, 'transaction_id' => 'x']; }
-        public function refund(array $params): array { return ['success' => true, 'transaction_id' => 'x']; }
+
+        public function getName(): string
+        {
+            return 'throwing';
+        }
+
+        public function authorize(array $params): array
+        {
+            throw new RuntimeException('Connection timeout');
+        }
+
+        public function purchase(array $params): array
+        {
+            throw new RuntimeException('Connection timeout');
+        }
+
+        public function capture(array $params): array
+        {
+            return ['success' => true, 'transaction_id' => 'x'];
+        }
+
+        public function refund(array $params): array
+        {
+            return ['success' => true, 'transaction_id' => 'x'];
+        }
     };
-    \Streeboga\PaymentConnectors\ConnectorFactory::register('throwing', get_class($throwingConnectorClass));
+    ConnectorFactory::register('throwing', get_class($throwingConnectorClass));
 
     // Create the throwing connector MCA with higher priority
-    $profile = \Streeboga\PaymentData\Models\BusinessProfile::where('merchant_account_id', $this->merchant->id)->first();
+    $profile = BusinessProfile::where('merchant_account_id', $this->merchant->id)->first();
     MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $profile->id,
@@ -346,7 +370,7 @@ test('confirm with expired payment returns error', function () {
     $paymentId = $create->json('data.id');
 
     // Manually expire the payment
-    \Streeboga\PaymentData\Models\PaymentIntent::where('key', $paymentId)
+    PaymentIntent::where('key', $paymentId)
         ->update(['expires_on' => now()->subMinutes(5)]);
 
     $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [

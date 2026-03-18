@@ -76,7 +76,7 @@ final class PayswitchSeedCommand extends Command
             ],
             'test_mode' => true,
         ]);
-        $this->line("Stripe Connector: <info>created (test mode)</info>");
+        $this->line('Stripe Connector: <info>created (test mode)</info>');
 
         $this->newLine();
         $this->info('Demo environment ready! Use the API key above to make requests.');

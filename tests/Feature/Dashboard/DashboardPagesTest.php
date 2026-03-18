@@ -1,13 +1,14 @@
 <?php
+
 declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Streeboga\PaymentData\Enums\CaptureMethod;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Models\PaymentIntent;
-use Streeboga\PaymentData\Enums\PaymentStatus;
-use Streeboga\PaymentData\Enums\CaptureMethod;
 
 uses(RefreshDatabase::class);
 

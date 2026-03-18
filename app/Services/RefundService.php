@@ -19,10 +19,10 @@ final class RefundService
 {
     public function create(array $data, int|string $merchantAccountId): Refund
     {
-        if (!isset($data['payment_id'])) {
+        if (! isset($data['payment_id'])) {
             throw new PaymentException('payment_id is required', 'missing_payment_id', 'invalid_request_error', 400);
         }
-        if (!isset($data['amount']) || !is_numeric($data['amount'])) {
+        if (! isset($data['amount']) || ! is_numeric($data['amount'])) {
             throw new PaymentException('Amount is required and must be numeric', 'missing_amount', 'invalid_request_error', 400);
         }
 
@@ -58,7 +58,7 @@ final class RefundService
                 throw new PaymentException('Amount overflow', 'amount_overflow', 'invalid_request_error', 400);
             }
 
-            if ($data['amount'] + $totalRefunded > $payment->amount_received) {
+            if ($payment->amount_received < $data['amount'] + $totalRefunded) {
                 throw new PaymentException(
                     "Refund amount ({$data['amount']}) plus already refunded ({$totalRefunded}) exceeds payment amount ({$payment->amount_received})",
                     'refund_exceeds_payment',
@@ -71,7 +71,7 @@ final class RefundService
             $lastAttempt = $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
             $connectorName = $payment->connector;
 
-            if (!$lastAttempt || !$connectorName) {
+            if (! $lastAttempt || ! $connectorName) {
                 throw new PaymentException('No successful payment attempt found for refund', 'missing_attempt', 'invalid_request_error', 400);
             }
 
@@ -79,7 +79,7 @@ final class RefundService
                 ->where('connector_name', $connectorName)
                 ->first();
 
-            if (!$mca) {
+            if (! $mca) {
                 throw new PaymentException('Connector no longer available for refund', 'connector_unavailable', 'invalid_request_error', 502);
             }
 

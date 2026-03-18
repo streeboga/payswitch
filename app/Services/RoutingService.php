@@ -208,6 +208,7 @@ final class RoutingService
                 if ($mca) {
                     return $mca;
                 }
+
                 // If disabled, continue to next split entry instead of returning null
                 continue;
             }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\Customer;
 
@@ -34,7 +35,7 @@ final class CustomerService
         return Customer::create($attributes);
     }
 
-    public function list(int|string $merchantAccountId): \Illuminate\Database\Eloquent\Collection
+    public function list(int|string $merchantAccountId): Collection
     {
         return Customer::where('merchant_account_id', $merchantAccountId)->get();
     }

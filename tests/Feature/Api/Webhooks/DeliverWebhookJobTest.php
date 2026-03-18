@@ -43,7 +43,7 @@ test('marks delivery attempt on failure', function () {
 
     try {
         $job->handle();
-    } catch (\RuntimeException $e) {
+    } catch (RuntimeException $e) {
         // Expected — triggers retry
     }
 
@@ -95,7 +95,7 @@ test('sends x-webhook-signature-512 header', function () {
 
 test('blocks SSRF to private IPs', function () {
     $job = new DeliverWebhookJob($this->event->id);
-    $reflection = new \ReflectionMethod($job, 'isUrlSafe');
+    $reflection = new ReflectionMethod($job, 'isUrlSafe');
 
     expect($reflection->invoke($job, 'https://example.com/webhook'))->toBeTrue();
     expect($reflection->invoke($job, 'http://localhost/webhook'))->toBeFalse();

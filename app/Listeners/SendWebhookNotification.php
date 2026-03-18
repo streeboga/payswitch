@@ -6,6 +6,7 @@ namespace App\Listeners;
 
 use App\Events\PaymentStatusChanged;
 use App\Jobs\DeliverWebhookJob;
+use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Models\WebhookEvent;
 
 class SendWebhookNotification
@@ -15,7 +16,7 @@ class SendWebhookNotification
         $payment = $event->payment;
 
         $eventType = match ($payment->status->value) {
-            'succeeded' => $payment->capture_method === \Streeboga\PaymentData\Enums\CaptureMethod::Manual
+            'succeeded' => $payment->capture_method === CaptureMethod::Manual
                 ? 'payment_captured'
                 : 'payment_succeeded',
             'cancelled' => 'payment_cancelled',
