@@ -1,0 +1,1285 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\BusinessProfile\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/PayswitchSeedCommand.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\Customer\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/PayswitchSeedCommand.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantAccount\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Console/Commands/PayswitchSeedCommand.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantAccount\:\:\$publishable_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/PayswitchSeedCommand.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\BusinessProfile\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/Admin/BusinessProfileController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantConnectorAccount\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/Admin/ConnectorController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantAccount\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/Admin/MerchantAccountController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\RoutingRule\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/Admin/RoutingRuleController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\Customer\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/CustomerController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\PaymentMethod\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/PaymentMethodController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\Refund\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Api/V1/RefundController.php
+
+		-
+			message: '#^Unknown parameter \$enum in call to Dedoc\\Scramble\\Attributes\\QueryParameter constructor\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Http/Controllers/Dashboard/AnalyticsController.php
+
+		-
+			message: '#^Unknown parameter \$enum in call to Dedoc\\Scramble\\Attributes\\QueryParameter constructor\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Http/Controllers/Dashboard/AuditLogController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantConnectorAccount\:\:\$connector_name\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Dashboard/ConnectorHealthController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantConnectorAccount\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Dashboard/ConnectorHealthController.php
+
+		-
+			message: '#^Unknown parameter \$enum in call to Dedoc\\Scramble\\Attributes\\QueryParameter constructor\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Http/Controllers/Dashboard/ConnectorHealthController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\BusinessProfile\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Dashboard/DashboardBusinessProfileController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantConnectorAccount\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Dashboard/DashboardConnectorController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\Customer\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Dashboard/DashboardCustomerController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantAccount\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Dashboard/DashboardMerchantController.php
+
+		-
+			message: '#^Unknown parameter \$enum in call to Dedoc\\Scramble\\Attributes\\QueryParameter constructor\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Http/Controllers/Dashboard/DashboardPaymentController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\RoutingRule\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Dashboard/DashboardRoutingRuleController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\WebhookEvent\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Dashboard/DashboardWebhookEventController.php
+
+		-
+			message: '#^Unknown parameter \$enum in call to Dedoc\\Scramble\\Attributes\\QueryParameter constructor\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Http/Controllers/Dashboard/DashboardWebhookEventController.php
+
+		-
+			message: '#^Unknown parameter \$enum in call to Dedoc\\Scramble\\Attributes\\QueryParameter constructor\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Http/Controllers/Dashboard/EventLogController.php
+
+		-
+			message: '#^Unknown parameter \$enum in call to Dedoc\\Scramble\\Attributes\\QueryParameter constructor\.$#'
+			identifier: argument.unknown
+			count: 1
+			path: app/Http/Controllers/Dashboard/NotificationController.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\ApiKey\:\:\$expires_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/ResolveApiKey.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\ApiKey\:\:\$key_hash\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/ResolveApiKey.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\ApiKey\:\:\$merchant_account_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/ResolveApiKey.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\ApiKey\:\:\$revoked_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/ResolveApiKey.php
+
+		-
+			message: '#^Call to function is_string\(\) with non\-falsy\-string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Middleware/ResolveApiKey.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantAccount\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Middleware/ResolveMerchantContext.php
+
+		-
+			message: '#^Call to function is_string\(\) with non\-falsy\-string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Middleware/ResolveMerchantContext.php
+
+		-
+			message: '#^Parameter \#1 \$value of static method Illuminate\\Support\\Str\:\:lower\(\) expects string, Illuminate\\Support\\Stringable given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Requests/Auth/LoginRequest.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ApiKeyResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ApiKeyResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ApiKeyResource\:\:\$expires_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ApiKeyResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ApiKeyResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ApiKeyResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ApiKeyResource\:\:\$key_prefix\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ApiKeyResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ApiKeyResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ApiKeyResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ApiKeyResource\:\:\$revoked_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ApiKeyResource.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Resources/ApiKeyResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AppNotificationResource\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AppNotificationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AppNotificationResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AppNotificationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AppNotificationResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AppNotificationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AppNotificationResource\:\:\$read_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AppNotificationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AppNotificationResource\:\:\$resource_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AppNotificationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AppNotificationResource\:\:\$resource_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AppNotificationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AppNotificationResource\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AppNotificationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AppNotificationResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AppNotificationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$causer_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$causer_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$event\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$log_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$properties\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$subject_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\AuditLogResource\:\:\$subject_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/AuditLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\BusinessProfileResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/BusinessProfileResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\BusinessProfileResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/BusinessProfileResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\BusinessProfileResource\:\:\$merchantAccount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/BusinessProfileResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\BusinessProfileResource\:\:\$payment_response_hash_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/BusinessProfileResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\BusinessProfileResource\:\:\$webhook_url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/BusinessProfileResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ConnectorResource\:\:\$connector_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ConnectorResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ConnectorResource\:\:\$connector_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ConnectorResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ConnectorResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ConnectorResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ConnectorResource\:\:\$disabled\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ConnectorResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ConnectorResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ConnectorResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ConnectorResource\:\:\$payment_methods_enabled\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ConnectorResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\ConnectorResource\:\:\$test_mode\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/ConnectorResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\CustomerResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CustomerResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\CustomerResource\:\:\$default_payment_method_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CustomerResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\CustomerResource\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CustomerResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\CustomerResource\:\:\$email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CustomerResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\CustomerResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CustomerResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\CustomerResource\:\:\$metadata\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CustomerResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\CustomerResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CustomerResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\CustomerResource\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CustomerResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\CustomerResource\:\:\$phone_country_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/CustomerResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeEvidenceResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeEvidenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeEvidenceResource\:\:\$file_path\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeEvidenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeEvidenceResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeEvidenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeEvidenceResource\:\:\$text_content\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeEvidenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeEvidenceResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeEvidenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$currency\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$deadline_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$paymentIntent\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$reason_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$reason_description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$resolved_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\DisputeResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/DisputeResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EventLogResource\:\:\$action\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EventLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EventLogResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EventLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EventLogResource\:\:\$detail\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EventLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EventLogResource\:\:\$event_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EventLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EventLogResource\:\:\$resource_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EventLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EventLogResource\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EventLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\EventLogResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/EventLogResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\JsonApiResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/JsonApiResource.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Resources\\Json\\AnonymousResourceCollection\:\:map\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Http/Resources/JsonApiResource.php
+
+		-
+			message: '#^Call to function is_callable\(\) with Closure will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: app/Http/Resources/JsonApiResource.php
+
+		-
+			message: '#^Unsafe usage of new static\(\)\.$#'
+			identifier: new.static
+			count: 2
+			path: app/Http/Resources/JsonApiResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\MerchantAccountResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/MerchantAccountResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\MerchantAccountResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/MerchantAccountResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\MerchantAccountResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/MerchantAccountResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\MerchantAccountResource\:\:\$organization\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/MerchantAccountResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\MerchantAccountResource\:\:\$publishable_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/MerchantAccountResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OrganizationResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OrganizationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OrganizationResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OrganizationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\OrganizationResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/OrganizationResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$amount_capturable\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$amount_received\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$attempt_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$authentication_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$cancellation_reason\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$capture_method\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$client_secret\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$connector\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$currency\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$customer_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$description\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$error_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$error_message\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$expires_on\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$metadata\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$net_amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$return_url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$session_expiry\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentIntentResource\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentIntentResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$card_brand\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$card_exp_month\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$card_exp_year\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$card_holder_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$card_last4\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$connector_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$is_default\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$metadata\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\PaymentMethodResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/PaymentMethodResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$connector\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$currency\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$error_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$error_message\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$metadata\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$paymentIntent\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$reason\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RefundResource\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RefundResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RoutingRuleResource\:\:\$active\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RoutingRuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RoutingRuleResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RoutingRuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RoutingRuleResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RoutingRuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RoutingRuleResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RoutingRuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RoutingRuleResource\:\:\$priority\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RoutingRuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RoutingRuleResource\:\:\$rules\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RoutingRuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\RoutingRuleResource\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/RoutingRuleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SavedFilterResource\:\:\$filters\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SavedFilterResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SavedFilterResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SavedFilterResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SavedFilterResource\:\:\$is_preset\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SavedFilterResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SavedFilterResource\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SavedFilterResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SavedFilterResource\:\:\$sort_order\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SavedFilterResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\SavedFilterResource\:\:\$table_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/SavedFilterResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserPreferenceResource\:\:\$base_currency\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserPreferenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserPreferenceResource\:\:\$data_density\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserPreferenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserPreferenceResource\:\:\$date_format\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserPreferenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserPreferenceResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserPreferenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserPreferenceResource\:\:\$notification_email\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserPreferenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserPreferenceResource\:\:\$notification_inapp\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserPreferenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserPreferenceResource\:\:\$number_format\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserPreferenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserPreferenceResource\:\:\$theme\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserPreferenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserPreferenceResource\:\:\$timezone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserPreferenceResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserRoleResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserRoleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserRoleResource\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserRoleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserRoleResource\:\:\$role\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserRoleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserRoleResource\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Http/Resources/UserRoleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\UserRoleResource\:\:\$user_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/UserRoleResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WebhookEventResource\:\:\$created_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WebhookEventResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WebhookEventResource\:\:\$delivered\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WebhookEventResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WebhookEventResource\:\:\$delivery_attempts\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WebhookEventResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WebhookEventResource\:\:\$event_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WebhookEventResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WebhookEventResource\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WebhookEventResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WebhookEventResource\:\:\$last_error\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WebhookEventResource.php
+
+		-
+			message: '#^Access to an undefined property App\\Http\\Resources\\WebhookEventResource\:\:\$next_retry_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Resources/WebhookEventResource.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\BusinessProfile\:\:\$payment_response_hash_key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/DeliverWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\BusinessProfile\:\:\$webhook_url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/DeliverWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\WebhookEvent\:\:\$content\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/DeliverWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\WebhookEvent\:\:\$delivered\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/DeliverWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\WebhookEvent\:\:\$delivery_attempts\.$#'
+			identifier: property.notFound
+			count: 7
+			path: app/Jobs/DeliverWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\WebhookEvent\:\:\$event_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/DeliverWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\WebhookEvent\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Jobs/DeliverWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\WebhookEvent\:\:\$merchant_account_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Jobs/DeliverWebhookJob.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\WebhookEvent\:\:\$updated_at\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Jobs/DeliverWebhookJob.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Http\\Request\:\:throttleKey\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: app/Services/AuthService.php
+
+		-
+			message: '#^Method App\\Services\\MerchantService\:\:listMerchantsByOrganization\(\) should return Illuminate\\Database\\Eloquent\\Collection\<int, Streeboga\\PaymentData\\Models\\MerchantAccount\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Services/MerchantService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantConnectorAccount\:\:\$connector_name\.$#'
+			identifier: property.notFound
+			count: 8
+			path: app/Services/PaymentConfirmationService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\PaymentMethod\:\:\$connector_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PaymentConfirmationService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\PaymentMethod\:\:\$customer_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/PaymentMethodService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\Refund\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RefundService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\Refund\:\:\$currency\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RefundService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\Refund\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RefundService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\RoutingRule\:\:\$rules\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RoutingService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\RoutingRule\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/RoutingService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantConnectorAccount\:\:\$connector_name\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Services/WebhookReceiverService.php
+
+		-
+			message: '#^Access to an undefined property Streeboga\\PaymentData\\Models\\MerchantConnectorAccount\:\:\$merchant_account_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/WebhookReceiverService.php
