@@ -79,7 +79,8 @@ final class DashboardMerchantController extends Controller
     #[Response(422, description: 'Validation error')]
     public function update(string $merchantKey, UpdateDashboardMerchantRequest $request): JsonResponse
     {
-        Gate::authorize('merchant-account.update');
+        $merchant = $this->merchantService->findMerchant($merchantKey);
+        Gate::authorize('merchant-account.update', [$merchant->id]);
 
         $merchant = $this->merchantService->updateMerchant($merchantKey, $request->toDto());
 
@@ -89,14 +90,15 @@ final class DashboardMerchantController extends Controller
     /**
      * Delete merchant
      *
-     * Delete a merchant account.
+     * Delete a merchant account and all its profiles, API keys, and connectors.
      */
     #[PathParameter('merchantKey', description: 'Merchant public key', example: 'merchant_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(204, description: 'Merchant deleted')]
     #[Response(404, description: 'Merchant not found')]
     public function destroy(string $merchantKey): JsonResponse
     {
-        Gate::authorize('merchant-account.delete');
+        $merchant = $this->merchantService->findMerchant($merchantKey);
+        Gate::authorize('merchant-account.delete', [$merchant->id]);
 
         $this->merchantService->deleteMerchant($merchantKey);
 

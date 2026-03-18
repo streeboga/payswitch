@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
@@ -14,6 +15,13 @@ beforeEach(function () {
     $this->org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $this->org->id, 'name' => 'Merchant']);
     $this->headers = ['X-Merchant-Key' => $this->merchant->key];
+
+    // Assign admin role so CRUD operations are authorized
+    UserRole::create([
+        'user_id' => $this->user->id,
+        'organization_id' => $this->org->id,
+        'role' => 'admin',
+    ]);
 });
 
 test('merchants list returns json:api response', function () {

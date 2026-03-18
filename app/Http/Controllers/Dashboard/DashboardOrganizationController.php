@@ -80,7 +80,8 @@ final class DashboardOrganizationController extends Controller
     #[Response(422, description: 'Validation error')]
     public function update(string $orgKey, UpdateDashboardOrganizationRequest $request): JsonResponse
     {
-        Gate::authorize('organization.update');
+        $org = $this->merchantService->findOrganization($orgKey);
+        Gate::authorize('organization.update', [$org->id]);
 
         $org = $this->merchantService->updateOrganization($orgKey, $request->toDto());
 
@@ -90,14 +91,15 @@ final class DashboardOrganizationController extends Controller
     /**
      * Delete organization
      *
-     * Delete an organization.
+     * Delete an organization and all its merchants, profiles, and related data.
      */
     #[PathParameter('orgKey', description: 'Organization public key', example: 'org_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(204, description: 'Organization deleted')]
     #[Response(404, description: 'Organization not found')]
     public function destroy(string $orgKey): JsonResponse
     {
-        Gate::authorize('organization.delete');
+        $org = $this->merchantService->findOrganization($orgKey);
+        Gate::authorize('organization.delete', [$org->id]);
 
         $this->merchantService->deleteOrganization($orgKey);
 
