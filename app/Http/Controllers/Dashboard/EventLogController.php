@@ -36,6 +36,10 @@ final class EventLogController extends Controller
         $merchantId = $request->attributes->get('merchant_id');
         Gate::authorize('event-log.viewAny', [$merchantId]);
 
+        // Resolve page number from JSON:API page[number] param
+        $pageNumber = (int) $request->input('page.number', 1);
+        \Illuminate\Pagination\Paginator::currentPageResolver(fn () => $pageNumber);
+
         $paginator = $this->eventLogService->list($merchantId, [
             'type' => $request->input('filter.type'),
             'from' => $request->input('filter.from'),
