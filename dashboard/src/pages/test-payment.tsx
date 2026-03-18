@@ -70,7 +70,7 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
   const [cardExpYear, setCardExpYear] = useState('30')
   const [cardCvc, setCardCvc] = useState('123')
   const [captureMethod, setCaptureMethod] = useState('automatic')
-  const [connectorName, setConnectorName] = useState('')
+  const [connectorName, setConnectorName] = useState('__auto__')
   const [description, setDescription] = useState('')
   const [result, setResult] = useState<TestPaymentResult | null>(null)
 
@@ -93,7 +93,7 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
         card_exp_year: cardExpYear,
         card_cvc: cardCvc,
         capture_method: captureMethod,
-        ...(connectorName ? { connector_name: connectorName } : {}),
+        ...(connectorName && connectorName !== '__auto__' ? { connector_name: connectorName } : {}),
         ...(description ? { description } : {}),
       },
       {
@@ -166,7 +166,7 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
                   <SelectValue placeholder={t('testPayment.connectorAuto')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('testPayment.connectorAuto')}</SelectItem>
+                  <SelectItem value="__auto__">{t('testPayment.connectorAuto')}</SelectItem>
                   {activeConnectors.map((c) => (
                     <SelectItem key={c.id} value={c.connector_name}>
                       {c.connector_name}

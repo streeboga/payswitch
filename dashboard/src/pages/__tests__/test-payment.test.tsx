@@ -27,6 +27,14 @@ vi.mock('@/stores/context', () => ({
     }),
 }))
 
+// Mock connectors hook
+vi.mock('@/hooks/use-connectors', () => ({
+  useConnectorsList: () => ({
+    data: { items: [] },
+    isLoading: false,
+  }),
+}))
+
 function renderWithProviders() {
   const queryClient = new QueryClient({
     defaultOptions: {
