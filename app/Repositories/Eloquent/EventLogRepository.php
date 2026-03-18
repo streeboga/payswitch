@@ -17,27 +17,29 @@ final readonly class EventLogRepository implements EventLogRepositoryInterface
     public function paginateForMerchant(int|string $merchantId, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         $webhooks = DB::table('webhook_events')
-            ->where('merchant_account_id', $merchantId)
+            ->join('payment_intents', 'webhook_events.payment_intent_id', '=', 'payment_intents.id')
+            ->where('webhook_events.merchant_account_id', $merchantId)
             ->select([
-                'key as event_id',
+                'webhook_events.key as event_id',
                 DB::raw("'webhook' as type"),
-                'event_type as action',
-                'payment_intent_id as resource_id',
-                DB::raw("CASE WHEN delivered = true THEN 'delivered' ELSE 'failed' END as status"),
-                'last_error as detail',
-                'created_at',
+                'webhook_events.event_type as action',
+                'payment_intents.key as resource_id',
+                DB::raw("CASE WHEN webhook_events.delivered = true THEN 'delivered' ELSE 'failed' END as status"),
+                'webhook_events.last_error as detail',
+                'webhook_events.created_at',
             ]);
 
         $audits = DB::table('payment_audit_log')
-            ->where('merchant_account_id', $merchantId)
+            ->join('payment_intents', 'payment_audit_log.payment_intent_id', '=', 'payment_intents.id')
+            ->where('payment_audit_log.merchant_account_id', $merchantId)
             ->select([
-                DB::raw('CAST(id AS TEXT) as event_id'),
+                DB::raw('CAST(payment_audit_log.id AS TEXT) as event_id'),
                 DB::raw("'status_change' as type"),
-                'action',
-                'payment_intent_id as resource_id',
-                'new_status as status',
-                DB::raw("(previous_status || ' → ' || new_status) as detail"),
-                'created_at',
+                'payment_audit_log.action',
+                'payment_intents.key as resource_id',
+                'payment_audit_log.new_status as status',
+                DB::raw("(payment_audit_log.previous_status || ' → ' || payment_audit_log.new_status) as detail"),
+                'payment_audit_log.created_at',
             ]);
 
         if (! empty($filters['type'])) {
@@ -49,8 +51,8 @@ final readonly class EventLogRepository implements EventLogRepositoryInterface
         }
 
         if (! empty($filters['from']) && ! empty($filters['to'])) {
-            $webhooks->whereBetween('created_at', [$filters['from'], $filters['to']]);
-            $audits->whereBetween('created_at', [$filters['from'], $filters['to']]);
+            $webhooks->whereBetween('webhook_events.created_at', [$filters['from'], $filters['to']]);
+            $audits->whereBetween('payment_audit_log.created_at', [$filters['from'], $filters['to']]);
         }
 
         $union = $webhooks->unionAll($audits);

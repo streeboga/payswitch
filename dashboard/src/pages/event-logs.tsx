@@ -27,28 +27,29 @@ type EventLogRow = EventLogAttributes & { id: string }
 
 // ─── Resource Link Helper ────────────────────────────────────
 
-function ResourceLink({ resourceId }: { resourceId: string }) {
-  if (resourceId.startsWith('pay_')) {
+function ResourceLink({ resourceId }: { resourceId: string | number | null }) {
+  const id = String(resourceId ?? '')
+  if (id.startsWith('pay_')) {
     return (
       <Link
         to="/payments/$paymentKey"
-        params={{ paymentKey: resourceId }}
+        params={{ paymentKey: id }}
         className="text-primary font-mono text-xs hover:underline"
       >
-        {resourceId}
+        {id}
       </Link>
     )
   }
 
-  if (resourceId.startsWith('ref_')) {
+  if (id.startsWith('ref_')) {
     return (
       <Link to="/refunds" className="text-primary font-mono text-xs hover:underline">
-        {resourceId}
+        {id}
       </Link>
     )
   }
 
-  return <span className="font-mono text-xs">{resourceId}</span>
+  return <span className="font-mono text-xs">{id}</span>
 }
 
 // ─── Page Component ─────────────────────────────────────────
