@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DataTransferObjects\Payment\CreatePaymentData;
 use App\Enums\PaymentAttemptStatus;
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
@@ -23,43 +24,35 @@ final class PaymentService
     public function __construct(
         private PaymentIntentRepositoryInterface $paymentRepository,
         private MerchantRepositoryInterface $merchantRepository,
+        private RoutingService $routingService,
     ) {}
 
-    public function create(array $data, int|string $merchantAccountId): PaymentIntent
+    public function create(CreatePaymentData $dto, int|string $merchantAccountId): PaymentIntent
     {
-        if (isset($data['payment_id'])) {
-            $existing = $this->paymentRepository->findByKeyOrNull($data['payment_id'], $merchantAccountId);
+        if ($dto->payment_id) {
+            $existing = $this->paymentRepository->findByKeyOrNull($dto->payment_id, $merchantAccountId);
             if ($existing) {
                 return $existing;
             }
         }
 
-        if (! isset($data['amount']) || ! is_int($data['amount']) || $data['amount'] <= 0) {
-            throw new PaymentException('Amount must be a positive integer', 'invalid_amount', 'invalid_request_error', 400);
-        }
-        if (empty($data['currency']) || ! preg_match('/^[A-Z]{3}$/i', $data['currency'])) {
-            throw new PaymentException('Currency must be a valid 3-letter ISO code', 'invalid_currency', 'invalid_request_error', 400);
-        }
-        $expiry = (int) ($data['session_expiry'] ?? config('payswitch.payment.session_expiry', 900));
-        if ($expiry <= 0) {
-            throw new PaymentException('Session expiry must be positive', 'invalid_session_expiry', 'invalid_request_error', 400);
-        }
+        $expiry = $dto->session_expiry ?? (int) config('payswitch.payment.session_expiry', 900);
 
         return $this->paymentRepository->create([
             'merchant_account_id' => $merchantAccountId,
-            'amount' => $data['amount'],
-            'currency' => strtoupper($data['currency']),
+            'amount' => $dto->amount,
+            'currency' => strtoupper($dto->currency),
             'status' => PaymentStatus::RequiresPaymentMethod,
-            'capture_method' => $data['capture_method'] ?? CaptureMethod::Automatic,
-            'authentication_type' => $data['authentication_type'] ?? 'no_three_ds',
-            'customer_id' => $data['customer_id'] ?? null,
-            'description' => $data['description'] ?? null,
-            'return_url' => $data['return_url'] ?? null,
-            'metadata' => $data['metadata'] ?? null,
+            'capture_method' => $dto->capture_method,
+            'authentication_type' => $dto->authentication_type,
+            'customer_id' => $dto->customer_id,
+            'description' => $dto->description,
+            'return_url' => $dto->return_url,
+            'metadata' => $dto->metadata,
             'session_expiry' => $expiry,
             'attempt_count' => 1,
             'expires_on' => now()->addSeconds($expiry),
-            'amount_capturable' => $data['amount'],
+            'amount_capturable' => $dto->amount,
         ]);
     }
 
@@ -105,10 +98,9 @@ final class PaymentService
             }
 
             // Resolve connector
-            $routingService = app(RoutingService::class);
             $explicitConnector = $data['connector'] ?? null;
             $paymentMethod = $data['payment_method'] ?? null;
-            $mca = $routingService->resolve($merchantAccountId, $explicitConnector, $paymentMethod, $payment->currency, $payment->amount);
+            $mca = $this->routingService->resolve($merchantAccountId, $explicitConnector, $paymentMethod, $payment->currency, $payment->amount);
 
             $connector = ConnectorFactory::resolve($mca);
             $connectorParams = array_merge($data, [
@@ -161,7 +153,7 @@ final class PaymentService
                     ]);
                 }
             } else {
-                $fallbackMca = $routingService->fallback($merchantAccountId, [$mca->connector_name]);
+                $fallbackMca = $this->routingService->fallback($merchantAccountId, [$mca->connector_name]);
 
                 if ($fallbackMca) {
                     $fallbackConnector = ConnectorFactory::resolve($fallbackMca);
