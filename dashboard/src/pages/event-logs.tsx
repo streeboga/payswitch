@@ -11,10 +11,8 @@ import type {
 import { useEventLogsList } from '@/hooks/use-event-logs'
 import {
   DataTable,
-  ColumnHeader,
   TableFilters,
   TableDensityToggle,
-  useTableSorting,
   useTablePagination,
   useTableFilters,
   type FilterDef,
@@ -62,22 +60,8 @@ export function EventLogsPage() {
   // ─── Filter Definitions ─────────────────────────────────────
 
   const EVENT_TYPE_OPTIONS = [
-    { value: 'payment.succeeded', label: 'payment.succeeded' },
-    { value: 'payment.failed', label: 'payment.failed' },
-    { value: 'payment.processing', label: 'payment.processing' },
-    { value: 'payment.cancelled', label: 'payment.cancelled' },
-    { value: 'payment.captured', label: 'payment.captured' },
-    { value: 'payment.authorized', label: 'payment.authorized' },
-    { value: 'refund.created', label: 'refund.created' },
-    { value: 'refund.succeeded', label: 'refund.succeeded' },
-    { value: 'refund.failed', label: 'refund.failed' },
-  ]
-
-  const RESOURCE_TYPE_OPTIONS = [
-    { value: 'payment', label: t('eventLogs.resourcePayments') },
-    { value: 'refund', label: t('eventLogs.resourceRefunds') },
-    { value: 'customer', label: t('eventLogs.resourceCustomers') },
-    { value: 'connector', label: t('eventLogs.resourceConnectors') },
+    { value: 'webhook', label: t('eventLogs.typeWebhook') },
+    { value: 'status_change', label: t('eventLogs.typeStatusChange') },
   ]
 
   const filterDefs: FilterDef[] = [
@@ -88,21 +72,9 @@ export function EventLogsPage() {
       options: EVENT_TYPE_OPTIONS,
     },
     {
-      type: 'select',
-      key: 'resource_type',
-      label: t('eventLogs.filterResource'),
-      options: RESOURCE_TYPE_OPTIONS,
-    },
-    {
       type: 'date-range',
       key: 'date',
       label: t('eventLogs.filterDate'),
-    },
-    {
-      type: 'text',
-      key: 'search',
-      label: t('eventLogs.filterSearch'),
-      placeholder: t('eventLogs.filterSearchPlaceholder'),
     },
   ]
 
@@ -111,9 +83,9 @@ export function EventLogsPage() {
   const columns: ColumnDef<EventLogRow, unknown>[] = [
     {
       accessorKey: 'created_at',
-      header: ({ column }) => <ColumnHeader column={column} title={t('eventLogs.columnTime')} />,
+      header: t('eventLogs.columnTime'),
       cell: ({ row }) => <DateFormat date={row.original.created_at} />,
-      enableSorting: true,
+      enableSorting: false,
     },
     {
       accessorKey: 'event_type',
@@ -126,32 +98,41 @@ export function EventLogsPage() {
       enableSorting: false,
     },
     {
+      accessorKey: 'action',
+      header: t('eventLogs.columnAction'),
+      cell: ({ row }) => (
+        <Badge variant="secondary" className="font-mono text-xs">
+          {row.original.action}
+        </Badge>
+      ),
+      enableSorting: false,
+    },
+    {
       accessorKey: 'resource_id',
       header: t('eventLogs.columnResource'),
       cell: ({ row }) => <ResourceLink resourceId={row.original.resource_id} />,
       enableSorting: false,
     },
     {
-      accessorKey: 'description',
-      header: t('eventLogs.columnDescription'),
+      accessorKey: 'status',
+      header: t('eventLogs.columnStatus'),
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-sm">{row.original.description}</span>
+        <Badge variant="outline" className="text-xs">
+          {row.original.status}
+        </Badge>
       ),
       enableSorting: false,
     },
     {
-      accessorKey: 'connector',
-      header: t('eventLogs.columnConnector'),
-      cell: ({ row }) => row.original.connector ?? '—',
+      accessorKey: 'detail',
+      header: t('eventLogs.columnDetail'),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-sm">{row.original.detail ?? '—'}</span>
+      ),
       enableSorting: false,
       meta: { hiddenOnMobile: true },
     },
   ]
-
-  const { sorting, onSortingChange } = useTableSorting({
-    defaultSort: 'created_at',
-    defaultOrder: 'desc',
-  })
 
   const {
     values: filterValues,
@@ -163,8 +144,6 @@ export function EventLogsPage() {
     const params: EventLogListParams = {}
 
     if (filterValues.type) params.type = filterValues.type
-    if (filterValues.resource_type) params.resource_type = filterValues.resource_type
-    if (filterValues.search) params.search = filterValues.search
 
     if (filterValues.date) {
       const [from, to] = filterValues.date.split(',')
@@ -172,13 +151,8 @@ export function EventLogsPage() {
       if (to) params.to = to
     }
 
-    if (sorting.length > 0) {
-      params.sort = sorting[0]!.id
-      params.direction = sorting[0]!.desc ? 'desc' : 'asc'
-    }
-
     return params
-  }, [filterValues, sorting])
+  }, [filterValues])
 
   const { pagination, currentPage, perPage, onPageChange, onPerPageChange } =
     useTablePagination(undefined)
@@ -202,10 +176,7 @@ export function EventLogsPage() {
     data: rows,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    manualSorting: true,
     manualPagination: true,
-    state: { sorting },
-    onSortingChange,
   })
 
   const handleRetry = useCallback(() => {

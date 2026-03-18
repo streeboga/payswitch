@@ -5,12 +5,11 @@ import { parseCollection, buildJsonApiParams } from '../types'
 // ─── Entity Type ─────────────────────────────────────────────
 
 export interface EventLogAttributes {
-  event_type: string
-  resource_type: string
+  event_type: string // 'webhook' | 'status_change'
+  action: string // e.g. 'payment.succeeded'
   resource_id: string
-  description: string
-  connector: string | null
-  metadata: Record<string, unknown> | null
+  status: string
+  detail: string | null
   created_at: string
 }
 
@@ -18,12 +17,8 @@ export interface EventLogAttributes {
 
 export interface EventLogListParams {
   type?: string
-  resource_type?: string
   from?: string
   to?: string
-  search?: string
-  sort?: string
-  direction?: 'asc' | 'desc'
   page?: number
   per_page?: number
 }

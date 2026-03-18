@@ -567,21 +567,17 @@
   "eventLogs": {
     "title": "Журнал событий",
     "filterType": "Тип",
-    "filterResource": "Ресурс",
     "filterDate": "Дата",
-    "filterSearch": "Поиск по ID",
-    "filterSearchPlaceholder": "pay_..., ref_...",
+    "typeWebhook": "Вебхук",
+    "typeStatusChange": "Смена статуса",
     "columnTime": "Время",
     "columnType": "Тип",
+    "columnAction": "Действие",
     "columnResource": "Ресурс",
-    "columnDescription": "Описание",
-    "columnConnector": "Коннектор",
+    "columnStatus": "Статус",
+    "columnDetail": "Детали",
     "emptyTitle": "Событий пока нет",
-    "emptyDesc": "Здесь появятся события после первой транзакции.",
-    "resourcePayments": "Платежи",
-    "resourceRefunds": "Возвраты",
-    "resourceCustomers": "Клиенты",
-    "resourceConnectors": "Коннекторы"
+    "emptyDesc": "Здесь появятся события после первой транзакции."
   },
   "organizations": {
     "title": "Организации",

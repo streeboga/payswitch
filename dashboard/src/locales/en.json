@@ -567,21 +567,17 @@
   "eventLogs": {
     "title": "Event Logs",
     "filterType": "Type",
-    "filterResource": "Resource",
     "filterDate": "Date",
-    "filterSearch": "Search by ID",
-    "filterSearchPlaceholder": "pay_..., ref_...",
+    "typeWebhook": "Webhook",
+    "typeStatusChange": "Status Change",
     "columnTime": "Time",
     "columnType": "Type",
+    "columnAction": "Action",
     "columnResource": "Resource",
-    "columnDescription": "Description",
-    "columnConnector": "Connector",
+    "columnStatus": "Status",
+    "columnDetail": "Detail",
     "emptyTitle": "No events yet",
-    "emptyDesc": "Events will appear here after the first transaction.",
-    "resourcePayments": "Payments",
-    "resourceRefunds": "Refunds",
-    "resourceCustomers": "Customers",
-    "resourceConnectors": "Connectors"
+    "emptyDesc": "Events will appear here after the first transaction."
   },
   "organizations": {
     "title": "Organizations",
