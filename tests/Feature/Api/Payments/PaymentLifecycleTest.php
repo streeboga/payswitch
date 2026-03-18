@@ -1,0 +1,305 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Streeboga\PaymentData\Models\ApiKey;
+use Streeboga\PaymentData\Models\BusinessProfile;
+use Streeboga\PaymentData\Models\MerchantAccount;
+use Streeboga\PaymentData\Models\MerchantConnectorAccount;
+use Streeboga\PaymentData\Models\Organization;
+use Streeboga\PaymentData\Support\IdGenerator;
+
+uses(RefreshDatabase::class);
+
+beforeEach(function () {
+    $org = Organization::create(['name' => 'Org']);
+    $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
+    $this->profile = BusinessProfile::create(['merchant_account_id' => $this->merchant->id]);
+
+    $this->rawKey = IdGenerator::apiKey('sandbox');
+    ApiKey::create([
+        'merchant_account_id' => $this->merchant->id,
+        'key_hash' => bcrypt($this->rawKey),
+        'key_prefix' => substr($this->rawKey, 0, 10),
+        'name' => 'Test',
+    ]);
+
+    // Stripe connector
+    MerchantConnectorAccount::create([
+        'merchant_account_id' => $this->merchant->id,
+        'business_profile_id' => $this->profile->id,
+        'connector_name' => 'stripe',
+        'connector_type' => 'fiz_operations',
+        'connector_account_details' => encrypt(json_encode(['auth_type' => 'HeaderKey', 'api_key' => 'sk_test_xxx'])),
+        'payment_methods_enabled' => [['payment_method' => 'card']],
+        'test_mode' => true,
+    ]);
+});
+
+function apiHeaders(): array
+{
+    return ['api-key' => test()->rawKey];
+}
+
+function createPayment(array $attrs = []): \Illuminate\Testing\TestResponse
+{
+    return test()->postJson('/api/v1/payments', [
+        'data' => [
+            'type' => 'payments',
+            'attributes' => array_merge([
+                'amount' => 6540,
+                'currency' => 'USD',
+            ], $attrs),
+        ],
+    ], apiHeaders());
+}
+
+// --- GET payment ---
+
+test('can retrieve payment by id', function () {
+    $create = createPayment();
+    $paymentId = $create->json('data.id');
+
+    $response = $this->getJson("/api/v1/payments/{$paymentId}", apiHeaders());
+
+    $response->assertOk()
+        ->assertJsonPath('data.id', $paymentId)
+        ->assertJsonPath('data.type', 'payments')
+        ->assertJsonPath('data.attributes.status', 'requires_payment_method');
+});
+
+test('returns 404 for non-existent payment', function () {
+    $this->getJson('/api/v1/payments/pay_nonexistent123456789012', apiHeaders())
+        ->assertStatus(404)
+        ->assertJsonStructure(['errors' => [['status', 'code']]]);
+});
+
+test('cannot access another merchants payment', function () {
+    $create = createPayment();
+    $paymentId = $create->json('data.id');
+
+    // Create different merchant + key
+    $org2 = Organization::create(['name' => 'Org2']);
+    $merchant2 = MerchantAccount::create(['org_id' => $org2->id, 'name' => 'M2']);
+    $rawKey2 = IdGenerator::apiKey('sandbox');
+    ApiKey::create([
+        'merchant_account_id' => $merchant2->id,
+        'key_hash' => bcrypt($rawKey2),
+        'key_prefix' => substr($rawKey2, 0, 10),
+        'name' => 'Other',
+    ]);
+
+    $this->getJson("/api/v1/payments/{$paymentId}", ['api-key' => $rawKey2])
+        ->assertStatus(404); // Should not find — scoped to merchant
+});
+
+// --- Confirm payment ---
+
+test('can confirm payment with card data (automatic capture)', function () {
+    $create = createPayment();
+    $paymentId = $create->json('data.id');
+
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'data' => [
+            'type' => 'payments',
+            'attributes' => [
+                'payment_method' => 'card',
+                'payment_method_data' => [
+                    'card' => [
+                        'card_number' => '4242424242424242',
+                        'card_exp_month' => '12',
+                        'card_exp_year' => '2030',
+                        'card_cvc' => '123',
+                    ],
+                ],
+            ],
+        ],
+    ], apiHeaders());
+
+    $response->assertOk()
+        ->assertJsonPath('data.attributes.status', 'succeeded')
+        ->assertJsonPath('data.attributes.amount_received', 6540);
+});
+
+test('can confirm payment with manual capture', function () {
+    $create = createPayment(['capture_method' => 'manual']);
+    $paymentId = $create->json('data.id');
+
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'data' => [
+            'type' => 'payments',
+            'attributes' => [
+                'payment_method' => 'card',
+                'payment_method_data' => [
+                    'card' => [
+                        'card_number' => '4242424242424242',
+                        'card_exp_month' => '12',
+                        'card_exp_year' => '2030',
+                        'card_cvc' => '123',
+                    ],
+                ],
+            ],
+        ],
+    ], apiHeaders());
+
+    $response->assertOk()
+        ->assertJsonPath('data.attributes.status', 'requires_capture')
+        ->assertJsonPath('data.attributes.amount_capturable', 6540);
+});
+
+test('cannot confirm already succeeded payment', function () {
+    $create = createPayment();
+    $paymentId = $create->json('data.id');
+
+    // First confirm
+    $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'data' => ['type' => 'payments', 'attributes' => [
+            'payment_method' => 'card',
+            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
+        ]],
+    ], apiHeaders());
+
+    // Second confirm should fail
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'data' => ['type' => 'payments', 'attributes' => [
+            'payment_method' => 'card',
+            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
+        ]],
+    ], apiHeaders());
+
+    $response->assertStatus(400)
+        ->assertJsonPath('errors.0.code', 'invalid_state_transition');
+});
+
+test('confirm with confirm:true on create works in one call', function () {
+    $response = $this->postJson('/api/v1/payments', [
+        'data' => [
+            'type' => 'payments',
+            'attributes' => [
+                'amount' => 5000,
+                'currency' => 'USD',
+                'confirm' => true,
+                'payment_method' => 'card',
+                'payment_method_data' => [
+                    'card' => [
+                        'card_number' => '4242424242424242',
+                        'card_exp_month' => '12',
+                        'card_exp_year' => '2030',
+                        'card_cvc' => '123',
+                    ],
+                ],
+            ],
+        ],
+    ], apiHeaders());
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.attributes.status', 'succeeded');
+});
+
+// --- Capture ---
+
+test('can capture authorized payment', function () {
+    $create = createPayment(['capture_method' => 'manual']);
+    $paymentId = $create->json('data.id');
+
+    // Confirm (manual → requires_capture)
+    $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'data' => ['type' => 'payments', 'attributes' => [
+            'payment_method' => 'card',
+            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
+        ]],
+    ], apiHeaders());
+
+    // Capture
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/capture", [
+        'data' => [
+            'type' => 'payments',
+            'attributes' => ['amount_to_capture' => 6540],
+        ],
+    ], apiHeaders());
+
+    $response->assertOk()
+        ->assertJsonPath('data.attributes.status', 'succeeded')
+        ->assertJsonPath('data.attributes.amount_received', 6540);
+});
+
+test('cannot capture more than authorized amount', function () {
+    $create = createPayment(['capture_method' => 'manual']);
+    $paymentId = $create->json('data.id');
+
+    $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'data' => ['type' => 'payments', 'attributes' => [
+            'payment_method' => 'card',
+            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
+        ]],
+    ], apiHeaders());
+
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/capture", [
+        'data' => [
+            'type' => 'payments',
+            'attributes' => ['amount_to_capture' => 99999],
+        ],
+    ], apiHeaders());
+
+    $response->assertStatus(400);
+});
+
+test('cannot capture payment not in requires_capture status', function () {
+    $create = createPayment(); // automatic capture
+    $paymentId = $create->json('data.id');
+
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/capture", [
+        'data' => [
+            'type' => 'payments',
+            'attributes' => ['amount_to_capture' => 100],
+        ],
+    ], apiHeaders());
+
+    $response->assertStatus(400)
+        ->assertJsonPath('errors.0.code', 'invalid_state_transition');
+});
+
+// --- Cancel ---
+
+test('can cancel payment in non-terminal status', function () {
+    $create = createPayment();
+    $paymentId = $create->json('data.id');
+
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/cancel", [], apiHeaders());
+
+    $response->assertOk()
+        ->assertJsonPath('data.attributes.status', 'cancelled');
+});
+
+test('cannot cancel succeeded payment', function () {
+    $create = createPayment();
+    $paymentId = $create->json('data.id');
+
+    // Confirm → succeeded
+    $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'data' => ['type' => 'payments', 'attributes' => [
+            'payment_method' => 'card',
+            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
+        ]],
+    ], apiHeaders());
+
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/cancel", [], apiHeaders());
+
+    $response->assertStatus(400)
+        ->assertJsonPath('errors.0.code', 'invalid_state_transition');
+});
+
+// --- Audit log ---
+
+test('payment status changes are logged in audit log', function () {
+    $create = createPayment();
+    $paymentId = $create->json('data.id');
+
+    $this->postJson("/api/v1/payments/{$paymentId}/cancel", [], apiHeaders());
+
+    $this->assertDatabaseHas('payment_audit_log', [
+        'action' => 'status_changed',
+        'new_status' => 'cancelled',
+    ]);
+});

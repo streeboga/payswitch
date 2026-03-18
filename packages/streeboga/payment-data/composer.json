@@ -1,0 +1,24 @@
+{
+    "name": "streeboga/payment-data",
+    "description": "Payment data layer: contracts, enums, models, migrations for Payswitch",
+    "type": "library",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Streeboga\\PaymentData\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Streeboga\\PaymentData\\PaymentDataServiceProvider"
+            ]
+        }
+    },
+    "require": {
+        "php": "^8.3",
+        "illuminate/database": "^13.0",
+        "illuminate/support": "^13.0",
+        "spatie/laravel-data": "^4.0"
+    }
+}

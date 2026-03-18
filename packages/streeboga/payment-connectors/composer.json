@@ -1,0 +1,24 @@
+{
+    "name": "streeboga/payment-connectors",
+    "description": "Payment gateway connectors for Payswitch",
+    "type": "library",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "Streeboga\\PaymentConnectors\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Streeboga\\PaymentConnectors\\PaymentConnectorsServiceProvider"
+            ]
+        }
+    },
+    "require": {
+        "php": "^8.3",
+        "streeboga/payment-data": "*",
+        "omnipay/common": "^3.0",
+        "omnipay/stripe": "^3.0"
+    }
+}
