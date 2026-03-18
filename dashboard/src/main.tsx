@@ -6,17 +6,23 @@ import { useAuthStore } from './stores/auth'
 import { i18nReady } from './lib/i18n'
 import './app.css'
 
-// Kick off the auth fetch BEFORE mounting — fire and forget.
-// The store updates reactively; the router re-evaluates guards once
-// isLoading flips to false (via the subscribe() in router.tsx).
-auth
-  .user()
-  .then((user) => {
-    useAuthStore.getState().setUser(user)
-  })
-  .catch(() => {
-    useAuthStore.getState().setLoading(false)
-  })
+// Only attempt to fetch the current user if a session cookie exists.
+// Without a session there is no point hitting /api/v1/user — it will
+// always return 401 and pollute the console with an error.
+const hasSession = document.cookie.includes('XSRF-TOKEN')
+
+if (hasSession) {
+  auth
+    .user()
+    .then((user) => {
+      useAuthStore.getState().setUser(user)
+    })
+    .catch(() => {
+      useAuthStore.getState().setLoading(false)
+    })
+} else {
+  useAuthStore.getState().setLoading(false)
+}
 
 // Wait for i18n to load translations before rendering to avoid
 // showing raw translation keys on initial page load.
