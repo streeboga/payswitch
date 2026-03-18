@@ -41,23 +41,27 @@ final class YooKassaConnector implements ConnectorInterface
     {
         $txnId = $params['transaction_id'] ?? '';
 
+        $idempotencyKey = ($params['payment_id'] ?? bin2hex(random_bytes(16))).'_capture';
+
         return $this->makeRequest('POST', "/payments/{$txnId}/capture", [
             'amount' => [
                 'value' => number_format(($params['amount'] ?? 0) / 100, 2, '.', ''),
                 'currency' => $params['currency'] ?? 'RUB',
             ],
-        ]);
+        ], $idempotencyKey);
     }
 
     public function refund(array $params): array
     {
+        $idempotencyKey = ($params['payment_id'] ?? bin2hex(random_bytes(16))).'_refund_'.($params['amount'] ?? 0);
+
         return $this->makeRequest('POST', '/refunds', [
             'payment_id' => $params['transaction_id'] ?? '',
             'amount' => [
                 'value' => number_format(($params['amount'] ?? 0) / 100, 2, '.', ''),
                 'currency' => $params['currency'] ?? 'RUB',
             ],
-        ]);
+        ], $idempotencyKey);
     }
 
     public function verifyWebhookSignature(string $payload, array $headers): bool
@@ -119,14 +123,16 @@ final class YooKassaConnector implements ConnectorInterface
             ];
         }
 
-        return $this->makeRequest('POST', '/payments', $body);
+        $idempotencyKey = $params['payment_id'] ?? bin2hex(random_bytes(16));
+
+        return $this->makeRequest('POST', '/payments', $body, $idempotencyKey);
     }
 
-    private function makeRequest(string $method, string $endpoint, array $data): array
+    private function makeRequest(string $method, string $endpoint, array $data, string $idempotencyKey = ''): array
     {
         try {
             $request = Http::withBasicAuth($this->shopId, $this->secretKey)
-                ->withHeaders(['Idempotence-Key' => bin2hex(random_bytes(16))])
+                ->withHeaders(['Idempotence-Key' => $idempotencyKey ?: bin2hex(random_bytes(16))])
                 ->timeout(30);
 
             $response = $method === 'POST'
