@@ -100,4 +100,19 @@ final class NotificationController extends Controller
 
         return response()->json(null, 204);
     }
+
+    /**
+     * Get unread notification count
+     *
+     * Returns the count of unread notifications for the authenticated user.
+     */
+    #[Response(200, description: 'Unread count')]
+    public function unreadCount(Request $request): JsonResponse
+    {
+        $count = AppNotification::where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->count();
+
+        return response()->json(['count' => $count]);
+    }
 }

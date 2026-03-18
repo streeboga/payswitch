@@ -34,8 +34,42 @@ Route::prefix('v1')->group(function () {
     Route::get('/user', [UserController::class, 'show'])->middleware('auth:sanctum');
 });
 
-// Dashboard API — Sanctum session auth + merchant context
-Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', 'throttle:60,1'])->group(function () {
+// Dashboard API — Sanctum auth only (no merchant context required)
+Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'throttle:300,1'])->group(function () {
+    // Organizations (Story 15-1)
+    Route::get('/organizations', [DashboardOrganizationController::class, 'index']);
+    Route::get('/organizations/{orgKey}', [DashboardOrganizationController::class, 'show']);
+    Route::get('/organizations/{orgKey}/merchants', [DashboardOrganizationController::class, 'merchants']);
+
+    // Notifications (Story 15-4) — unread-count BEFORE wildcard
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{notificationKey}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+    Route::delete('/notifications/{notificationKey}', [NotificationController::class, 'destroy']);
+
+    // User settings (Story 16-4)
+    Route::get('/settings', [UserSettingsController::class, 'show']);
+    Route::patch('/settings', [UserSettingsController::class, 'update']);
+
+    // Saved filters (Story 16-5)
+    Route::get('/saved-filters', [SavedFilterController::class, 'index']);
+    Route::post('/saved-filters', [SavedFilterController::class, 'store']);
+    Route::delete('/saved-filters/{filterId}', [SavedFilterController::class, 'destroy']);
+
+    // Audit log (Story 15-3)
+    Route::get('/audit-log', [AuditLogController::class, 'index']);
+    Route::get('/audit-log/export', [AuditLogController::class, 'export']);
+
+    // Users & RBAC (Story 16-3)
+    Route::get('/users', [UserRoleController::class, 'index']);
+    Route::post('/users/roles', [UserRoleController::class, 'store']);
+    Route::patch('/users/roles/{roleId}', [UserRoleController::class, 'update']);
+    Route::delete('/users/roles/{roleId}', [UserRoleController::class, 'destroy']);
+});
+
+// Dashboard API — Sanctum auth + merchant context
+Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', 'throttle:300,1'])->group(function () {
     // Analytics (Story 12-1)
     Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
     Route::get('/analytics/charts', [AnalyticsController::class, 'charts']);
@@ -43,15 +77,13 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     Route::get('/analytics/payment-methods', [AnalyticsController::class, 'paymentMethods']);
     Route::get('/analytics/failure-reasons', [AnalyticsController::class, 'failureReasons']);
 
-    // Payments list (Story 12-3)
+    // Payments (Story 12-3, 12-5)
     Route::get('/payments', [DashboardPaymentController::class, 'index']);
     Route::get('/payments/export', [DashboardPaymentController::class, 'export']);
-
-    // Refunds list (Story 12-6)
-    Route::get('/refunds', [DashboardRefundController::class, 'index']);
-
-    // Payment detail (Story 12-5)
     Route::get('/payments/{paymentKey}', [DashboardPaymentController::class, 'show']);
+
+    // Refunds (Story 12-6)
+    Route::get('/refunds', [DashboardRefundController::class, 'index']);
 
     // Customers (Story 13-1)
     Route::get('/customers', [DashboardCustomerController::class, 'index']);
@@ -63,6 +95,10 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     Route::get('/connectors/{connectorKey}', [DashboardConnectorController::class, 'show']);
     Route::patch('/connectors/{connectorKey}', [DashboardConnectorController::class, 'update']);
     Route::delete('/connectors/{connectorKey}', [DashboardConnectorController::class, 'destroy']);
+
+    // Connector health (Story 16-2)
+    Route::get('/connectors/{connectorKey}/health', [ConnectorHealthController::class, 'health']);
+    Route::get('/connectors/{connectorKey}/health/errors', [ConnectorHealthController::class, 'errors']);
 
     // Routing rules (Story 13-3)
     Route::get('/routing-rules', [DashboardRoutingRuleController::class, 'index']);
@@ -86,50 +122,16 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     // Event logs (Story 14-3)
     Route::get('/event-logs', [EventLogController::class, 'index']);
 
-    // Organizations (Story 15-1)
-    Route::get('/organizations', [DashboardOrganizationController::class, 'index']);
-    Route::get('/organizations/{orgKey}', [DashboardOrganizationController::class, 'show']);
-    Route::get('/organizations/{orgKey}/merchants', [DashboardOrganizationController::class, 'merchants']);
-
     // Business profiles (Story 15-2)
     Route::get('/profiles', [DashboardBusinessProfileController::class, 'index']);
     Route::post('/profiles', [DashboardBusinessProfileController::class, 'store']);
     Route::get('/profiles/{profileKey}', [DashboardBusinessProfileController::class, 'show']);
     Route::patch('/profiles/{profileKey}', [DashboardBusinessProfileController::class, 'update']);
 
-    // Audit log (Story 15-3)
-    Route::get('/audit-log', [AuditLogController::class, 'index']);
-    Route::get('/audit-log/export', [AuditLogController::class, 'export']);
-
-    // Notifications (Story 15-4)
-    Route::get('/notifications', [NotificationController::class, 'index']);
-    Route::patch('/notifications/{notificationKey}/read', [NotificationController::class, 'markRead']);
-    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
-    Route::delete('/notifications/{notificationKey}', [NotificationController::class, 'destroy']);
-
     // Disputes (Story 16-1)
     Route::get('/disputes', [DisputeController::class, 'index']);
     Route::get('/disputes/{disputeKey}', [DisputeController::class, 'show']);
     Route::post('/disputes/{disputeKey}/evidence', [DisputeController::class, 'submitEvidence']);
-
-    // Connector health (Story 16-2)
-    Route::get('/connectors/{connectorKey}/health', [ConnectorHealthController::class, 'health']);
-    Route::get('/connectors/{connectorKey}/health/errors', [ConnectorHealthController::class, 'errors']);
-
-    // Users & RBAC (Story 16-3)
-    Route::get('/users', [UserRoleController::class, 'index']);
-    Route::post('/users/roles', [UserRoleController::class, 'store']);
-    Route::patch('/users/roles/{roleId}', [UserRoleController::class, 'update']);
-    Route::delete('/users/roles/{roleId}', [UserRoleController::class, 'destroy']);
-
-    // User settings (Story 16-4)
-    Route::get('/settings', [UserSettingsController::class, 'show']);
-    Route::patch('/settings', [UserSettingsController::class, 'update']);
-
-    // Saved filters (Story 16-5)
-    Route::get('/saved-filters', [SavedFilterController::class, 'index']);
-    Route::post('/saved-filters', [SavedFilterController::class, 'store']);
-    Route::delete('/saved-filters/{filterId}', [SavedFilterController::class, 'destroy']);
 });
 
 Route::prefix('v1')->middleware('json-api')->group(function () {
