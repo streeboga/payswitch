@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router'
 import { RootLayout } from './root-layout'
 import { useAuthStore } from '@/stores/auth'
+import { useContextStore } from '@/stores/context'
 
 // Eager: login & 2FA (needed before auth), overview (most common landing)
 import { LoginPage } from '@/pages/login'
@@ -110,6 +111,15 @@ function requireAuth() {
   const { isAuthenticated, isLoading } = useAuthStore.getState()
   if (!isLoading && !isAuthenticated) {
     throw redirect({ to: '/login' })
+  }
+}
+
+// Test-mode guard — redirects to /overview if not in test mode
+function requireTestMode() {
+  requireAuth()
+  const { testMode } = useContextStore.getState()
+  if (!testMode) {
+    throw redirect({ to: '/overview' })
   }
 }
 
@@ -242,14 +252,14 @@ const onboardingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/onboarding',
   component: OnboardingPage,
-  beforeLoad: requireAuth,
+  beforeLoad: requireTestMode,
 })
 
 const testPaymentRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/test-payment',
   component: TestPaymentPage,
-  beforeLoad: requireAuth,
+  beforeLoad: requireTestMode,
 })
 
 const eventLogsRoute = createRoute({

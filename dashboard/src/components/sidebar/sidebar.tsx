@@ -134,9 +134,18 @@ export function Sidebar() {
   const sidebarCollapsed = usePreferencesStore((s) => s.sidebarCollapsed)
   const toggleSidebar = usePreferencesStore((s) => s.toggleSidebar)
 
+  const testMode = useContextStore((s) => s.testMode)
+
   const visibleGroups = useMemo(
-    () => getNavGroups(t).filter((group) => !group.adminOnly || isAdmin),
-    [t, isAdmin],
+    () =>
+      getNavGroups(t)
+        .filter((group) => !group.adminOnly || isAdmin)
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => !item.testOnly || testMode),
+        }))
+        .filter((group) => group.items.length > 0),
+    [t, isAdmin, testMode],
   )
 
   const handleLogout = useCallback(async () => {

@@ -26,6 +26,7 @@ export interface NavItem {
   icon: LucideIcon
   badge?: number
   adminOnly?: boolean
+  testOnly?: boolean
 }
 
 export interface NavGroup {
@@ -58,8 +59,8 @@ export function getNavGroups(t: TFunction): NavGroup[] {
     {
       label: t('sidebar.development'),
       items: [
-        { label: t('sidebar.onboarding'), path: '/onboarding', icon: Rocket },
-        { label: t('sidebar.testPayment'), path: '/test-payment', icon: FlaskConical },
+        { label: t('sidebar.onboarding'), path: '/onboarding', icon: Rocket, testOnly: true },
+        { label: t('sidebar.testPayment'), path: '/test-payment', icon: FlaskConical, testOnly: true },
         { label: t('sidebar.eventLogs'), path: '/event-logs', icon: ScrollText },
       ],
     },
