@@ -17,15 +17,15 @@ trait HasTwoFactorAuthentication
     {
         $google2fa = app(Google2FA::class);
 
-        return $google2fa->verifyKey(
-            decrypt($this->two_factor_secret),
+        return (bool) $google2fa->verifyKey(
+            decrypt((string) $this->two_factor_secret),
             $code,
         );
     }
 
     public function verifyRecoveryCode(string $code): bool
     {
-        $codes = json_decode(decrypt($this->two_factor_recovery_codes), true);
+        $codes = json_decode(decrypt((string) $this->two_factor_recovery_codes), true);
 
         if (! in_array($code, $codes, true)) {
             return false;

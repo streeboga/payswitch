@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\RoutingRuleRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\RoutingRule;
@@ -30,11 +31,22 @@ final readonly class RoutingRuleService
         return $this->routingRuleRepository->getAllByMerchant($merchantId);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, RoutingRule>
+     */
+    public function paginateByMerchant(int|string $merchantId, int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->routingRuleRepository->paginateByMerchant($merchantId, $perPage);
+    }
+
     public function findByKey(string $ruleKey, int|string $merchantId): RoutingRule
     {
         return $this->routingRuleRepository->findByKey($ruleKey, $merchantId);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(int|string $merchantId, array $data): RoutingRule
     {
         if (isset($data['business_profile_id']) && $data['business_profile_id']) {
@@ -53,6 +65,9 @@ final readonly class RoutingRuleService
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function update(string $ruleKey, int|string $merchantId, array $data): RoutingRule
     {
         $rule = $this->routingRuleRepository->findByKey($ruleKey, $merchantId);
@@ -64,7 +79,9 @@ final readonly class RoutingRuleService
 
         $this->routingRuleRepository->update($rule, $data);
 
-        return $rule->fresh();
+        $rule->refresh();
+
+        return $rule;
     }
 
     public function delete(string $ruleKey, int|string $merchantId): void

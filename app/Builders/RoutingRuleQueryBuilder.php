@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Builders;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\RoutingRule;
 
 final class RoutingRuleQueryBuilder
 {
+    /** @var Builder<RoutingRule> */
     private Builder $query;
 
     public function __construct()
@@ -55,11 +57,19 @@ final class RoutingRuleQueryBuilder
         return $this->query->firstOrFail();
     }
 
+    /** @return Collection<int, RoutingRule> */
     public function get(): Collection
     {
         return $this->query->get();
     }
 
+    /** @return LengthAwarePaginator<int, RoutingRule> */
+    public function paginate(int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->query->paginate($perPage);
+    }
+
+    /** @return Builder<RoutingRule> */
     public function getQuery(): Builder
     {
         return $this->query;

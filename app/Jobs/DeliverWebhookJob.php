@@ -23,6 +23,7 @@ final class DeliverWebhookJob implements ShouldQueue
 
     public int $tries;
 
+    /** @var array<int, int> */
     public array $backoff;
 
     public function __construct(

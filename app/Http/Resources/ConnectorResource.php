@@ -13,6 +13,7 @@ final class ConnectorResource extends JsonApiResource
         return 'connectors';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

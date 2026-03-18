@@ -11,6 +11,7 @@ use Streeboga\PaymentData\Models\Refund;
 
 final class RefundQueryBuilder
 {
+    /** @var Builder<Refund> */
     private Builder $query;
 
     public function __construct()
@@ -102,6 +103,7 @@ final class RefundQueryBuilder
         return $this;
     }
 
+    /** @return LengthAwarePaginator<int, Refund> */
     public function paginate(int $perPage = 20): LengthAwarePaginator
     {
         return $this->query->paginate($perPage);
@@ -122,6 +124,7 @@ final class RefundQueryBuilder
         return $this->query->first();
     }
 
+    /** @return Builder<Refund> */
     public function getQuery(): Builder
     {
         return $this->query;

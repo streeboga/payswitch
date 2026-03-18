@@ -11,6 +11,7 @@ use Streeboga\PaymentData\Models\Organization;
 
 final class OrganizationQueryBuilder
 {
+    /** @var Builder<Organization> */
     private Builder $query;
 
     public function __construct()
@@ -72,16 +73,19 @@ final class OrganizationQueryBuilder
         return $this->query->first();
     }
 
+    /** @return Collection<int, Organization> */
     public function get(): Collection
     {
         return $this->query->get();
     }
 
+    /** @return LengthAwarePaginator<int, Organization> */
     public function paginate(int $perPage = 20): LengthAwarePaginator
     {
         return $this->query->paginate($perPage);
     }
 
+    /** @return Builder<Organization> */
     public function getQuery(): Builder
     {
         return $this->query;

@@ -9,6 +9,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface NotificationRepositoryInterface
 {
+    /**
+     * @return LengthAwarePaginator<int, AppNotification>
+     */
     public function paginateForUser(int $userId, ?string $type, ?string $read, int $perPage): LengthAwarePaginator;
 
     public function findByKeyOrFail(int $userId, string $notificationKey): AppNotification;

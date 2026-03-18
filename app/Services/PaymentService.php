@@ -124,7 +124,9 @@ final readonly class PaymentService
                 'amount_capturable' => $remaining,
             ]);
 
-            return ['payment' => $payment->fresh(), 'previousStatus' => $previousStatus];
+            $payment->refresh();
+
+            return ['payment' => $payment, 'previousStatus' => $previousStatus];
         });
 
         $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
@@ -156,7 +158,9 @@ final readonly class PaymentService
             PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Cancelled);
             $this->paymentRepository->update($payment, ['status' => PaymentStatus::Cancelled]);
 
-            return ['payment' => $payment->fresh(), 'previousStatus' => $previousStatus];
+            $payment->refresh();
+
+            return ['payment' => $payment, 'previousStatus' => $previousStatus];
         });
 
         $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);

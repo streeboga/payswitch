@@ -10,6 +10,7 @@ interface EventLogRepositoryInterface
 {
     /**
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, object>
      */
     public function paginateForMerchant(int|string $merchantId, array $filters = [], int $perPage = 20): LengthAwarePaginator;
 }

@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 final class StoreRoutingRuleRequest extends FormRequest
 {
+    /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {
         return [

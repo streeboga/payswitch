@@ -11,6 +11,7 @@ use Streeboga\PaymentData\Models\MerchantAccount;
 
 final class MerchantAccountQueryBuilder
 {
+    /** @var Builder<MerchantAccount> */
     private Builder $query;
 
     public function __construct()
@@ -90,16 +91,19 @@ final class MerchantAccountQueryBuilder
         return $this->query->first();
     }
 
+    /** @return Collection<int, MerchantAccount> */
     public function get(): Collection
     {
         return $this->query->get();
     }
 
+    /** @return LengthAwarePaginator<int, MerchantAccount> */
     public function paginate(int $perPage = 20): LengthAwarePaginator
     {
         return $this->query->paginate($perPage);
     }
 
+    /** @return Builder<MerchantAccount> */
     public function getQuery(): Builder
     {
         return $this->query;

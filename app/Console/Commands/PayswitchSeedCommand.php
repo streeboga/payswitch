@@ -101,7 +101,7 @@ final class PayswitchSeedCommand extends Command
             'business_profile_id' => $profile->id,
             'connector_name' => 'stripe',
             'connector_type' => 'fiz_operations',
-            'connector_account_details' => Crypt::encryptString(json_encode([
+            'connector_account_details' => Crypt::encryptString((string) json_encode([
                 'auth_type' => 'HeaderKey',
                 'api_key' => 'sk_test_REPLACE_WITH_YOUR_KEY',
             ])),
@@ -156,6 +156,7 @@ final class PayswitchSeedCommand extends Command
             $amount = random_int(1000, 500000);
             $connector = $connectors[$i % count($connectors)];
             $captureMethod = $i % 3 === 0 ? CaptureMethod::Manual : CaptureMethod::Automatic;
+            /** @var Customer $customer */
             $customer = $customers[$i % $customers->count()];
             $createdAt = now()->subHours(random_int(1, 720));
 
@@ -241,6 +242,7 @@ final class PayswitchSeedCommand extends Command
         ];
 
         foreach ($refundConfigs as $idx => $config) {
+            /** @var PaymentIntent $payment */
             $payment = $succeededPayments[$idx];
 
             $refundData = [

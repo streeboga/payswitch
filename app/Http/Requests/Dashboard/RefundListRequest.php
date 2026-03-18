@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class RefundListRequest extends FormRequest
 {
+    /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {
         return [
@@ -21,6 +22,7 @@ final class RefundListRequest extends FormRequest
         ];
     }
 
+    /** @return array<string, mixed> */
     public function filters(): array
     {
         return $this->validated('filter') ?? [];

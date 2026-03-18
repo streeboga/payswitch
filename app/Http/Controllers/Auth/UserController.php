@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\UserRole;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
@@ -22,10 +23,10 @@ final class UserController extends Controller
     #[Response(401, description: 'Unauthenticated')]
     public function show(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $user = $request->user() ?? abort(401);
         $user->load('roles.organization');
 
-        $roles = $user->roles->map(fn ($r) => [
+        $roles = $user->roles->map(fn (UserRole $r) => [
             'organization_id' => $r->organization?->key,
             'role' => $r->role->value,
         ]);

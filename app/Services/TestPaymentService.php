@@ -16,6 +16,9 @@ final readonly class TestPaymentService
         private PaymentConfirmationService $confirmationService,
     ) {}
 
+    /**
+     * @param  array<string, mixed>  $params
+     */
     public function createAndConfirm(array $params, int|string $merchantAccountId): PaymentIntent
     {
         $paymentMethod = $params['payment_method'] ?? 'card';

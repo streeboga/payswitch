@@ -13,6 +13,7 @@ final class AppNotificationResource extends JsonApiResource
         return 'notifications';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

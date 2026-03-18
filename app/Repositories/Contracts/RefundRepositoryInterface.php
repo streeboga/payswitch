@@ -9,6 +9,9 @@ use Streeboga\PaymentData\Models\Refund;
 
 interface RefundRepositoryInterface
 {
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function create(array $attributes): Refund;
 
     public function findByKey(string $key, int|string $merchantAccountId): Refund;
@@ -17,5 +20,9 @@ interface RefundRepositoryInterface
 
     public function sumPendingAndSucceededForPayment(int $paymentIntentId): int;
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Refund>
+     */
     public function paginateFiltered(int|string $merchantAccountId, array $filters = [], int $perPage = 20): LengthAwarePaginator;
 }

@@ -72,6 +72,9 @@ final readonly class WebhookReceiverService
         return ['status' => 'ok', 'code' => 200];
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
     private function processWebhook(
         ConnectorInterface $connector,
         int $merchantAccountId,
@@ -106,7 +109,9 @@ final readonly class WebhookReceiverService
                 }
                 $this->paymentRepository->update($lockedPayment, $updateData);
 
-                return ['payment' => $lockedPayment->fresh(), 'previousStatus' => $previousStatus];
+                $lockedPayment->refresh();
+
+                return ['payment' => $lockedPayment, 'previousStatus' => $previousStatus];
             }
 
             return null;

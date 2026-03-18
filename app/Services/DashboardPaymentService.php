@@ -15,6 +15,10 @@ final readonly class DashboardPaymentService
         private PaymentIntentRepositoryInterface $repository,
     ) {}
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, PaymentIntent>
+     */
     public function list(int|string $merchantId, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         return $this->repository->paginateFiltered($merchantId, $filters, $perPage);
@@ -25,6 +29,10 @@ final readonly class DashboardPaymentService
         return $this->repository->findByKey($paymentKey, $merchantId);
     }
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LazyCollection<int, PaymentIntent>
+     */
     public function exportCursor(int|string $merchantId, array $filters = []): LazyCollection
     {
         return $this->repository->filteredQuery($merchantId, $filters)->cursor();

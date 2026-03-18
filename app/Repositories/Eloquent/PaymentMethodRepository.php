@@ -11,6 +11,9 @@ use Streeboga\PaymentData\Models\PaymentMethod;
 
 final readonly class PaymentMethodRepository implements PaymentMethodRepositoryInterface
 {
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function create(array $attributes): PaymentMethod
     {
         return PaymentMethod::create($attributes);
@@ -24,6 +27,9 @@ final readonly class PaymentMethodRepository implements PaymentMethodRepositoryI
             ->firstOrFail();
     }
 
+    /**
+     * @return Collection<int, PaymentMethod>
+     */
     public function findByCustomer(int $customerId, int|string $merchantAccountId): Collection
     {
         return PaymentMethodQueryBuilder::make()
@@ -46,6 +52,9 @@ final readonly class PaymentMethodRepository implements PaymentMethodRepositoryI
             ->update(['is_default' => false]);
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function update(PaymentMethod $paymentMethod, array $attributes): PaymentMethod
     {
         $paymentMethod->update($attributes);

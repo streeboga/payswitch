@@ -10,6 +10,7 @@ use Streeboga\PaymentData\Models\WebhookEvent;
 
 final class WebhookEventQueryBuilder
 {
+    /** @var Builder<WebhookEvent> */
     private Builder $query;
 
     public function __construct()
@@ -71,6 +72,7 @@ final class WebhookEventQueryBuilder
         return $this;
     }
 
+    /** @return LengthAwarePaginator<int, WebhookEvent> */
     public function paginate(int $perPage = 20): LengthAwarePaginator
     {
         return $this->query->paginate($perPage);
@@ -93,6 +95,7 @@ final class WebhookEventQueryBuilder
         return $this->query->first();
     }
 
+    /** @return Builder<WebhookEvent> */
     public function getQuery(): Builder
     {
         return $this->query;

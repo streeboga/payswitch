@@ -43,12 +43,16 @@ function parseDetailResponse(response: CustomerDetailResponse): CustomerDetail {
   const payments: (PaymentIntentAttributes & { id: string })[] = []
 
   for (const resource of response.included ?? []) {
-    if (resource.type === 'payment_methods') {
+    if (resource.type === 'payment-methods' || resource.type === 'payment_methods') {
       paymentMethods.push({
         ...(resource.attributes as unknown as PaymentMethodAttributes),
         id: resource.id,
       })
-    } else if (resource.type === 'payment_intents') {
+    } else if (
+      resource.type === 'payments' ||
+      resource.type === 'payment_intents' ||
+      resource.type === 'payment-intents'
+    ) {
       payments.push({
         ...(resource.attributes as unknown as PaymentIntentAttributes),
         id: resource.id,

@@ -13,6 +13,10 @@ final readonly class EventLogService
         private EventLogRepositoryInterface $eventLogs,
     ) {}
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, object>
+     */
     public function list(int|string $merchantId, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         return $this->eventLogs->paginateForMerchant($merchantId, $filters, $perPage);

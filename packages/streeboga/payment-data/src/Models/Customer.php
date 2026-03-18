@@ -51,4 +51,9 @@ class Customer extends Model
     {
         return $this->hasMany(PaymentMethod::class);
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(PaymentIntent::class, 'customer_id', 'key');
+    }
 }

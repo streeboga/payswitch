@@ -13,6 +13,7 @@ final class PaymentMethodResource extends JsonApiResource
         return 'payment-methods';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

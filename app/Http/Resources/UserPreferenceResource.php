@@ -18,6 +18,7 @@ final class UserPreferenceResource extends JsonApiResource
         return 'user-preferences';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

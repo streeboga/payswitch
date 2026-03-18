@@ -10,6 +10,7 @@ use App\Enums\UserRole as UserRoleEnum;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -24,6 +25,8 @@ class User extends Authenticatable
 
     /**
      * Get all user role assignments.
+     *
+     * @return HasMany<UserRole, $this>
      */
     public function roles(): HasMany
     {
@@ -48,8 +51,8 @@ class User extends Authenticatable
     public function roleForMerchant(int|string $merchantId): ?UserRoleEnum
     {
         $role = $this->roles()
-            ->whereHas('organization', function ($q) use ($merchantId) {
-                $q->whereHas('merchantAccounts', function ($q2) use ($merchantId) {
+            ->whereHas('organization', function (Builder $q) use ($merchantId) {
+                $q->whereHas('merchantAccounts', function (Builder $q2) use ($merchantId) {
                     $q2->where('id', $merchantId);
                 });
             })

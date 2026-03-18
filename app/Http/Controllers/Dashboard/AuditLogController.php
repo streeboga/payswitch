@@ -66,6 +66,9 @@ final class AuditLogController extends Controller
 
         return response()->streamDownload(function () use ($cursor) {
             $out = fopen('php://output', 'w');
+            if ($out === false) {
+                throw new \RuntimeException('Failed to open php://output for CSV export');
+            }
             fputcsv($out, ['id', 'event', 'description', 'subject_type', 'subject_id', 'causer_id', 'created_at']);
 
             foreach ($cursor as $activity) {
@@ -76,7 +79,7 @@ final class AuditLogController extends Controller
                     $activity->subject_type,
                     $activity->subject_id,
                     $activity->causer_id,
-                    $activity->created_at->toIso8601String(),
+                    $activity->created_at?->toIso8601String() ?? '',
                 ]);
             }
 

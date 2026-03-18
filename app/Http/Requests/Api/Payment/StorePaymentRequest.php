@@ -10,6 +10,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class StorePaymentRequest extends FormRequest
 {
+    /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {
         return [

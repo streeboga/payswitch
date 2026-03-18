@@ -18,6 +18,7 @@ final class SavedFilterResource extends JsonApiResource
         return 'saved-filters';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

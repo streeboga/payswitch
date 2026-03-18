@@ -10,6 +10,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 interface DisputeRepositoryInterface
 {
+    /**
+     * @return LengthAwarePaginator<int, Dispute>
+     */
     public function paginateForMerchant(
         int|string $merchantAccountId,
         ?string $status = null,

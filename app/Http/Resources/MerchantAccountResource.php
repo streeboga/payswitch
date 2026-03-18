@@ -13,6 +13,7 @@ final class MerchantAccountResource extends JsonApiResource
         return 'merchants';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

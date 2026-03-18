@@ -40,6 +40,7 @@ use Illuminate\Support\ServiceProvider;
 
 final class RepositoryServiceProvider extends ServiceProvider
 {
+    /** @var array<string, string> */
     public array $bindings = [
         AnalyticsRepositoryInterface::class => AnalyticsRepository::class,
         AuditLogRepositoryInterface::class => AuditLogRepository::class,

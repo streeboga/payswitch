@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Collection;
 
 final readonly class UserRoleRepository implements UserRoleRepositoryInterface
 {
+    /**
+     * @return Collection<int, UserRole>
+     */
     public function getRolesForMerchant(int|string $merchantId): Collection
     {
         return UserRole::with('user')
@@ -21,6 +24,9 @@ final readonly class UserRoleRepository implements UserRoleRepositoryInterface
             ->get();
     }
 
+    /**
+     * @param  array{user_id: int|string, organization_id: int|string, role: string}  $attributes
+     */
     public function updateOrCreate(array $attributes): UserRole
     {
         return UserRole::updateOrCreate(

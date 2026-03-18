@@ -28,7 +28,9 @@ final class UserSettingsController extends Controller
     #[Response(200, description: 'User preferences')]
     public function show(Request $request): JsonResponse
     {
-        $prefs = $this->settingsService->getOrCreatePreferences($request->user()->id);
+        $user = $request->user() ?? abort(401);
+
+        $prefs = $this->settingsService->getOrCreatePreferences($user->id);
 
         return (new UserPreferenceResource($prefs))->toResponse($request);
     }
@@ -44,8 +46,10 @@ final class UserSettingsController extends Controller
     {
         $validated = $request->validated();
 
+        $user = $request->user() ?? abort(401);
+
         $prefs = $this->settingsService->updatePreferences(
-            $request->user()->id,
+            $user->id,
             $validated,
         );
 

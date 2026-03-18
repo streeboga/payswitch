@@ -10,6 +10,7 @@ use App\Http\Resources\ApiKeyResource;
 use App\Services\MerchantService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,16 +28,20 @@ final class DashboardApiKeyController extends Controller
      *
      * Retrieve all API keys for the current merchant.
      */
-    #[Response(200, description: 'API key list')]
+    #[QueryParameter('page[size]', type: 'integer', description: 'Items per page (max 100)', example: 20)]
+    #[QueryParameter('page[number]', type: 'integer', description: 'Page number', example: 1)]
+    #[Response(200, description: 'Paginated API key list')]
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
         Gate::authorize('api-key.viewAny', [$merchantId]);
 
-        return ApiKeyResource::jsonApiList(
-            $this->merchantService->listApiKeys($merchantId),
-            $request,
+        $paginator = $this->merchantService->paginateApiKeys(
+            $merchantId,
+            (int) $request->input('page.size', 20),
         );
+
+        return ApiKeyResource::jsonApiCollection($paginator, $request);
     }
 
     /**

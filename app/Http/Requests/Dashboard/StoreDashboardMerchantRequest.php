@@ -9,6 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreDashboardMerchantRequest extends FormRequest
 {
+    /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {
         return [

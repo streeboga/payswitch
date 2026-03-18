@@ -18,6 +18,7 @@ final class AuditLogResource extends JsonApiResource
         return 'audit-logs';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

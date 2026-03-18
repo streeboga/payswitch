@@ -13,6 +13,7 @@ final class BusinessProfileResource extends JsonApiResource
         return 'profiles';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

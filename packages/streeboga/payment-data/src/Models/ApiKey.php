@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Streeboga\PaymentData\Models;
 
+use App\Enums\ApiKeyType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,6 +15,7 @@ class ApiKey extends Model
         'key_hash',
         'key_prefix',
         'name',
+        'type',
         'expires_at',
         'revoked_at',
     ];
@@ -21,6 +23,7 @@ class ApiKey extends Model
     protected function casts(): array
     {
         return [
+            'type' => ApiKeyType::class,
             'expires_at' => 'datetime',
             'revoked_at' => 'datetime',
         ];

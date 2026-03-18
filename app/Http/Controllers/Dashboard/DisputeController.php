@@ -85,7 +85,8 @@ final class DisputeController extends Controller
         $filePath = null;
 
         if ($request->hasFile('file')) {
-            $filePath = $request->file('file')->store("disputes/{$dispute->key}", 'local');
+            $stored = $request->file('file')->store("disputes/{$dispute->key}", 'local');
+            $filePath = $stored !== false ? $stored : null;
         }
 
         $evidence = $this->disputeService->createEvidence($dispute, $attrs, $filePath);

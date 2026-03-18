@@ -50,6 +50,9 @@ final readonly class PaymentMethodService
         ]);
     }
 
+    /**
+     * @return Collection<int, PaymentMethod>
+     */
     public function listForCustomer(string $customerKey, int|string $merchantAccountId): Collection
     {
         $customer = $this->customerRepository->findByKey($customerKey, $merchantAccountId);
@@ -77,12 +80,14 @@ final readonly class PaymentMethodService
             $this->paymentMethodRepository->update($pm, ['is_default' => true]);
         });
 
-        return $pm->fresh();
+        $pm->refresh();
+
+        return $pm;
     }
 
     public static function detectBrand(string $cardNumber): string
     {
-        $number = preg_replace('/\D/', '', $cardNumber);
+        $number = preg_replace('/\D/', '', $cardNumber) ?? '';
 
         return match (true) {
             str_starts_with($number, '4') => 'visa',

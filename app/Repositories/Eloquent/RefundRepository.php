@@ -17,6 +17,9 @@ final readonly class RefundRepository implements RefundRepositoryInterface
         return RefundQueryBuilder::make();
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function create(array $attributes): Refund
     {
         return Refund::create($attributes);
@@ -40,6 +43,10 @@ final readonly class RefundRepository implements RefundRepositoryInterface
             ->sum('amount');
     }
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Refund>
+     */
     public function paginateFiltered(int|string $merchantAccountId, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         $builder = $this->query()->forMerchant($merchantAccountId);

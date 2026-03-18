@@ -9,6 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreRefundRequest extends FormRequest
 {
+    /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {
         return [

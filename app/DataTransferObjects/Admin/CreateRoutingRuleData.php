@@ -8,6 +8,9 @@ use Spatie\LaravelData\Data;
 
 final class CreateRoutingRuleData extends Data
 {
+    /**
+     * @param  array<string, mixed>  $rules
+     */
     public function __construct(
         public readonly string $type,
         public readonly string $name,

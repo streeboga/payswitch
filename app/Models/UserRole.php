@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Streeboga\PaymentData\Models\Organization;
 
+/**
+ * @property UserRoleEnum $role
+ */
 class UserRole extends Model
 {
     protected $fillable = [
@@ -24,11 +27,13 @@ class UserRole extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<Organization, $this> */
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);

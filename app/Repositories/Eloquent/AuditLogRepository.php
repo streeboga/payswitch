@@ -12,11 +12,19 @@ use Spatie\Activitylog\Models\Activity;
 
 final readonly class AuditLogRepository implements AuditLogRepositoryInterface
 {
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Activity>
+     */
     public function getPaginated(array $filters, int $perPage): LengthAwarePaginator
     {
         return $this->buildFilteredQuery($filters)->paginate($perPage);
     }
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LazyCollection<int, Activity>
+     */
     public function getCursorForExport(array $filters): LazyCollection
     {
         return $this->buildFilteredQuery($filters)->cursor();

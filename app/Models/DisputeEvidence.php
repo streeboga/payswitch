@@ -16,6 +16,7 @@ class DisputeEvidence extends Model
         'text_content',
     ];
 
+    /** @return BelongsTo<Dispute, $this> */
     public function dispute(): BelongsTo
     {
         return $this->belongsTo(Dispute::class);

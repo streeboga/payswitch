@@ -86,6 +86,8 @@ final readonly class RoutingService
 
     /**
      * Get the next fallback connector (excluding already tried ones).
+     *
+     * @param  array<int, string>  $excludeConnectors
      */
     public function fallback(int|string $merchantAccountId, array $excludeConnectors): ?MerchantConnectorAccount
     {
@@ -107,6 +109,9 @@ final readonly class RoutingService
         };
     }
 
+    /**
+     * @param  array<string, mixed>  $config
+     */
     private function evaluatePriorityRule(array $config, int|string $merchantAccountId): ?MerchantConnectorAccount
     {
         $connectorNames = array_filter($config['connectors'] ?? [], fn ($n) => ! empty($n));
@@ -122,6 +127,9 @@ final readonly class RoutingService
         return null;
     }
 
+    /**
+     * @param  array<string, mixed>  $config
+     */
     private function evaluateRuleBasedRule(array $config, ?string $currency, ?int $amount, int|string $merchantAccountId): ?MerchantConnectorAccount
     {
         $conditions = $config['conditions'] ?? [];
@@ -165,6 +173,9 @@ final readonly class RoutingService
         return null;
     }
 
+    /**
+     * @param  array<string, mixed>  $config
+     */
     private function evaluateVolumeSplitRule(array $config, int|string $merchantAccountId): ?MerchantConnectorAccount
     {
         $splits = array_filter($config['split'] ?? [], fn ($s) => isset($s['weight']) && $s['weight'] > 0 && isset($s['connector']));

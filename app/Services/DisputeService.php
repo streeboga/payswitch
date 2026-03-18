@@ -32,6 +32,9 @@ final readonly class DisputeService
         return $this->disputes->findByKeyOrFail($disputeKey, $merchantAccountId);
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function createEvidence(Dispute $dispute, array $attributes, ?string $filePath = null): DisputeEvidence
     {
         return $this->disputes->createEvidence([

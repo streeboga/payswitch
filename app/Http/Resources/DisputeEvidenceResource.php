@@ -18,6 +18,7 @@ final class DisputeEvidenceResource extends JsonApiResource
         return (string) $this->id;
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

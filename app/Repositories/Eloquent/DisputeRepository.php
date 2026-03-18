@@ -11,6 +11,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 final readonly class DisputeRepository implements DisputeRepositoryInterface
 {
+    /**
+     * @return LengthAwarePaginator<int, Dispute>
+     */
     public function paginateForMerchant(
         int|string $merchantAccountId,
         ?string $status = null,
@@ -37,6 +40,9 @@ final readonly class DisputeRepository implements DisputeRepositoryInterface
             ->firstOrFail();
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function createEvidence(array $attributes): DisputeEvidence
     {
         return DisputeEvidence::create($attributes);

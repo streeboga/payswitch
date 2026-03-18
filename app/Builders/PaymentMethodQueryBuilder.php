@@ -10,6 +10,7 @@ use Streeboga\PaymentData\Models\PaymentMethod;
 
 final class PaymentMethodQueryBuilder
 {
+    /** @var Builder<PaymentMethod> */
     private Builder $query;
 
     public function __construct()
@@ -55,16 +56,19 @@ final class PaymentMethodQueryBuilder
         return $this->query->firstOrFail();
     }
 
+    /** @return Collection<int, PaymentMethod> */
     public function get(): Collection
     {
         return $this->query->get();
     }
 
+    /** @param array<string, mixed> $attributes */
     public function update(array $attributes): int
     {
         return $this->query->update($attributes);
     }
 
+    /** @return Builder<PaymentMethod> */
     public function getQuery(): Builder
     {
         return $this->query;

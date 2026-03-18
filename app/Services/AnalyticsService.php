@@ -13,6 +13,9 @@ final readonly class AnalyticsService
         private AnalyticsRepositoryInterface $repository,
     ) {}
 
+    /**
+     * @return array<string, int|float>
+     */
     public function overview(int|string $merchantId, PeriodFilter $period): array
     {
         $data = $this->repository->overview($merchantId, $period);
@@ -24,21 +27,33 @@ final readonly class AnalyticsService
         return $data;
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function charts(int|string $merchantId, PeriodFilter $period): array
     {
         return $this->repository->charts($merchantId, $period);
     }
 
+    /**
+     * @return array<string, int>
+     */
     public function funnel(int|string $merchantId, PeriodFilter $period): array
     {
         return $this->repository->funnel($merchantId, $period);
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function paymentMethods(int|string $merchantId, PeriodFilter $period): array
     {
         return $this->repository->paymentMethods($merchantId, $period);
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function failureReasons(int|string $merchantId, PeriodFilter $period): array
     {
         return $this->repository->failureReasons($merchantId, $period);

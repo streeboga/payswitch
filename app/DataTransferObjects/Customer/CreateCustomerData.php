@@ -8,6 +8,9 @@ use Spatie\LaravelData\Data;
 
 final class CreateCustomerData extends Data
 {
+    /**
+     * @param  array<string, mixed>|null  $metadata
+     */
     public function __construct(
         public readonly ?string $name = null,
         public readonly ?string $email = null,

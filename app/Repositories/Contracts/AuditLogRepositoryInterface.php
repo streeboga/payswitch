@@ -12,6 +12,7 @@ interface AuditLogRepositoryInterface
 {
     /**
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Activity>
      */
     public function getPaginated(array $filters, int $perPage): LengthAwarePaginator;
 

@@ -45,6 +45,9 @@ final readonly class BusinessProfileService
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function update(string $profileKey, array $attributes): BusinessProfile
     {
         $profile = $this->merchantRepository->findProfileByKey($profileKey);

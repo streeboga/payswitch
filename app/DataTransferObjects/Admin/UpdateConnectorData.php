@@ -9,6 +9,10 @@ use Spatie\LaravelData\Optional;
 
 final class UpdateConnectorData extends Data
 {
+    /**
+     * @param  array<string, mixed>|Optional|null  $connector_account_details
+     * @param  array<int, string>|Optional|null  $payment_methods_enabled
+     */
     public function __construct(
         public readonly string|Optional $connector_name = new Optional,
         public readonly string|Optional $connector_type = new Optional,
@@ -19,6 +23,7 @@ final class UpdateConnectorData extends Data
         public readonly string|Optional|null $profile_id = new Optional,
     ) {}
 
+    /** @return array<string, mixed> */
     public function toUpdateArray(): array
     {
         return collect($this->toArray())

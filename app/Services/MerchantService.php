@@ -99,6 +99,9 @@ final readonly class MerchantService
         return $this->merchantRepository->listApiKeysByMerchant($merchantId);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, ApiKey>
+     */
     public function paginateApiKeys(int|string $merchantId, int $perPage = 20): LengthAwarePaginator
     {
         return $this->merchantRepository->paginateApiKeysByMerchant($merchantId, $perPage);

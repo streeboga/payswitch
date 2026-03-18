@@ -13,6 +13,7 @@ final class PaymentIntentResource extends JsonApiResource
         return 'payments';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

@@ -8,6 +8,9 @@ use Spatie\LaravelData\Data;
 
 final class ConfirmPaymentData extends Data
 {
+    /**
+     * @param  array<string, mixed>  $payment_method_data
+     */
     public function __construct(
         public readonly string $payment_method,
         public readonly array $payment_method_data,

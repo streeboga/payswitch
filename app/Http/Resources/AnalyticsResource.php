@@ -27,6 +27,7 @@ final class AnalyticsResource extends JsonApiResource
         return '1';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return $this->resource;
@@ -39,6 +40,8 @@ final class AnalyticsResource extends JsonApiResource
 
     /**
      * Create a JSON:API list response from an array of items.
+     *
+     * @param  array<int, array<string, mixed>>  $items
      */
     public static function jsonApiListFromArray(string $type, array $items, Request $request): JsonResponse
     {

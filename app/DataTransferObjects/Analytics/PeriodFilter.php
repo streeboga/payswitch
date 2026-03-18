@@ -14,6 +14,7 @@ final class PeriodFilter extends Data
         public readonly CarbonImmutable $to,
     ) {}
 
+    /** @param array<string, mixed> $params */
     public static function fromRequest(array $params): self
     {
         if (! empty($params['from']) && ! empty($params['to'])) {

@@ -39,16 +39,25 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
         return BusinessProfileQueryBuilder::make();
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function createOrganization(array $attributes): Organization
     {
         return Organization::create($attributes);
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function createMerchantAccount(array $attributes): MerchantAccount
     {
         return MerchantAccount::create($attributes);
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function createBusinessProfile(array $attributes): BusinessProfile
     {
         $profile = BusinessProfile::create($attributes);
@@ -56,11 +65,17 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
         return $profile->load('merchantAccount');
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function createApiKey(array $attributes): ApiKey
     {
         return ApiKey::create($attributes);
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function createConnector(array $attributes): MerchantConnectorAccount
     {
         return MerchantConnectorAccount::create($attributes);
@@ -104,6 +119,9 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
             ->first();
     }
 
+    /**
+     * @return Collection<int, MerchantConnectorAccount>
+     */
     public function getActiveConnectorsByMerchant(int|string $merchantAccountId): Collection
     {
         return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
@@ -111,11 +129,17 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
             ->get();
     }
 
+    /**
+     * @return Collection<int, MerchantConnectorAccount>
+     */
     public function getConnectorsByMerchant(int|string $merchantAccountId): Collection
     {
         return $this->connectorQuery()->forMerchant($merchantAccountId)->getQuery()->get();
     }
 
+    /**
+     * @param  array<int, string>  $excludeConnectors
+     */
     public function getFirstActiveConnector(int|string $merchantAccountId, array $excludeConnectors = []): ?MerchantConnectorAccount
     {
         $query = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
@@ -133,6 +157,9 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
         $connector->delete();
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function updateConnector(MerchantConnectorAccount $connector, array $attributes): MerchantConnectorAccount
     {
         $connector->update($attributes);
@@ -155,16 +182,25 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
         return $this->connectorQuery()->forMerchant($merchantAccountId)->whereKey($connectorKey)->first();
     }
 
+    /**
+     * @return Collection<int, Organization>
+     */
     public function listOrganizations(): Collection
     {
         return $this->orgQuery()->withMerchantCount()->latest()->get();
     }
 
+    /**
+     * @return Collection<int, MerchantAccount>
+     */
     public function listAllMerchants(): Collection
     {
         return $this->merchantQuery()->withOrganization()->withCounts()->latest()->get();
     }
 
+    /**
+     * @return Collection<int, ApiKey>
+     */
     public function listApiKeysByMerchant(int|string $merchantAccountId): Collection
     {
         return ApiKey::where('merchant_account_id', $merchantAccountId)
@@ -172,6 +208,9 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
             ->get();
     }
 
+    /**
+     * @return LengthAwarePaginator<int, ApiKey>
+     */
     public function paginateApiKeysByMerchant(int|string $merchantAccountId, int $perPage = 20): LengthAwarePaginator
     {
         return ApiKey::where('merchant_account_id', $merchantAccountId)
@@ -189,23 +228,32 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
         $apiKey->revoke();
     }
 
+    /**
+     * @return Collection<int, BusinessProfile>
+     */
     public function listProfilesByMerchant(int|string $merchantAccountId): Collection
     {
         return $this->profileQuery()->withMerchantAccount()->withCounts()->forMerchant($merchantAccountId)->get();
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function updateProfile(BusinessProfile $profile, array $attributes): BusinessProfile
     {
         $profile->update($attributes);
 
-        return $profile->fresh('merchantAccount');
+        return $profile->refresh()->load('merchantAccount');
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function updateOrganization(Organization $org, array $attributes): Organization
     {
         $org->update($attributes);
 
-        return $org->fresh()->loadCount('merchantAccounts');
+        return $org->refresh()->loadCount('merchantAccounts');
     }
 
     public function deleteOrganization(Organization $org): void
@@ -213,11 +261,14 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
         $org->delete();
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function updateMerchant(MerchantAccount $merchant, array $attributes): MerchantAccount
     {
         $merchant->update($attributes);
 
-        return $merchant->fresh('organization')->loadCount(['businessProfiles', 'connectorAccounts']);
+        return $merchant->refresh()->load('organization')->loadCount(['businessProfiles', 'connectorAccounts']);
     }
 
     public function deleteMerchant(MerchantAccount $merchant): void

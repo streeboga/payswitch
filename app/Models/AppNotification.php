@@ -45,6 +45,7 @@ class AppNotification extends Model
         return 'key';
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

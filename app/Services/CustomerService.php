@@ -7,6 +7,7 @@ namespace App\Services;
 use App\DataTransferObjects\Customer\CreateCustomerData;
 use App\DataTransferObjects\Customer\UpdateCustomerData;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\Customer;
@@ -37,9 +38,21 @@ final readonly class CustomerService
         return $this->customerRepository->create($attributes);
     }
 
+    /**
+     * @return Collection<int, Customer>
+     */
     public function list(int|string $merchantAccountId): Collection
     {
         return $this->customerRepository->list($merchantAccountId);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Customer>
+     */
+    public function paginate(int|string $merchantAccountId, array $filters = [], int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->customerRepository->paginate($merchantAccountId, $filters, $perPage);
     }
 
     public function find(string $customerKey, int|string $merchantAccountId): Customer
@@ -58,7 +71,9 @@ final readonly class CustomerService
 
         $this->customerRepository->update($customer, $updateData);
 
-        return $customer->fresh();
+        $customer->refresh();
+
+        return $customer;
     }
 
     public function delete(string $customerKey, int|string $merchantAccountId): void

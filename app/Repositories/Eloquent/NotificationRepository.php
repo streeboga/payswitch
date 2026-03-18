@@ -10,6 +10,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 final readonly class NotificationRepository implements NotificationRepositoryInterface
 {
+    /**
+     * @return LengthAwarePaginator<int, AppNotification>
+     */
     public function paginateForUser(int $userId, ?string $type, ?string $read, int $perPage): LengthAwarePaginator
     {
         $query = AppNotification::where('user_id', $userId);

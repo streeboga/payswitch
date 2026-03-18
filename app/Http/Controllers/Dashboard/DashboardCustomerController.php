@@ -13,6 +13,7 @@ use App\Http\Resources\CustomerResource;
 use App\Services\CustomerService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,14 +31,21 @@ final class DashboardCustomerController extends Controller
      *
      * Retrieve all customers for the current merchant.
      */
-    #[Response(200, description: 'Customer list')]
+    #[QueryParameter('page[size]', type: 'integer', description: 'Items per page (max 100)', example: 20)]
+    #[QueryParameter('page[number]', type: 'integer', description: 'Page number', example: 1)]
+    #[Response(200, description: 'Paginated customer list')]
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
         Gate::authorize('customer.viewAny', [$merchantId]);
-        $customers = $this->customerService->list($merchantId);
 
-        return CustomerResource::jsonApiList($customers, $request);
+        $paginator = $this->customerService->paginate(
+            $merchantId,
+            [],
+            (int) $request->input('page.size', 20),
+        );
+
+        return CustomerResource::jsonApiCollection($paginator, $request);
     }
 
     /**
@@ -79,7 +87,9 @@ final class DashboardCustomerController extends Controller
         Gate::authorize('customer.view', [$merchantId]);
         $customer = $this->customerService->find($customerKey, $merchantId);
 
-        return (new CustomerResource($customer))->toResponse($request);
+        $includes = array_filter(explode(',', $request->query('include', '')));
+
+        return (new CustomerResource($customer))->toResponseWithIncludes($request, $includes);
     }
 
     /**

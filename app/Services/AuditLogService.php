@@ -19,6 +19,7 @@ final readonly class AuditLogService
      * Get paginated audit log entries with optional filters.
      *
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Activity>
      */
     public function getPaginated(array $filters, int $perPage): LengthAwarePaginator
     {

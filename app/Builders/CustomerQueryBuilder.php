@@ -10,6 +10,7 @@ use Streeboga\PaymentData\Models\Customer;
 
 final class CustomerQueryBuilder
 {
+    /** @var Builder<Customer> */
     private Builder $query;
 
     public function __construct()
@@ -81,11 +82,13 @@ final class CustomerQueryBuilder
         return $this->query->first();
     }
 
+    /** @return LengthAwarePaginator<int, Customer> */
     public function paginate(int $perPage = 20): LengthAwarePaginator
     {
         return $this->query->paginate($perPage);
     }
 
+    /** @return Builder<Customer> */
     public function getQuery(): Builder
     {
         return $this->query;

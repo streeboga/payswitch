@@ -34,6 +34,9 @@ final readonly class ConnectorService
         ]);
     }
 
+    /**
+     * @return Collection<int, MerchantConnectorAccount>
+     */
     public function list(string $merchantKey): Collection
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
@@ -62,7 +65,9 @@ final readonly class ConnectorService
 
         $this->merchantRepository->updateConnector($connector, $updateData);
 
-        return $connector->fresh();
+        $connector->refresh();
+
+        return $connector;
     }
 
     public function delete(string $merchantKey, string $connectorKey): void

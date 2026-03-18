@@ -18,6 +18,7 @@ final class EventLogResource extends JsonApiResource
         return 'event-logs';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

@@ -34,6 +34,8 @@ abstract class JsonApiResource extends JsonResource
     /**
      * Return the resource's attributes.
      * Subclasses MUST override this method.
+     *
+     * @return array<string, mixed>
      */
     public function toAttributes(Request $request): array
     {
@@ -64,6 +66,8 @@ abstract class JsonApiResource extends JsonResource
 
     /**
      * Transform the resource into a JSON:API array.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
@@ -122,7 +126,7 @@ abstract class JsonApiResource extends JsonResource
     /**
      * Create a paginated JSON:API collection response.
      *
-     * @param  LengthAwarePaginator  $paginator
+     * @param  LengthAwarePaginator<int, mixed>  $paginator
      */
     public static function jsonApiCollection($paginator, Request $request): JsonResponse
     {
@@ -149,6 +153,8 @@ abstract class JsonApiResource extends JsonResource
 
     /**
      * Create a simple collection response (no pagination).
+     *
+     * @param  iterable<mixed>  $items
      */
     public static function jsonApiList($items, Request $request): JsonResponse
     {
@@ -167,6 +173,7 @@ abstract class JsonApiResource extends JsonResource
 
     private int $statusCode = 200;
 
+    /** @var array<string, string> */
     private array $additionalHeaders = [];
 
     public function withStatus(int $code): static

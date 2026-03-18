@@ -8,6 +8,9 @@ use Spatie\LaravelData\Data;
 
 final class CreateRefundData extends Data
 {
+    /**
+     * @param  array<string, mixed>|null  $metadata
+     */
     public function __construct(
         public readonly string $payment_id,
         public readonly int $amount,

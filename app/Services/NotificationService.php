@@ -16,6 +16,8 @@ final readonly class NotificationService
 
     /**
      * List notifications for a user with optional filters.
+     *
+     * @return LengthAwarePaginator<int, AppNotification>
      */
     public function list(int $userId, ?string $type, ?string $read, int $perPage): LengthAwarePaginator
     {

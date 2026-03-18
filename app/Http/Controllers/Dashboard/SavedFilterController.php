@@ -29,7 +29,9 @@ final class SavedFilterController extends Controller
     #[Response(200, description: 'Saved filter list')]
     public function index(Request $request): JsonResponse
     {
-        $filters = $this->savedFilterService->list($request->user()->id);
+        $user = $request->user() ?? abort(401);
+
+        $filters = $this->savedFilterService->list($user->id);
 
         return SavedFilterResource::jsonApiList($filters, $request);
     }
@@ -45,8 +47,10 @@ final class SavedFilterController extends Controller
     {
         $validated = $request->validated();
 
+        $user = $request->user() ?? abort(401);
+
         $filter = $this->savedFilterService->create(
-            $request->user()->id,
+            $user->id,
             $validated,
         );
 
@@ -62,7 +66,9 @@ final class SavedFilterController extends Controller
     #[Response(204, description: 'Filter deleted')]
     public function destroy(string $filterId, Request $request): JsonResponse
     {
-        $this->savedFilterService->delete($filterId, $request->user()->id);
+        $user = $request->user() ?? abort(401);
+
+        $this->savedFilterService->delete($filterId, $user->id);
 
         return response()->json(null, 204);
     }

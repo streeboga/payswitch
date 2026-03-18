@@ -97,7 +97,9 @@ final readonly class PaymentConfirmationService
                 }
             }
 
-            return ['payment' => $payment->fresh(), 'previousStatus' => $previousStatus];
+            $payment->refresh();
+
+            return ['payment' => $payment, 'previousStatus' => $previousStatus];
         });
 
         $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
@@ -106,6 +108,7 @@ final readonly class PaymentConfirmationService
     }
 
     /**
+     * @param  array<string, mixed>  $connectorParams
      * @return array{success: bool, message?: string, code?: string, transaction_id?: string}
      */
     private function executeConnectorCall(PaymentIntent $payment, MerchantConnectorAccount $mca, array $connectorParams): array
@@ -162,6 +165,9 @@ final readonly class PaymentConfirmationService
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $result
+     */
     private function applyRequiresActionStatus(PaymentIntent $payment, string $connectorName, array $result): void
     {
         PaymentStateMachine::assertTransition($payment->status, PaymentStatus::RequiresCustomerAction);
@@ -175,6 +181,9 @@ final readonly class PaymentConfirmationService
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $result
+     */
     private function applyFailedStatus(PaymentIntent $payment, string $connectorName, array $result): void
     {
         PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Failed);

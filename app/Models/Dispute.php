@@ -50,16 +50,19 @@ class Dispute extends Model
         });
     }
 
+    /** @return BelongsTo<PaymentIntent, $this> */
     public function paymentIntent(): BelongsTo
     {
         return $this->belongsTo(PaymentIntent::class);
     }
 
+    /** @return BelongsTo<MerchantAccount, $this> */
     public function merchantAccount(): BelongsTo
     {
         return $this->belongsTo(MerchantAccount::class);
     }
 
+    /** @return HasMany<DisputeEvidence, $this> */
     public function evidences(): HasMany
     {
         return $this->hasMany(DisputeEvidence::class);

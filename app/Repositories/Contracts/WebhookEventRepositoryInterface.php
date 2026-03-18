@@ -9,12 +9,19 @@ use Streeboga\PaymentData\Models\WebhookEvent;
 
 interface WebhookEventRepositoryInterface
 {
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function create(array $attributes): WebhookEvent;
 
     public function findById(int $id): ?WebhookEvent;
 
     public function findByKeyForMerchant(string $key, int|string $merchantId): WebhookEvent;
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, WebhookEvent>
+     */
     public function paginateForMerchant(int|string $merchantId, array $filters = [], int $perPage = 20): LengthAwarePaginator;
 
     public function markDelivered(WebhookEvent $event, int $attempts): void;

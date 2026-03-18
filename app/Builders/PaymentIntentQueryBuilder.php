@@ -11,6 +11,7 @@ use Streeboga\PaymentData\Models\PaymentIntent;
 
 final class PaymentIntentQueryBuilder
 {
+    /** @var Builder<PaymentIntent> */
     private Builder $query;
 
     public function __construct()
@@ -125,6 +126,7 @@ final class PaymentIntentQueryBuilder
         return $this;
     }
 
+    /** @return LengthAwarePaginator<int, PaymentIntent> */
     public function paginate(int $perPage = 20): LengthAwarePaginator
     {
         return $this->query->paginate($perPage);
@@ -137,6 +139,7 @@ final class PaymentIntentQueryBuilder
         return $this;
     }
 
+    /** @return LazyCollection<int, PaymentIntent> */
     public function cursor(): LazyCollection
     {
         return $this->query->cursor();
@@ -152,6 +155,7 @@ final class PaymentIntentQueryBuilder
         return $this->query->first();
     }
 
+    /** @return Builder<PaymentIntent> */
     public function getQuery(): Builder
     {
         return $this->query;

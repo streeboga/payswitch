@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Repositories\Contracts\RefundRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Streeboga\PaymentData\Models\Refund;
 
 final readonly class DashboardRefundService
 {
@@ -13,6 +14,10 @@ final readonly class DashboardRefundService
         private RefundRepositoryInterface $repository,
     ) {}
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Refund>
+     */
     public function list(int|string $merchantId, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         return $this->repository->paginateFiltered($merchantId, $filters, $perPage);

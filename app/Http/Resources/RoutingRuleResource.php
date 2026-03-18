@@ -13,6 +13,7 @@ final class RoutingRuleResource extends JsonApiResource
         return 'routing-rules';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

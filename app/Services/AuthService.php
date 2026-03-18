@@ -33,6 +33,12 @@ final readonly class AuthService
 
         $user = Auth::user();
 
+        if (! $user) {
+            throw ValidationException::withMessages([
+                'email' => [__('auth.failed')],
+            ]);
+        }
+
         if ($user->hasTwoFactorEnabled()) {
             Auth::logout();
             $request->session()->put('login.id', $user->id);

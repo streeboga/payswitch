@@ -9,6 +9,9 @@ use Spatie\LaravelData\Optional;
 
 final class UpdateRoutingRuleData extends Data
 {
+    /**
+     * @param  array<string, mixed>|Optional  $rules
+     */
     public function __construct(
         public readonly string|Optional $type = new Optional,
         public readonly string|Optional $name = new Optional,
@@ -18,6 +21,7 @@ final class UpdateRoutingRuleData extends Data
         public readonly string|Optional|null $business_profile_id = new Optional,
     ) {}
 
+    /** @return array<string, mixed> */
     public function toUpdateArray(): array
     {
         return collect($this->toArray())

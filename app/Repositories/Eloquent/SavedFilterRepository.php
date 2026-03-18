@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Collection;
 
 final readonly class SavedFilterRepository implements SavedFilterRepositoryInterface
 {
+    /**
+     * @return Collection<int, SavedFilter>
+     */
     public function allForUser(int|string $userId): Collection
     {
         return SavedFilter::where('user_id', $userId)
@@ -17,6 +20,9 @@ final readonly class SavedFilterRepository implements SavedFilterRepositoryInter
             ->get();
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function create(array $attributes): SavedFilter
     {
         return SavedFilter::create($attributes);

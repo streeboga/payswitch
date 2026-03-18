@@ -10,6 +10,10 @@ use Streeboga\PaymentData\Enums\CaptureMethod;
 
 final class CreatePaymentData extends Data
 {
+    /**
+     * @param  array<string, mixed>|null  $metadata
+     * @param  array<string, mixed>|null  $payment_method_data
+     */
     public function __construct(
         public readonly int $amount,
         public readonly string $currency,

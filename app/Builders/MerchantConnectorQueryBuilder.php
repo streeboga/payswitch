@@ -9,6 +9,7 @@ use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 
 final class MerchantConnectorQueryBuilder
 {
+    /** @var Builder<MerchantConnectorAccount> */
     private Builder $query;
 
     public function __construct()
@@ -52,6 +53,7 @@ final class MerchantConnectorQueryBuilder
         return $this->query->first();
     }
 
+    /** @return Builder<MerchantConnectorAccount> */
     public function getQuery(): Builder
     {
         return $this->query;

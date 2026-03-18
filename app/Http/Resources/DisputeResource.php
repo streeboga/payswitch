@@ -13,6 +13,7 @@ final class DisputeResource extends JsonApiResource
         return 'disputes';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

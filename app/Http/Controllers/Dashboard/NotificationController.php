@@ -32,8 +32,10 @@ final class NotificationController extends Controller
     #[Response(200, description: 'Paginated notification list')]
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user() ?? abort(401);
+
         $paginator = $this->notificationService->list(
-            userId: $request->user()->id,
+            userId: $user->id,
             type: $request->input('filter.type'),
             read: $request->input('filter.read'),
             perPage: (int) $request->input('page.size', 20),
@@ -52,7 +54,9 @@ final class NotificationController extends Controller
     #[Response(404, description: 'Notification not found')]
     public function markRead(string $notificationKey, Request $request): JsonResponse
     {
-        $notification = $this->notificationService->markRead($request->user()->id, $notificationKey);
+        $user = $request->user() ?? abort(401);
+
+        $notification = $this->notificationService->markRead($user->id, $notificationKey);
 
         return (new AppNotificationResource($notification))->toResponse($request);
     }
@@ -65,7 +69,9 @@ final class NotificationController extends Controller
     #[Response(200, description: 'All notifications marked as read')]
     public function markAllRead(Request $request): JsonResponse
     {
-        $this->notificationService->markAllRead($request->user()->id);
+        $user = $request->user() ?? abort(401);
+
+        $this->notificationService->markAllRead($user->id);
 
         return response()->json([
             'data' => ['type' => 'notification-actions', 'id' => '1', 'attributes' => ['status' => 'done']],
@@ -81,7 +87,9 @@ final class NotificationController extends Controller
     #[Response(204, description: 'Notification deleted')]
     public function destroy(string $notificationKey, Request $request): JsonResponse
     {
-        $this->notificationService->delete($request->user()->id, $notificationKey);
+        $user = $request->user() ?? abort(401);
+
+        $this->notificationService->delete($user->id, $notificationKey);
 
         return response()->json(null, 204);
     }
@@ -94,7 +102,9 @@ final class NotificationController extends Controller
     #[Response(200, description: 'Unread count')]
     public function unreadCount(Request $request): JsonResponse
     {
-        $count = $this->notificationService->unreadCount($request->user()->id);
+        $user = $request->user() ?? abort(401);
+
+        $count = $this->notificationService->unreadCount($user->id);
 
         return response()->json(['count' => $count]);
     }

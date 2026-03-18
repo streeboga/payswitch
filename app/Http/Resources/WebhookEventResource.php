@@ -13,6 +13,7 @@ final class WebhookEventResource extends JsonApiResource
         return 'webhook-events';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

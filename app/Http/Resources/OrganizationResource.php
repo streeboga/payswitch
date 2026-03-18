@@ -13,6 +13,7 @@ final class OrganizationResource extends JsonApiResource
         return 'organizations';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

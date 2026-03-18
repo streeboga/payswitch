@@ -22,6 +22,9 @@ final readonly class SavedFilterService
         return $this->filters->allForUser($userId);
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function create(int|string $userId, array $attributes): SavedFilter
     {
         return $this->filters->create([

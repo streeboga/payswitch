@@ -7,6 +7,7 @@ namespace App\Repositories\Eloquent;
 use App\Builders\PaymentIntentQueryBuilder;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
 
@@ -17,6 +18,9 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         return PaymentIntentQueryBuilder::make();
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function create(array $attributes): PaymentIntent
     {
         return PaymentIntent::create($attributes);
@@ -37,6 +41,9 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         return $this->query()->forMerchant($merchantAccountId)->whereKey($key)->first();
     }
 
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function update(PaymentIntent $payment, array $attributes): PaymentIntent
     {
         $payment->update($attributes);
@@ -44,6 +51,10 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         return $payment;
     }
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, PaymentIntent>
+     */
     public function paginate(int|string $merchantAccountId, array $filters = [], ?string $sort = null, int $perPage = 20): LengthAwarePaginator
     {
         $builder = $this->query()->forMerchant($merchantAccountId);
@@ -64,6 +75,9 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         return $query->paginate($perPage);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, PaymentIntent>
+     */
     public function paginateAll(int $perPage = 20): LengthAwarePaginator
     {
         return $this->query()->latest()->getQuery()->paginate($perPage);
@@ -84,13 +98,17 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         $payment->increment('attempt_count');
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function createAttempt(PaymentIntent $payment, array $data): void
     {
         $payment->paymentAttempts()->create($data);
     }
 
-    public function findLastSuccessfulAttempt(PaymentIntent $payment): ?object
+    public function findLastSuccessfulAttempt(PaymentIntent $payment): ?PaymentAttempt
     {
+        /** @var PaymentAttempt|null */
         return $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
     }
 
@@ -101,11 +119,18 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
             ->first();
     }
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, PaymentIntent>
+     */
     public function paginateFiltered(int|string $merchantAccountId, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         return $this->filteredQuery($merchantAccountId, $filters)->paginate($perPage);
     }
 
+    /**
+     * @param  array<string, mixed>  $filters
+     */
     public function filteredQuery(int|string $merchantAccountId, array $filters = []): PaymentIntentQueryBuilder
     {
         $builder = $this->query()->forMerchant($merchantAccountId);

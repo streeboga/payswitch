@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\DB;
 
 final readonly class ConnectorHealthRepository implements ConnectorHealthRepositoryInterface
 {
+    /**
+     * @return array{total: int, success_count: int, error_count: int, success_rate: float, error_rate: float}
+     */
     public function getHealthStats(int|string $merchantId, string $connectorName, CarbonInterface $since): array
     {
         $stats = DB::table('payment_attempts')
@@ -21,6 +24,10 @@ final readonly class ConnectorHealthRepository implements ConnectorHealthReposit
             ->selectRaw("SUM(CASE WHEN payment_attempts.status = 'succeeded' THEN 1 ELSE 0 END) as success_count")
             ->selectRaw("SUM(CASE WHEN payment_attempts.status = 'failed' THEN 1 ELSE 0 END) as error_count")
             ->first();
+
+        if ($stats === null) {
+            return ['total' => 0, 'success_count' => 0, 'error_count' => 0, 'success_rate' => 0.0, 'error_rate' => 0.0];
+        }
 
         $total = (int) $stats->total;
         $successCount = (int) $stats->success_count;
@@ -37,6 +44,9 @@ final readonly class ConnectorHealthRepository implements ConnectorHealthReposit
         ];
     }
 
+    /**
+     * @return array<int, array{code: string|null, message: string|null, count: int, last_occurrence: string}>
+     */
     public function getErrorBreakdown(int|string $merchantId, string $connectorName): array
     {
         $errors = DB::table('payment_attempts')

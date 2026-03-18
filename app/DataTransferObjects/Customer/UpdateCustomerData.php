@@ -9,6 +9,9 @@ use Spatie\LaravelData\Optional;
 
 final class UpdateCustomerData extends Data
 {
+    /**
+     * @param  array<string, mixed>|Optional|null  $metadata
+     */
     public function __construct(
         public readonly string|Optional $name = new Optional,
         public readonly string|Optional|null $email = new Optional,
@@ -18,6 +21,7 @@ final class UpdateCustomerData extends Data
         public readonly array|Optional|null $metadata = new Optional,
     ) {}
 
+    /** @return array<string, mixed> */
     public function toUpdateArray(): array
     {
         return collect($this->toArray())

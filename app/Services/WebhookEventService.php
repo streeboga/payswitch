@@ -15,6 +15,10 @@ final readonly class WebhookEventService
         private WebhookEventRepositoryInterface $webhookEventRepository,
     ) {}
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, WebhookEvent>
+     */
     public function paginateForMerchant(int|string $merchantId, array $filters, int $perPage): LengthAwarePaginator
     {
         return $this->webhookEventRepository->paginateForMerchant($merchantId, $filters, $perPage);

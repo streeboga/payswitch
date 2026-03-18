@@ -27,6 +27,9 @@ final readonly class AnalyticsRepository implements AnalyticsRepositoryInterface
 
     private const string REFUND_SUCCEEDED = RefundStatus::Succeeded->value;
 
+    /**
+     * @return array<string, int>
+     */
     public function overview(int|string $merchantId, PeriodFilter $period): array
     {
         $s = self::SUCCEEDED;
@@ -48,6 +51,18 @@ final readonly class AnalyticsRepository implements AnalyticsRepositoryInterface
             ->selectRaw("SUM(CASE WHEN status = '{$rs}' THEN amount ELSE 0 END) as refund_amount")
             ->first();
 
+        if ($payments === null || $refunds === null) {
+            return [
+                'total_count' => 0,
+                'successful_count' => 0,
+                'failed_count' => 0,
+                'total_amount' => 0,
+                'net_amount' => 0,
+                'refund_count' => 0,
+                'refund_amount' => 0,
+            ];
+        }
+
         return [
             'total_count' => (int) $payments->total_count,
             'successful_count' => (int) $payments->successful_count,
@@ -59,6 +74,9 @@ final readonly class AnalyticsRepository implements AnalyticsRepositoryInterface
         ];
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function charts(int|string $merchantId, PeriodFilter $period): array
     {
         $s = self::SUCCEEDED;
@@ -83,6 +101,9 @@ final readonly class AnalyticsRepository implements AnalyticsRepositoryInterface
         ])->toArray();
     }
 
+    /**
+     * @return array<string, int>
+     */
     public function funnel(int|string $merchantId, PeriodFilter $period): array
     {
         $rpm = self::REQUIRES_PAYMENT_METHOD;
@@ -98,6 +119,10 @@ final readonly class AnalyticsRepository implements AnalyticsRepositoryInterface
             ->selectRaw("SUM(CASE WHEN status = '{$s}' THEN 1 ELSE 0 END) as captured")
             ->first();
 
+        if ($stages === null) {
+            return ['created' => 0, 'confirmed' => 0, 'authorized' => 0, 'captured' => 0];
+        }
+
         return [
             'created' => (int) $stages->created,
             'confirmed' => (int) $stages->confirmed,
@@ -106,6 +131,9 @@ final readonly class AnalyticsRepository implements AnalyticsRepositoryInterface
         ];
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function paymentMethods(int|string $merchantId, PeriodFilter $period): array
     {
         $rows = $this->paymentsQuery($merchantId, $period)
@@ -125,6 +153,9 @@ final readonly class AnalyticsRepository implements AnalyticsRepositoryInterface
         ])->toArray();
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function failureReasons(int|string $merchantId, PeriodFilter $period): array
     {
         $rows = $this->paymentsQuery($merchantId, $period)

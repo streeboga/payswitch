@@ -91,6 +91,9 @@ final class DashboardPaymentController extends Controller
 
         return response()->streamDownload(function () use ($cursor) {
             $out = fopen('php://output', 'w');
+            if ($out === false) {
+                throw new \RuntimeException('Failed to open php://output for CSV export');
+            }
 
             fputcsv($out, ['id', 'status', 'amount', 'currency', 'connector', 'description', 'error_code', 'created_at']);
 

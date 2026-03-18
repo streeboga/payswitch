@@ -18,6 +18,7 @@ final class ConnectorHealthResource extends JsonApiResource
         return 'connector-health';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

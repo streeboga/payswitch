@@ -11,6 +11,9 @@ use Streeboga\PaymentData\Models\WebhookEvent;
 
 final readonly class WebhookEventRepository implements WebhookEventRepositoryInterface
 {
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
     public function create(array $attributes): WebhookEvent
     {
         return WebhookEvent::create($attributes);
@@ -29,6 +32,10 @@ final readonly class WebhookEventRepository implements WebhookEventRepositoryInt
             ->firstOrFail();
     }
 
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, WebhookEvent>
+     */
     public function paginateForMerchant(int|string $merchantId, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         $builder = WebhookEventQueryBuilder::make()

@@ -48,6 +48,7 @@ final class UserRoleController extends Controller
     #[Response(422, description: 'Validation error')]
     public function store(StoreUserRoleRequest $request): JsonResponse
     {
+        /** @var array{user_id: int|string, organization_id: int|string, role: string} $validated */
         $validated = $request->validated();
 
         $role = $this->userRoleService->assignRole($validated);

@@ -9,6 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class StorePaymentMethodRequest extends FormRequest
 {
+    /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {
         return [
@@ -26,6 +27,7 @@ final class StorePaymentMethodRequest extends FormRequest
         ];
     }
 
+    /** @return array<string, mixed> */
     public function validatedAttributes(): array
     {
         return $this->validated();

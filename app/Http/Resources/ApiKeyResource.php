@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\ApiKeyType;
 use Illuminate\Http\Request;
 
 final class ApiKeyResource extends JsonApiResource
@@ -13,11 +14,15 @@ final class ApiKeyResource extends JsonApiResource
         return 'api-keys';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         $attrs = [
             'name' => $this->name,
+            'type' => $this->type?->value ?? ApiKeyType::Secret->value,
             'key_prefix' => $this->key_prefix,
+            'expires_at' => $this->expires_at?->toIso8601String(),
+            'revoked_at' => $this->revoked_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
         ];
 

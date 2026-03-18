@@ -8,6 +8,9 @@ use Spatie\LaravelData\Data;
 
 final class CreatePaymentMethodData extends Data
 {
+    /**
+     * @param  array<string, mixed>|null  $metadata
+     */
     public function __construct(
         public readonly string $type,
         public readonly string $connector_name,

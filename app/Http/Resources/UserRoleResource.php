@@ -18,6 +18,7 @@ final class UserRoleResource extends JsonApiResource
         return 'user-roles';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

@@ -13,6 +13,7 @@ final class RefundResource extends JsonApiResource
         return 'refunds';
     }
 
+    /** @return array<string, mixed> */
     public function toAttributes(Request $request): array
     {
         return [

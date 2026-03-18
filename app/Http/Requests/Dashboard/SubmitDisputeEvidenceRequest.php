@@ -13,6 +13,7 @@ final class SubmitDisputeEvidenceRequest extends FormRequest
         return true;
     }
 
+    /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {
         return [

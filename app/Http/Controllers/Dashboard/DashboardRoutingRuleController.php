@@ -11,6 +11,7 @@ use App\Http\Resources\RoutingRuleResource;
 use App\Services\RoutingRuleService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,14 +29,20 @@ final class DashboardRoutingRuleController extends Controller
      *
      * Retrieve all routing rules for the current merchant.
      */
-    #[Response(200, description: 'Routing rule list')]
+    #[QueryParameter('page[size]', type: 'integer', description: 'Items per page (max 100)', example: 20)]
+    #[QueryParameter('page[number]', type: 'integer', description: 'Page number', example: 1)]
+    #[Response(200, description: 'Paginated routing rule list')]
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
         Gate::authorize('routing-rule.viewAny', [$merchantId]);
-        $rules = $this->routingRuleService->listByMerchant($merchantId);
 
-        return RoutingRuleResource::jsonApiList($rules, $request);
+        $paginator = $this->routingRuleService->paginateByMerchant(
+            $merchantId,
+            (int) $request->input('page.size', 20),
+        );
+
+        return RoutingRuleResource::jsonApiCollection($paginator, $request);
     }
 
     /**

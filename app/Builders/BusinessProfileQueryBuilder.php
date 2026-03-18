@@ -11,6 +11,7 @@ use Streeboga\PaymentData\Models\BusinessProfile;
 
 final class BusinessProfileQueryBuilder
 {
+    /** @var Builder<BusinessProfile> */
     private Builder $query;
 
     public function __construct()
@@ -78,16 +79,19 @@ final class BusinessProfileQueryBuilder
         return $this->query->first();
     }
 
+    /** @return Collection<int, BusinessProfile> */
     public function get(): Collection
     {
         return $this->query->get();
     }
 
+    /** @return LengthAwarePaginator<int, BusinessProfile> */
     public function paginate(int $perPage = 20): LengthAwarePaginator
     {
         return $this->query->paginate($perPage);
     }
 
+    /** @return Builder<BusinessProfile> */
     public function getQuery(): Builder
     {
         return $this->query;
