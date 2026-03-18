@@ -40,6 +40,11 @@ class AppNotification extends Model
         });
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'key';
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

@@ -16,13 +16,8 @@ beforeEach(function () {
 
 test('can create business profile with webhook url', function () {
     $response = $this->postJson('/api/v1/profiles', [
-        'data' => [
-            'type' => 'profiles',
-            'attributes' => [
-                'merchant_id' => $this->merchant->key,
-                'webhook_url' => 'https://example.com/webhook',
-            ],
-        ],
+        'merchant_id' => $this->merchant->key,
+        'webhook_url' => 'https://example.com/webhook',
     ], ['api-key' => 'admin_test_key']);
 
     $response->assertStatus(201)
@@ -34,13 +29,8 @@ test('can create business profile with webhook url', function () {
 
 test('can retrieve business profile', function () {
     $create = $this->postJson('/api/v1/profiles', [
-        'data' => [
-            'type' => 'profiles',
-            'attributes' => [
-                'merchant_id' => $this->merchant->key,
-                'webhook_url' => 'https://example.com/hook',
-            ],
-        ],
+        'merchant_id' => $this->merchant->key,
+        'webhook_url' => 'https://example.com/hook',
     ], ['api-key' => 'admin_test_key']);
 
     $profileKey = $create->json('data.id');
@@ -52,12 +42,7 @@ test('can retrieve business profile', function () {
 
 test('auto-generates payment_response_hash_key if not provided', function () {
     $response = $this->postJson('/api/v1/profiles', [
-        'data' => [
-            'type' => 'profiles',
-            'attributes' => [
-                'merchant_id' => $this->merchant->key,
-            ],
-        ],
+        'merchant_id' => $this->merchant->key,
     ], ['api-key' => 'admin_test_key']);
 
     $response->assertStatus(201);

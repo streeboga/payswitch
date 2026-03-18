@@ -13,6 +13,7 @@ class Parameter
      * @param  'query'|'path'|'header'|'cookie'|'body'  $in
      * @param  scalar|array|object|MissingValue  $example
      * @param  array<string, Example>  $examples  The key is a distinct name and the value is an example object.
+     * @param  array<string|int>  $enum  Allowed values for the parameter.
      */
     public function __construct(
         public readonly string $in,
@@ -26,6 +27,7 @@ class Parameter
         public mixed $default = new MissingValue,
         public mixed $example = new MissingValue,
         public array $examples = [],
+        public array $enum = [],
     ) {
         $this->required = $required !== null ? $required : $this->in === 'path';
     }

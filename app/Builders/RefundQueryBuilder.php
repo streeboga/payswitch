@@ -85,6 +85,16 @@ final class RefundQueryBuilder
         return $this;
     }
 
+    /**
+     * @param  array<int, string>|string  $relations
+     */
+    public function with(array|string $relations): self
+    {
+        $this->query->with($relations);
+
+        return $this;
+    }
+
     public function latest(): self
     {
         $this->query->latest();

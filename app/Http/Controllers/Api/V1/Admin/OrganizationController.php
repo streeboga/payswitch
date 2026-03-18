@@ -8,10 +8,11 @@ use App\Http\Requests\Api\Admin\StoreOrganizationRequest;
 use App\Http\Resources\OrganizationResource;
 use App\Services\MerchantService;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 
-#[Group(name: 'Admin > Organizations', weight: 10)]
+#[Group(name: 'Admin > Organizations', description: 'Organization management', weight: 10)]
 final class OrganizationController extends Controller
 {
     public function __construct(
@@ -23,6 +24,8 @@ final class OrganizationController extends Controller
      *
      * Creates a new top-level organization entity.
      */
+    #[Response(201, description: 'Organization created')]
+    #[Response(422, description: 'Validation error')]
     public function store(StoreOrganizationRequest $request): JsonResponse
     {
         $organization = $this->merchantService->createOrganization($request->toDto());

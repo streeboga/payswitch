@@ -29,11 +29,9 @@ test('get user preferences returns defaults', function () {
 test('update user preferences', function () {
     $response = $this->actingAs($this->user)
         ->patchJson('/api/v1/dashboard/settings', [
-            'data' => ['type' => 'user-preferences', 'attributes' => [
-                'timezone' => 'Europe/Moscow',
-                'theme' => 'dark',
-                'base_currency' => 'RUB',
-            ]],
+            'timezone' => 'Europe/Moscow',
+            'theme' => 'dark',
+            'base_currency' => 'RUB',
         ], $this->headers);
 
     $response->assertOk()

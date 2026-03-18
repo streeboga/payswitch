@@ -1,15 +1,32 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use App\Events\PaymentStatusChanged;
 use App\Listeners\LogPaymentAudit;
 use App\Listeners\SendWebhookNotification;
+use App\Policies\AnalyticsPolicy;
+use App\Policies\ApiKeyPolicy;
+use App\Policies\BusinessProfilePolicy;
+use App\Policies\ConnectorHealthPolicy;
+use App\Policies\ConnectorPolicy;
+use App\Policies\CustomerPolicy;
+use App\Policies\DisputePolicy;
+use App\Policies\EventLogPolicy;
+use App\Policies\PaymentPolicy;
+use App\Policies\RoutingRulePolicy;
+use App\Policies\TestPaymentPolicy;
+use App\Policies\UserRolePolicy;
+use App\Policies\WebhookEventPolicy;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -31,6 +48,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureRateLimiting();
+        $this->registerMerchantPolicies();
 
         Event::listen(PaymentStatusChanged::class, LogPaymentAudit::class);
         Event::listen(PaymentStatusChanged::class, SendWebhookNotification::class);
@@ -41,6 +59,16 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
+        RateLimiter::for('login', function ($request) {
+            $email = strtolower((string) $request->string('email'));
+
+            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+        });
+
+        RateLimiter::for('two-factor', function ($request) {
+            return Limit::perMinute(5)->by($request->session()->get('login.id', $request->ip()));
+        });
+
         RateLimiter::for('payswitch-api', function ($request) {
             $type = $request->attributes->get('api_key_type', 'unknown');
             $limit = config("payswitch.rate_limit.{$type}", 60);
@@ -51,11 +79,45 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * Register merchant-scoped policy gates.
+     */
+    private function registerMerchantPolicies(): void
+    {
+        $map = [
+            'payment' => PaymentPolicy::class,
+            'customer' => CustomerPolicy::class,
+            'connector' => ConnectorPolicy::class,
+            'routing-rule' => RoutingRulePolicy::class,
+            'dispute' => DisputePolicy::class,
+            'webhook-event' => WebhookEventPolicy::class,
+            'api-key' => ApiKeyPolicy::class,
+            'business-profile' => BusinessProfilePolicy::class,
+            'analytics' => AnalyticsPolicy::class,
+            'user-role' => UserRolePolicy::class,
+            'event-log' => EventLogPolicy::class,
+            'connector-health' => ConnectorHealthPolicy::class,
+            'test-payment' => TestPaymentPolicy::class,
+        ];
+
+        foreach ($map as $resource => $policyClass) {
+            foreach (get_class_methods($policyClass) as $method) {
+                if (str_starts_with($method, '__')) {
+                    continue;
+                }
+
+                Gate::define("{$resource}.{$method}", [$policyClass, $method]);
+            }
+        }
+    }
+
+    /**
      * Configure default behaviors for production-ready applications.
      */
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        Model::preventLazyLoading(! app()->isProduction());
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

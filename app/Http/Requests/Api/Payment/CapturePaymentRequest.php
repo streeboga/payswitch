@@ -12,12 +12,12 @@ class CapturePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.amount_to_capture' => ['required', 'integer', 'min:1'],
+            'amount_to_capture' => ['required', 'integer', 'min:1'],
         ];
     }
 
     public function toDto(): CapturePaymentData
     {
-        return CapturePaymentData::from($this->validated('data.attributes'));
+        return CapturePaymentData::from($this->validated());
     }
 }

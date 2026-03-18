@@ -14,17 +14,17 @@ final class UpdateRoutingRuleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.type' => ['sometimes', 'string', Rule::enum(RoutingRuleType::class)],
-            'data.attributes.name' => ['sometimes', 'string', 'max:255'],
-            'data.attributes.rules' => ['sometimes', 'array'],
-            'data.attributes.active' => ['sometimes', 'boolean'],
-            'data.attributes.priority' => ['sometimes', 'integer', 'min:0'],
-            'data.attributes.business_profile_id' => ['sometimes', 'string'],
+            'type' => ['sometimes', 'string', Rule::enum(RoutingRuleType::class)],
+            'name' => ['sometimes', 'string', 'max:255'],
+            'rules' => ['sometimes', 'array'],
+            'active' => ['sometimes', 'boolean'],
+            'priority' => ['sometimes', 'integer', 'min:0'],
+            'business_profile_id' => ['sometimes', 'string'],
         ];
     }
 
     public function toDto(): UpdateRoutingRuleData
     {
-        return UpdateRoutingRuleData::from($this->validated('data.attributes') ?? []);
+        return UpdateRoutingRuleData::from($this->validated());
     }
 }

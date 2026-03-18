@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\StoreTestPaymentRequest;
 use App\Http\Resources\PaymentIntentResource;
 use App\Services\TestPaymentService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Test Payments', description: 'Create test payments for development', weight: 17)]
 final class TestPaymentController extends Controller
@@ -26,21 +27,15 @@ final class TestPaymentController extends Controller
      */
     #[Response(201, description: 'Test payment created')]
     #[Response(422, description: 'Validation error')]
-    public function store(Request $request): JsonResponse
+    public function store(StoreTestPaymentRequest $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('test-payment.create', [$merchantId]);
 
-        $validated = $request->validate([
-            'data.attributes.amount' => 'required|integer|min:1',
-            'data.attributes.currency' => 'sometimes|string|size:3',
-            'data.attributes.capture_method' => 'sometimes|string|in:automatic,manual',
-            'data.attributes.payment_method' => 'sometimes|string',
-            'data.attributes.card_number' => 'sometimes|string',
-            'data.attributes.payment_method_data' => 'sometimes|array',
-        ]);
+        $validated = $request->validated();
 
         $payment = $this->testPaymentService->createAndConfirm(
-            $validated['data']['attributes'],
+            $validated,
             $merchantId,
         );
 

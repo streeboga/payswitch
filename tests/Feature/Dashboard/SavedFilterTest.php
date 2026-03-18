@@ -34,11 +34,9 @@ test('saved filters list returns json:api response', function () {
 test('create saved filter returns 201', function () {
     $response = $this->actingAs($this->user)
         ->postJson('/api/v1/dashboard/saved-filters', [
-            'data' => ['type' => 'saved-filters', 'attributes' => [
-                'table_name' => 'payments',
-                'name' => 'My filter',
-                'filters' => ['status' => 'succeeded', 'currency' => 'USD'],
-            ]],
+            'table_name' => 'payments',
+            'name' => 'My filter',
+            'filters' => ['status' => 'succeeded', 'currency' => 'USD'],
         ], $this->headers);
 
     $response->assertStatus(201)

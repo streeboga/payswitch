@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\DataTransferObjects\Payment\ConfirmPaymentData;
 use App\Http\Requests\Api\Payment\CapturePaymentRequest;
 use App\Http\Requests\Api\Payment\ConfirmPaymentRequest;
 use App\Http\Requests\Api\Payment\StorePaymentRequest;
 use App\Http\Resources\PaymentIntentResource;
 use App\Services\PaymentService;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
-#[Group(name: 'Payments', weight: 1)]
+#[Group(name: 'Payments', description: 'Create, confirm, capture and cancel payment intents', weight: 1)]
 final class PaymentController extends Controller
 {
     public function __construct(
@@ -28,6 +29,8 @@ final class PaymentController extends Controller
      * Creates a new payment intent for the authenticated merchant. The payment can optionally
      * be confirmed immediately by setting the confirm flag to true and providing payment method data.
      */
+    #[Response(201, description: 'Payment intent created')]
+    #[Response(422, description: 'Validation error')]
     public function store(StorePaymentRequest $request): JsonResponse
     {
         $dto = $request->toDto();
@@ -36,8 +39,7 @@ final class PaymentController extends Controller
         $payment = $this->paymentService->create($dto, $merchantAccountId);
 
         if ($dto->confirm) {
-            $confirmData = ConfirmPaymentData::from($request->validated('data.attributes') ?? []);
-            $payment = $this->paymentService->confirm($payment->key, $confirmData, $merchantAccountId);
+            $payment = $this->paymentService->confirm($payment->key, $request->toConfirmDto(), $merchantAccountId);
         }
 
         return (new PaymentIntentResource($payment))
@@ -51,6 +53,9 @@ final class PaymentController extends Controller
      *
      * Retrieves the details of a payment intent that belongs to the authenticated merchant.
      */
+    #[PathParameter('paymentKey', description: 'Payment intent public key', example: 'pi_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Payment intent details')]
+    #[Response(404, description: 'Payment not found')]
     public function show(string $paymentKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
@@ -64,6 +69,10 @@ final class PaymentController extends Controller
      *
      * Confirms a payment intent with the provided payment method and payment method data.
      */
+    #[PathParameter('paymentKey', description: 'Payment intent public key', example: 'pi_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Payment intent confirmed')]
+    #[Response(404, description: 'Payment not found')]
+    #[Response(422, description: 'Validation error')]
     public function confirm(string $paymentKey, ConfirmPaymentRequest $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
@@ -78,12 +87,14 @@ final class PaymentController extends Controller
      *
      * Captures a previously authorized payment intent. Allows partial capture.
      */
+    #[PathParameter('paymentKey', description: 'Payment intent public key', example: 'pi_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Payment captured')]
+    #[Response(404, description: 'Payment not found')]
     public function capture(string $paymentKey, CapturePaymentRequest $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
-        $amount = (int) $request->input('data.attributes.amount_to_capture');
 
-        $payment = $this->paymentService->capture($paymentKey, $amount, $merchantAccountId);
+        $payment = $this->paymentService->capture($paymentKey, $request->toDto()->amount_to_capture, $merchantAccountId);
 
         return (new PaymentIntentResource($payment))->toResponse($request);
     }
@@ -93,6 +104,9 @@ final class PaymentController extends Controller
      *
      * Cancels a payment intent that has not yet been captured or completed.
      */
+    #[PathParameter('paymentKey', description: 'Payment intent public key', example: 'pi_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Payment cancelled')]
+    #[Response(404, description: 'Payment not found')]
     public function cancel(string $paymentKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');

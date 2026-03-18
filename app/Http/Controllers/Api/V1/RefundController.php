@@ -8,11 +8,13 @@ use App\Http\Requests\Api\Refund\StoreRefundRequest;
 use App\Http\Resources\RefundResource;
 use App\Services\RefundService;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
-#[Group(name: 'Refunds', weight: 3)]
+#[Group(name: 'Refunds', description: 'Create and retrieve refunds', weight: 3)]
 final class RefundController extends Controller
 {
     public function __construct(
@@ -24,6 +26,8 @@ final class RefundController extends Controller
      *
      * Initiates a refund against a previously succeeded payment intent. Partial refunds supported.
      */
+    #[Response(201, description: 'Refund created')]
+    #[Response(422, description: 'Validation error')]
     public function store(StoreRefundRequest $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
@@ -41,6 +45,9 @@ final class RefundController extends Controller
      *
      * Retrieves the details of a refund including its current processing status.
      */
+    #[PathParameter('refundKey', description: 'Refund public key', example: 'ref_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Refund details')]
+    #[Response(404, description: 'Refund not found')]
     public function show(string $refundKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');

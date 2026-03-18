@@ -11,7 +11,7 @@ use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Symfony\Component\HttpFoundation\Response;
 
-class ResolveApiKey
+final class ResolveApiKey
 {
     public function handle(Request $request, Closure $next): Response
     {

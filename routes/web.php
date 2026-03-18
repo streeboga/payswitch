@@ -1,20 +1,14 @@
 <?php
 
-use App\Http\Controllers\Dashboard\MerchantsController;
-use App\Http\Controllers\Dashboard\OverviewController;
-use App\Http\Controllers\Dashboard\PaymentsController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
 
-Route::inertia('/', 'welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-])->name('home');
+Route::post('/login', [LoginController::class, 'store'])
+    ->middleware('throttle:login');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', OverviewController::class)->name('dashboard');
-    Route::get('/dashboard/payments', [PaymentsController::class, 'index'])->name('dashboard.payments');
-    Route::get('/dashboard/payments/{paymentKey}', [PaymentsController::class, 'show'])->name('dashboard.payments.show');
-    Route::get('/dashboard/merchants', [MerchantsController::class, 'index'])->name('dashboard.merchants');
-});
+Route::post('/logout', [LoginController::class, 'destroy'])
+    ->middleware('auth');
 
-require __DIR__.'/settings.php';
+Route::post('/two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
+    ->middleware('throttle:two-factor');

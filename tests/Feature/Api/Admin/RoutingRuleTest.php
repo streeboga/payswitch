@@ -16,11 +16,9 @@ beforeEach(function () {
 
 test('can create priority routing rule', function () {
     $response = $this->postJson("/api/v1/merchants/{$this->merchant->key}/routing-rules", [
-        'data' => ['type' => 'routing-rules', 'attributes' => [
-            'type' => 'priority',
-            'name' => 'Priority routing',
-            'rules' => ['connectors' => ['stripe', 'cloudpayments']],
-        ]],
+        'type' => 'priority',
+        'name' => 'Priority routing',
+        'rules' => ['connectors' => ['stripe', 'cloudpayments']],
     ], ['api-key' => 'admin_test_key']);
 
     $response->assertStatus(201)
@@ -31,16 +29,14 @@ test('can create priority routing rule', function () {
 
 test('can create rule-based routing rule', function () {
     $response = $this->postJson("/api/v1/merchants/{$this->merchant->key}/routing-rules", [
-        'data' => ['type' => 'routing-rules', 'attributes' => [
-            'type' => 'rule_based',
-            'name' => 'Currency routing',
-            'rules' => [
-                'conditions' => [
-                    ['field' => 'currency', 'operator' => '==', 'value' => 'RUB', 'connector' => 'cloudpayments'],
-                ],
-                'default_connector' => 'stripe',
+        'type' => 'rule_based',
+        'name' => 'Currency routing',
+        'rules' => [
+            'conditions' => [
+                ['field' => 'currency', 'operator' => '==', 'value' => 'RUB', 'connector' => 'cloudpayments'],
             ],
-        ]],
+            'default_connector' => 'stripe',
+        ],
     ], ['api-key' => 'admin_test_key']);
 
     $response->assertStatus(201);
@@ -48,11 +44,9 @@ test('can create rule-based routing rule', function () {
 
 test('rejects invalid routing rule type', function () {
     $response = $this->postJson("/api/v1/merchants/{$this->merchant->key}/routing-rules", [
-        'data' => ['type' => 'routing-rules', 'attributes' => [
-            'type' => 'invalid_type',
-            'name' => 'Bad rule',
-            'rules' => [],
-        ]],
+        'type' => 'invalid_type',
+        'name' => 'Bad rule',
+        'rules' => [],
     ], ['api-key' => 'admin_test_key']);
 
     $response->assertStatus(422);
@@ -60,15 +54,11 @@ test('rejects invalid routing rule type', function () {
 
 test('can list routing rules for merchant', function () {
     $this->postJson("/api/v1/merchants/{$this->merchant->key}/routing-rules", [
-        'data' => ['type' => 'routing-rules', 'attributes' => [
-            'type' => 'priority', 'name' => 'Rule 1', 'rules' => ['connectors' => ['stripe']],
-        ]],
+        'type' => 'priority', 'name' => 'Rule 1', 'rules' => ['connectors' => ['stripe']],
     ], ['api-key' => 'admin_test_key']);
 
     $this->postJson("/api/v1/merchants/{$this->merchant->key}/routing-rules", [
-        'data' => ['type' => 'routing-rules', 'attributes' => [
-            'type' => 'priority', 'name' => 'Rule 2', 'rules' => ['connectors' => ['test']],
-        ]],
+        'type' => 'priority', 'name' => 'Rule 2', 'rules' => ['connectors' => ['test']],
     ], ['api-key' => 'admin_test_key']);
 
     $this->getJson("/api/v1/merchants/{$this->merchant->key}/routing-rules", ['api-key' => 'admin_test_key'])
@@ -78,9 +68,7 @@ test('can list routing rules for merchant', function () {
 
 test('can delete routing rule', function () {
     $create = $this->postJson("/api/v1/merchants/{$this->merchant->key}/routing-rules", [
-        'data' => ['type' => 'routing-rules', 'attributes' => [
-            'type' => 'priority', 'name' => 'Delete me', 'rules' => ['connectors' => ['stripe']],
-        ]],
+        'type' => 'priority', 'name' => 'Delete me', 'rules' => ['connectors' => ['stripe']],
     ], ['api-key' => 'admin_test_key']);
 
     $ruleKey = $create->json('data.id');
@@ -91,17 +79,13 @@ test('can delete routing rule', function () {
 
 test('can update routing rule via PATCH', function () {
     $create = $this->postJson("/api/v1/merchants/{$this->merchant->key}/routing-rules", [
-        'data' => ['type' => 'routing-rules', 'attributes' => [
-            'type' => 'priority', 'name' => 'Original', 'rules' => ['connectors' => ['stripe']],
-        ]],
+        'type' => 'priority', 'name' => 'Original', 'rules' => ['connectors' => ['stripe']],
     ], ['api-key' => 'admin_test_key']);
 
     $ruleKey = $create->json('data.id');
 
     $this->patchJson("/api/v1/merchants/{$this->merchant->key}/routing-rules/{$ruleKey}", [
-        'data' => ['type' => 'routing-rules', 'id' => $ruleKey, 'attributes' => [
-            'name' => 'Updated', 'active' => false,
-        ]],
+        'name' => 'Updated', 'active' => false,
     ], ['api-key' => 'admin_test_key'])
         ->assertOk()
         ->assertJsonPath('data.attributes.name', 'Updated')

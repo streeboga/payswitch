@@ -18,27 +18,22 @@ beforeEach(function () {
 
 test('can add stripe connector to merchant', function () {
     $response = $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
-        'data' => [
-            'type' => 'connectors',
-            'attributes' => [
-                'connector_name' => 'stripe',
-                'connector_type' => 'fiz_operations',
-                'profile_id' => $this->profile->key,
-                'connector_account_details' => [
-                    'auth_type' => 'HeaderKey',
-                    'api_key' => 'sk_test_xxx',
+        'connector_name' => 'stripe',
+        'connector_type' => 'fiz_operations',
+        'profile_id' => $this->profile->key,
+        'connector_account_details' => [
+            'auth_type' => 'HeaderKey',
+            'api_key' => 'sk_test_xxx',
+        ],
+        'payment_methods_enabled' => [
+            [
+                'payment_method' => 'card',
+                'payment_method_types' => [
+                    ['payment_method_type' => 'credit', 'card_networks' => ['Visa', 'Mastercard']],
                 ],
-                'payment_methods_enabled' => [
-                    [
-                        'payment_method' => 'card',
-                        'payment_method_types' => [
-                            ['payment_method_type' => 'credit', 'card_networks' => ['Visa', 'Mastercard']],
-                        ],
-                    ],
-                ],
-                'test_mode' => true,
             ],
         ],
+        'test_mode' => true,
     ], ['api-key' => 'admin_test_key']);
 
     $response->assertStatus(201)
@@ -50,16 +45,11 @@ test('can add stripe connector to merchant', function () {
 
 test('connector credentials are stored encrypted', function () {
     $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
-        'data' => [
-            'type' => 'connectors',
-            'attributes' => [
-                'connector_name' => 'stripe',
-                'connector_type' => 'fiz_operations',
-                'profile_id' => $this->profile->key,
-                'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test_secret'],
-                'test_mode' => true,
-            ],
-        ],
+        'connector_name' => 'stripe',
+        'connector_type' => 'fiz_operations',
+        'profile_id' => $this->profile->key,
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test_secret'],
+        'test_mode' => true,
     ], ['api-key' => 'admin_test_key']);
 
     // Raw DB value should NOT contain the plaintext secret
@@ -71,16 +61,11 @@ test('can list connectors for merchant', function () {
     // Create 2 connectors
     foreach (['stripe', 'yookassa'] as $name) {
         $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
-            'data' => [
-                'type' => 'connectors',
-                'attributes' => [
-                    'connector_name' => $name,
-                    'connector_type' => 'fiz_operations',
-                    'profile_id' => $this->profile->key,
-                    'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'test'],
-                    'test_mode' => true,
-                ],
-            ],
+            'connector_name' => $name,
+            'connector_type' => 'fiz_operations',
+            'profile_id' => $this->profile->key,
+            'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'test'],
+            'test_mode' => true,
         ], ['api-key' => 'admin_test_key']);
     }
 
@@ -95,16 +80,11 @@ test('can list connectors for merchant', function () {
 
 test('can delete connector', function () {
     $create = $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
-        'data' => [
-            'type' => 'connectors',
-            'attributes' => [
-                'connector_name' => 'stripe',
-                'connector_type' => 'fiz_operations',
-                'profile_id' => $this->profile->key,
-                'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'test'],
-                'test_mode' => true,
-            ],
-        ],
+        'connector_name' => 'stripe',
+        'connector_type' => 'fiz_operations',
+        'profile_id' => $this->profile->key,
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'test'],
+        'test_mode' => true,
     ], ['api-key' => 'admin_test_key']);
 
     $connectorKey = $create->json('data.id');
@@ -118,16 +98,11 @@ test('can delete connector', function () {
 
 test('can update connector via PATCH', function () {
     $create = $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
-        'data' => [
-            'type' => 'connectors',
-            'attributes' => [
-                'connector_name' => 'stripe',
-                'connector_type' => 'fiz_operations',
-                'profile_id' => $this->profile->key,
-                'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'old'],
-                'test_mode' => true,
-            ],
-        ],
+        'connector_name' => 'stripe',
+        'connector_type' => 'fiz_operations',
+        'profile_id' => $this->profile->key,
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'old'],
+        'test_mode' => true,
     ], ['api-key' => 'admin_test_key']);
 
     $connectorKey = $create->json('data.id');
@@ -135,11 +110,7 @@ test('can update connector via PATCH', function () {
     $response = $this->patchJson(
         "/api/v1/merchants/{$this->merchant->key}/connectors/{$connectorKey}",
         [
-            'data' => [
-                'type' => 'connectors',
-                'id' => $connectorKey,
-                'attributes' => ['disabled' => true],
-            ],
+            'disabled' => true,
         ],
         ['api-key' => 'admin_test_key']
     );

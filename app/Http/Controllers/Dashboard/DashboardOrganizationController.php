@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\StoreDashboardOrganizationRequest;
 use App\Http\Resources\MerchantAccountResource;
 use App\Http\Resources\OrganizationResource;
 use App\Services\MerchantService;
@@ -13,7 +14,6 @@ use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Streeboga\PaymentData\Models\Organization;
 
 #[Group('Dashboard Organizations', description: 'Organization management for the dashboard', weight: 19)]
 final class DashboardOrganizationController extends Controller
@@ -30,9 +30,26 @@ final class DashboardOrganizationController extends Controller
     #[Response(200, description: 'Organization list')]
     public function index(Request $request): JsonResponse
     {
-        $organizations = Organization::orderByDesc('created_at')->get();
+        $organizations = $this->merchantService->listOrganizations();
 
         return OrganizationResource::jsonApiList($organizations, $request);
+    }
+
+    /**
+     * Create organization
+     *
+     * Create a new organization.
+     */
+    #[Response(201, description: 'Organization created')]
+    #[Response(422, description: 'Validation error')]
+    public function store(StoreDashboardOrganizationRequest $request): JsonResponse
+    {
+        $org = $this->merchantService->createOrganization($request->toDto());
+
+        return (new OrganizationResource($org))
+            ->withStatus(201)
+            ->withHeader('Location', "/api/v1/dashboard/organizations/{$org->key}")
+            ->toResponse($request);
     }
 
     /**
@@ -45,7 +62,7 @@ final class DashboardOrganizationController extends Controller
     #[Response(404, description: 'Organization not found')]
     public function show(string $orgKey, Request $request): JsonResponse
     {
-        $org = Organization::where('key', $orgKey)->firstOrFail();
+        $org = $this->merchantService->findOrganization($orgKey);
 
         return (new OrganizationResource($org))->toResponse($request);
     }
@@ -59,8 +76,8 @@ final class DashboardOrganizationController extends Controller
     #[Response(200, description: 'Merchant list')]
     public function merchants(string $orgKey, Request $request): JsonResponse
     {
-        $org = Organization::where('key', $orgKey)->firstOrFail();
+        $merchants = $this->merchantService->listMerchantsByOrganization($orgKey);
 
-        return MerchantAccountResource::jsonApiList($org->merchantAccounts, $request);
+        return MerchantAccountResource::jsonApiList($merchants, $request);
     }
 }

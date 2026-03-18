@@ -25,13 +25,8 @@ beforeEach(function () {
 
 test('can create payment with minimal fields', function () {
     $response = $this->postJson('/api/v1/payments', [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => [
-                'amount' => 6540,
-                'currency' => 'USD',
-            ],
-        ],
+        'amount' => 6540,
+        'currency' => 'USD',
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(201)
@@ -61,18 +56,13 @@ test('can create payment with minimal fields', function () {
 
 test('can create payment with all optional fields', function () {
     $response = $this->postJson('/api/v1/payments', [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => [
-                'amount' => 10000,
-                'currency' => 'EUR',
-                'capture_method' => 'manual',
-                'authentication_type' => 'three_ds',
-                'description' => 'Order #123',
-                'return_url' => 'https://example.com/return',
-                'metadata' => ['order_id' => 'ORD-456'],
-            ],
-        ],
+        'amount' => 10000,
+        'currency' => 'EUR',
+        'capture_method' => 'manual',
+        'authentication_type' => 'three_ds',
+        'description' => 'Order #123',
+        'return_url' => 'https://example.com/return',
+        'metadata' => ['order_id' => 'ORD-456'],
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(201)
@@ -83,10 +73,7 @@ test('can create payment with all optional fields', function () {
 
 test('cannot create payment without amount', function () {
     $response = $this->postJson('/api/v1/payments', [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => ['currency' => 'USD'],
-        ],
+        'currency' => 'USD',
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(422)
@@ -95,10 +82,7 @@ test('cannot create payment without amount', function () {
 
 test('cannot create payment without currency', function () {
     $response = $this->postJson('/api/v1/payments', [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => ['amount' => 100],
-        ],
+        'amount' => 100,
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(422);
@@ -106,10 +90,8 @@ test('cannot create payment without currency', function () {
 
 test('cannot create payment with negative amount', function () {
     $response = $this->postJson('/api/v1/payments', [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => ['amount' => -100, 'currency' => 'USD'],
-        ],
+        'amount' => -100,
+        'currency' => 'USD',
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(422);
@@ -117,10 +99,8 @@ test('cannot create payment with negative amount', function () {
 
 test('session_expiry defaults to 900 seconds', function () {
     $response = $this->postJson('/api/v1/payments', [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => ['amount' => 100, 'currency' => 'USD'],
-        ],
+        'amount' => 100,
+        'currency' => 'USD',
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(201);
@@ -130,10 +110,8 @@ test('session_expiry defaults to 900 seconds', function () {
 
 test('payment is scoped to authenticated merchant', function () {
     $response = $this->postJson('/api/v1/payments', [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => ['amount' => 100, 'currency' => 'USD'],
-        ],
+        'amount' => 100,
+        'currency' => 'USD',
     ], ['api-key' => $this->rawKey]);
 
     $this->assertDatabaseHas('payment_intents', [

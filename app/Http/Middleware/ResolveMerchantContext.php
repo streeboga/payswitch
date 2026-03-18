@@ -10,7 +10,7 @@ use Streeboga\PaymentData\Models\MerchantAccount;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-class ResolveMerchantContext
+final class ResolveMerchantContext
 {
     public function handle(Request $request, Closure $next): Response
     {
@@ -28,6 +28,15 @@ class ResolveMerchantContext
 
         $request->attributes->set('merchant_id', $merchant->id);
         $request->attributes->set('merchant_key', $merchant->key);
+
+        $user = $request->user();
+
+        if ($user && ! $user->hasAccessToMerchant($merchant->id)) {
+            abort(403, 'You do not have access to this merchant');
+        }
+
+        // Set the user's role for this merchant on the request for RBAC checks
+        $request->attributes->set('merchant_role', $user?->roleForMerchant($merchant->id));
 
         return $next($request);
     }

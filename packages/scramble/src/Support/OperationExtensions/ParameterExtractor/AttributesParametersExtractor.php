@@ -103,6 +103,10 @@ class AttributesParametersExtractor implements ParameterExtractor
                 $parameter->examples = $attributeParameter->examples;
             }
 
+            if ($name === 'enum') {
+                $parameter->schema->type->enum = $attrValue;
+            }
+
             $parameter->setAttribute('nonBody', $attributeParameter->getAttribute('nonBody'));
         }
 
@@ -142,6 +146,10 @@ class AttributesParametersExtractor implements ParameterExtractor
 
         if ($attribute->format) {
             $type->format = $attribute->format;
+        }
+
+        if ($attribute->enum) {
+            $type->enum = $attribute->enum;
         }
 
         return $parameter;

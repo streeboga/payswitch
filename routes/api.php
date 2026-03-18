@@ -14,6 +14,7 @@ use App\Http\Controllers\Dashboard\DashboardApiKeyController;
 use App\Http\Controllers\Dashboard\DashboardBusinessProfileController;
 use App\Http\Controllers\Dashboard\DashboardConnectorController;
 use App\Http\Controllers\Dashboard\DashboardCustomerController;
+use App\Http\Controllers\Dashboard\DashboardMerchantController;
 use App\Http\Controllers\Dashboard\DashboardOrganizationController;
 use App\Http\Controllers\Dashboard\DashboardPaymentController;
 use App\Http\Controllers\Dashboard\DashboardRefundController;
@@ -38,8 +39,14 @@ Route::prefix('v1')->group(function () {
 Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'throttle:300,1'])->group(function () {
     // Organizations (Story 15-1)
     Route::get('/organizations', [DashboardOrganizationController::class, 'index']);
+    Route::post('/organizations', [DashboardOrganizationController::class, 'store']);
     Route::get('/organizations/{orgKey}', [DashboardOrganizationController::class, 'show']);
     Route::get('/organizations/{orgKey}/merchants', [DashboardOrganizationController::class, 'merchants']);
+
+    // Merchants
+    Route::get('/merchants', [DashboardMerchantController::class, 'index']);
+    Route::get('/merchants/{merchantKey}', [DashboardMerchantController::class, 'show']);
+    Route::post('/merchants', [DashboardMerchantController::class, 'store']);
 
     // Profiles by merchant key (context switcher)
     Route::get('/merchants/{merchantKey}/profiles', [DashboardBusinessProfileController::class, 'indexByMerchant']);
@@ -64,11 +71,6 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'throttle:300,1'])->g
     Route::get('/audit-log', [AuditLogController::class, 'index']);
     Route::get('/audit-log/export', [AuditLogController::class, 'export']);
 
-    // Users & RBAC (Story 16-3)
-    Route::get('/users', [UserRoleController::class, 'index']);
-    Route::post('/users/roles', [UserRoleController::class, 'store']);
-    Route::patch('/users/roles/{roleId}', [UserRoleController::class, 'update']);
-    Route::delete('/users/roles/{roleId}', [UserRoleController::class, 'destroy']);
 });
 
 // Dashboard API — Sanctum auth + merchant context
@@ -138,6 +140,12 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     Route::get('/disputes', [DisputeController::class, 'index']);
     Route::get('/disputes/{disputeKey}', [DisputeController::class, 'show']);
     Route::post('/disputes/{disputeKey}/evidence', [DisputeController::class, 'submitEvidence']);
+
+    // Users & RBAC (Story 16-3)
+    Route::get('/users', [UserRoleController::class, 'index']);
+    Route::post('/users/roles', [UserRoleController::class, 'store']);
+    Route::patch('/users/roles/{roleId}', [UserRoleController::class, 'update']);
+    Route::delete('/users/roles/{roleId}', [UserRoleController::class, 'destroy']);
 });
 
 Route::prefix('v1')->middleware('json-api')->group(function () {

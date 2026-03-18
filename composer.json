@@ -34,12 +34,11 @@
     "require": {
         "php": "^8.3",
         "dedoc/scramble": "@dev",
-        "inertiajs/inertia-laravel": "^2.0",
-        "laravel/fortify": "^1.34",
         "laravel/framework": "^13.0",
+        "laravel/sanctum": "*",
         "laravel/tinker": "^3.0",
-        "laravel/wayfinder": "^0.1.14",
         "php-http/guzzle7-adapter": "^1.1",
+        "pragmarx/google2fa": "*",
         "spatie/laravel-activitylog": "^4.12",
         "spatie/laravel-data": "^4.0",
         "spatie/laravel-query-builder": "^6.0",
@@ -75,17 +74,12 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
-            "npm install",
-            "npm run build"
+            "npm --prefix dashboard install",
+            "npm --prefix dashboard run build"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
-        ],
-        "dev:ssr": [
-            "npm run build:ssr",
-            "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"php artisan inertia:start-ssr\" --names=server,queue,logs,ssr --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm --prefix dashboard run dev\" --names=server,queue,logs,vite --kill-others"
         ],
         "lint": [
             "pint --parallel"
@@ -95,9 +89,9 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
-            "npm run lint:check",
-            "npm run format:check",
-            "npm run types:check",
+            "npm --prefix dashboard run lint:check",
+            "npm --prefix dashboard run format:check",
+            "npm --prefix dashboard run types:check",
             "@test"
         ],
         "test": [

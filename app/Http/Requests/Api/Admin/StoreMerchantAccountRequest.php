@@ -12,13 +12,13 @@ final class StoreMerchantAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.organization_id' => ['required', 'string'],
-            'data.attributes.name' => ['required', 'string', 'max:255'],
+            'organization_id' => ['required', 'string'],
+            'name' => ['required', 'string', 'max:255'],
         ];
     }
 
     public function toDto(): CreateMerchantAccountData
     {
-        return CreateMerchantAccountData::from($this->validated('data.attributes'));
+        return CreateMerchantAccountData::from($this->validated());
     }
 }

@@ -106,9 +106,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 $errors = [];
                 foreach ($e->errors() as $field => $messages) {
                     // Convert dot-notation field to JSON pointer
-                    $pointer = str_starts_with($field, 'data.attributes.')
-                        ? '/'.str_replace('.', '/', $field)
-                        : "/data/attributes/{$field}";
+                    $pointer = '/'.str_replace('.', '/', $field);
 
                     foreach ($messages as $message) {
                         $errors[] = [

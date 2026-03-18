@@ -5,20 +5,22 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\StoreDashboardBusinessProfileRequest;
+use App\Http\Requests\Dashboard\UpdateDashboardBusinessProfileRequest;
 use App\Http\Resources\BusinessProfileResource;
-use App\Repositories\Contracts\MerchantRepositoryInterface;
+use App\Services\BusinessProfileService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Streeboga\PaymentData\Models\BusinessProfile;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Business Profiles', description: 'Business profile management for the dashboard', weight: 20)]
 final class DashboardBusinessProfileController extends Controller
 {
     public function __construct(
-        private readonly MerchantRepositoryInterface $merchantRepository,
+        private readonly BusinessProfileService $businessProfileService,
     ) {}
 
     /**
@@ -30,7 +32,8 @@ final class DashboardBusinessProfileController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-        $profiles = BusinessProfile::where('merchant_account_id', $merchantId)->get();
+        Gate::authorize('business-profile.viewAny', [$merchantId]);
+        $profiles = $this->businessProfileService->listByMerchantId($merchantId);
 
         return BusinessProfileResource::jsonApiList($profiles, $request);
     }
@@ -45,8 +48,7 @@ final class DashboardBusinessProfileController extends Controller
     #[Response(404, description: 'Merchant not found')]
     public function indexByMerchant(string $merchantKey, Request $request): JsonResponse
     {
-        $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
-        $profiles = BusinessProfile::where('merchant_account_id', $merchant->id)->get();
+        $profiles = $this->businessProfileService->listByMerchantKey($merchantKey);
 
         return BusinessProfileResource::jsonApiList($profiles, $request);
     }
@@ -61,7 +63,9 @@ final class DashboardBusinessProfileController extends Controller
     #[Response(404, description: 'Profile not found')]
     public function show(string $profileKey, Request $request): JsonResponse
     {
-        $profile = $this->merchantRepository->findProfileByKey($profileKey);
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('business-profile.view', [$merchantId]);
+        $profile = $this->businessProfileService->findByKey($profileKey);
 
         return (new BusinessProfileResource($profile))->toResponse($request);
     }
@@ -73,18 +77,17 @@ final class DashboardBusinessProfileController extends Controller
      */
     #[Response(201, description: 'Profile created')]
     #[Response(422, description: 'Validation error')]
-    public function store(Request $request): JsonResponse
+    public function store(StoreDashboardBusinessProfileRequest $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('business-profile.create', [$merchantId]);
 
-        $validated = $request->validate([
-            'data.attributes.webhook_url' => 'sometimes|url|max:2048',
-        ]);
+        $validated = $request->validated();
 
-        $profile = $this->merchantRepository->createBusinessProfile([
-            'merchant_account_id' => $merchantId,
-            'webhook_url' => $validated['data']['attributes']['webhook_url'] ?? null,
-        ]);
+        $profile = $this->businessProfileService->create(
+            $merchantId,
+            $validated['webhook_url'] ?? null,
+        );
 
         return (new BusinessProfileResource($profile))
             ->withStatus(201)
@@ -100,16 +103,18 @@ final class DashboardBusinessProfileController extends Controller
     #[PathParameter('profileKey', description: 'Business profile public key')]
     #[Response(200, description: 'Profile updated')]
     #[Response(404, description: 'Profile not found')]
-    public function update(string $profileKey, Request $request): JsonResponse
+    public function update(string $profileKey, UpdateDashboardBusinessProfileRequest $request): JsonResponse
     {
-        $profile = $this->merchantRepository->findProfileByKey($profileKey);
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('business-profile.update', [$merchantId]);
 
-        $validated = $request->validate([
-            'data.attributes.webhook_url' => 'sometimes|nullable|url|max:2048',
-        ]);
+        $validated = $request->validated();
 
-        $profile->update($validated['data']['attributes'] ?? []);
+        $profile = $this->businessProfileService->update(
+            $profileKey,
+            $validated,
+        );
 
-        return (new BusinessProfileResource($profile->fresh()))->toResponse($request);
+        return (new BusinessProfileResource($profile))->toResponse($request);
     }
 }

@@ -49,15 +49,10 @@ function apiHeaders(): array
 
 function createPayment(array $attrs = []): TestResponse
 {
-    return test()->postJson('/api/v1/payments', [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => array_merge([
-                'amount' => 6540,
-                'currency' => 'USD',
-            ], $attrs),
-        ],
-    ], apiHeaders());
+    return test()->postJson('/api/v1/payments', array_merge([
+        'amount' => 6540,
+        'currency' => 'USD',
+    ], $attrs), apiHeaders());
 }
 
 // --- GET payment ---
@@ -106,18 +101,13 @@ test('can confirm payment with card data (automatic capture)', function () {
     $paymentId = $create->json('data.id');
 
     $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => [
-                'payment_method' => 'card',
-                'payment_method_data' => [
-                    'card' => [
-                        'card_number' => '4242424242424242',
-                        'card_exp_month' => '12',
-                        'card_exp_year' => '2030',
-                        'card_cvc' => '123',
-                    ],
-                ],
+        'payment_method' => 'card',
+        'payment_method_data' => [
+            'card' => [
+                'card_number' => '4242424242424242',
+                'card_exp_month' => '12',
+                'card_exp_year' => '2030',
+                'card_cvc' => '123',
             ],
         ],
     ], apiHeaders());
@@ -132,18 +122,13 @@ test('can confirm payment with manual capture', function () {
     $paymentId = $create->json('data.id');
 
     $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => [
-                'payment_method' => 'card',
-                'payment_method_data' => [
-                    'card' => [
-                        'card_number' => '4242424242424242',
-                        'card_exp_month' => '12',
-                        'card_exp_year' => '2030',
-                        'card_cvc' => '123',
-                    ],
-                ],
+        'payment_method' => 'card',
+        'payment_method_data' => [
+            'card' => [
+                'card_number' => '4242424242424242',
+                'card_exp_month' => '12',
+                'card_exp_year' => '2030',
+                'card_cvc' => '123',
             ],
         ],
     ], apiHeaders());
@@ -159,18 +144,14 @@ test('cannot confirm already succeeded payment', function () {
 
     // First confirm
     $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], apiHeaders());
 
     // Second confirm should fail
     $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], apiHeaders());
 
     $response->assertStatus(400)
@@ -179,21 +160,16 @@ test('cannot confirm already succeeded payment', function () {
 
 test('confirm with confirm:true on create works in one call', function () {
     $response = $this->postJson('/api/v1/payments', [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => [
-                'amount' => 5000,
-                'currency' => 'USD',
-                'confirm' => true,
-                'payment_method' => 'card',
-                'payment_method_data' => [
-                    'card' => [
-                        'card_number' => '4242424242424242',
-                        'card_exp_month' => '12',
-                        'card_exp_year' => '2030',
-                        'card_cvc' => '123',
-                    ],
-                ],
+        'amount' => 5000,
+        'currency' => 'USD',
+        'confirm' => true,
+        'payment_method' => 'card',
+        'payment_method_data' => [
+            'card' => [
+                'card_number' => '4242424242424242',
+                'card_exp_month' => '12',
+                'card_exp_year' => '2030',
+                'card_cvc' => '123',
             ],
         ],
     ], apiHeaders());
@@ -210,18 +186,13 @@ test('can capture authorized payment', function () {
 
     // Confirm (manual → requires_capture)
     $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], apiHeaders());
 
     // Capture
     $response = $this->postJson("/api/v1/payments/{$paymentId}/capture", [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => ['amount_to_capture' => 6540],
-        ],
+        'amount_to_capture' => 6540,
     ], apiHeaders());
 
     $response->assertOk()
@@ -234,17 +205,12 @@ test('cannot capture more than authorized amount', function () {
     $paymentId = $create->json('data.id');
 
     $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], apiHeaders());
 
     $response = $this->postJson("/api/v1/payments/{$paymentId}/capture", [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => ['amount_to_capture' => 99999],
-        ],
+        'amount_to_capture' => 99999,
     ], apiHeaders());
 
     $response->assertStatus(400);
@@ -255,10 +221,7 @@ test('cannot capture payment not in requires_capture status', function () {
     $paymentId = $create->json('data.id');
 
     $response = $this->postJson("/api/v1/payments/{$paymentId}/capture", [
-        'data' => [
-            'type' => 'payments',
-            'attributes' => ['amount_to_capture' => 100],
-        ],
+        'amount_to_capture' => 100,
     ], apiHeaders());
 
     $response->assertStatus(400)
@@ -283,10 +246,8 @@ test('cannot cancel succeeded payment', function () {
 
     // Confirm → succeeded
     $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], apiHeaders());
 
     $response = $this->postJson("/api/v1/payments/{$paymentId}/cancel", [], apiHeaders());
@@ -362,11 +323,9 @@ test('connector exception during confirm triggers fallback', function () {
 
     // Confirm with explicit throwing connector — primary fails, fallback (test) should work
     $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'payment_method' => 'card',
-            'connector' => 'throwing',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'payment_method' => 'card',
+        'connector' => 'throwing',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], apiHeaders());
 
     // The primary connector throws, fallback should be attempted
@@ -390,10 +349,8 @@ test('confirm with expired payment returns error', function () {
         ->update(['expires_on' => now()->subMinutes(5)]);
 
     $response = $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], apiHeaders());
 
     $response->assertStatus(400)

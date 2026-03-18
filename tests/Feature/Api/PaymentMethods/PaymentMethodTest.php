@@ -31,17 +31,12 @@ beforeEach(function () {
 
 test('can save a payment method for customer', function () {
     $response = $this->postJson("/api/v1/customers/{$this->customer->key}/payment-methods", [
-        'data' => [
-            'type' => 'payment-methods',
-            'attributes' => [
-                'type' => 'card',
-                'card_number' => '4242424242424242',
-                'card_exp_month' => '12',
-                'card_exp_year' => '2030',
-                'card_holder_name' => 'John Doe',
-                'connector_name' => 'test',
-            ],
-        ],
+        'type' => 'card',
+        'card_number' => '4242424242424242',
+        'card_exp_month' => '12',
+        'card_exp_year' => '2030',
+        'card_holder_name' => 'John Doe',
+        'connector_name' => 'test',
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(201)
@@ -59,11 +54,9 @@ test('can list payment methods for customer', function () {
     // Create 2 payment methods
     for ($i = 0; $i < 2; $i++) {
         $this->postJson("/api/v1/customers/{$this->customer->key}/payment-methods", [
-            'data' => ['type' => 'payment-methods', 'attributes' => [
-                'type' => 'card', 'card_number' => '4242424242424242',
+            'type' => 'card', 'card_number' => '4242424242424242',
                 'card_exp_month' => '12', 'card_exp_year' => '2030',
                 'card_holder_name' => 'John', 'connector_name' => 'test',
-            ]],
         ], ['api-key' => $this->rawKey]);
     }
 
@@ -73,11 +66,9 @@ test('can list payment methods for customer', function () {
 
 test('can delete payment method', function () {
     $create = $this->postJson("/api/v1/customers/{$this->customer->key}/payment-methods", [
-        'data' => ['type' => 'payment-methods', 'attributes' => [
-            'type' => 'card', 'card_number' => '4242424242424242',
+        'type' => 'card', 'card_number' => '4242424242424242',
             'card_exp_month' => '12', 'card_exp_year' => '2030',
             'card_holder_name' => 'John', 'connector_name' => 'test',
-        ]],
     ], ['api-key' => $this->rawKey]);
     $pmKey = $create->json('data.id');
 
@@ -87,11 +78,9 @@ test('can delete payment method', function () {
 
 test('can set default payment method', function () {
     $create = $this->postJson("/api/v1/customers/{$this->customer->key}/payment-methods", [
-        'data' => ['type' => 'payment-methods', 'attributes' => [
-            'type' => 'card', 'card_number' => '4242424242424242',
+        'type' => 'card', 'card_number' => '4242424242424242',
             'card_exp_month' => '12', 'card_exp_year' => '2030',
             'card_holder_name' => 'John', 'connector_name' => 'test',
-        ]],
     ], ['api-key' => $this->rawKey]);
     $pmKey = $create->json('data.id');
 
@@ -102,21 +91,17 @@ test('can set default payment method', function () {
 test('card brand is detected from card number', function () {
     // Visa
     $visa = $this->postJson("/api/v1/customers/{$this->customer->key}/payment-methods", [
-        'data' => ['type' => 'payment-methods', 'attributes' => [
-            'type' => 'card', 'card_number' => '4242424242424242',
+        'type' => 'card', 'card_number' => '4242424242424242',
             'card_exp_month' => '12', 'card_exp_year' => '2030',
             'connector_name' => 'test',
-        ]],
     ], ['api-key' => $this->rawKey]);
     $visa->assertJsonPath('data.attributes.card_brand', 'visa');
 
     // Mastercard
     $mc = $this->postJson("/api/v1/customers/{$this->customer->key}/payment-methods", [
-        'data' => ['type' => 'payment-methods', 'attributes' => [
-            'type' => 'card', 'card_number' => '5555555555554444',
+        'type' => 'card', 'card_number' => '5555555555554444',
             'card_exp_month' => '12', 'card_exp_year' => '2030',
             'connector_name' => 'test',
-        ]],
     ], ['api-key' => $this->rawKey]);
     $mc->assertJsonPath('data.attributes.card_brand', 'mastercard');
 });

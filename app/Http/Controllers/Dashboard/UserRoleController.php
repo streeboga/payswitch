@@ -4,19 +4,25 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Http\Requests\Dashboard\StoreUserRoleRequest;
+use App\Http\Requests\Dashboard\UpdateUserRoleRequest;
+use App\Http\Resources\UserRoleResource;
+use App\Services\UserRoleService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Users & RBAC', description: 'User and role management', weight: 25)]
 final class UserRoleController extends Controller
 {
+    public function __construct(
+        private readonly UserRoleService $userRoleService,
+    ) {}
+
     /**
      * List users with roles
      *
@@ -26,32 +32,11 @@ final class UserRoleController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('user-role.viewAny', [$merchantId]);
 
-        $roles = \App\Models\UserRole::with('user')
-            ->whereHas('organization', function ($q) use ($merchantId) {
-                $q->whereHas('merchantAccounts', function ($q2) use ($merchantId) {
-                    $q2->where('id', $merchantId);
-                });
-            })
-            ->get();
+        $roles = $this->userRoleService->getRolesForMerchant($merchantId);
 
-        $items = $roles->map(fn ($role) => [
-            'type' => 'user-roles',
-            'id' => (string) $role->id,
-            'attributes' => [
-                'user_id' => $role->user_id,
-                'user_name' => $role->user?->name,
-                'user_email' => $role->user?->email,
-                'role' => $role->role->value,
-                'created_at' => $role->created_at->toIso8601String(),
-            ],
-        ])->toArray();
-
-        return response()->json(
-            ['data' => $items],
-            200,
-            ['Content-Type' => 'application/vnd.api+json'],
-        );
+        return UserRoleResource::jsonApiList($roles, $request);
     }
 
     /**
@@ -61,32 +46,13 @@ final class UserRoleController extends Controller
      */
     #[Response(201, description: 'Role assigned')]
     #[Response(422, description: 'Validation error')]
-    public function store(Request $request): JsonResponse
+    public function store(StoreUserRoleRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'data.attributes.user_id' => 'required|exists:users,id',
-            'data.attributes.organization_id' => 'required|exists:organizations,id',
-            'data.attributes.role' => ['required', Rule::enum(UserRole::class)],
-        ]);
+        $validated = $request->validated();
 
-        $attrs = $validated['data']['attributes'];
+        $role = $this->userRoleService->assignRole($validated);
 
-        $role = \App\Models\UserRole::updateOrCreate(
-            ['user_id' => $attrs['user_id'], 'organization_id' => $attrs['organization_id']],
-            ['role' => $attrs['role']],
-        );
-
-        return response()->json([
-            'data' => [
-                'type' => 'user-roles',
-                'id' => (string) $role->id,
-                'attributes' => [
-                    'user_id' => $role->user_id,
-                    'role' => $role->role->value,
-                    'created_at' => $role->created_at->toIso8601String(),
-                ],
-            ],
-        ], 201, ['Content-Type' => 'application/vnd.api+json']);
+        return (new UserRoleResource($role))->withStatus(201)->toResponse($request);
     }
 
     /**
@@ -96,23 +62,13 @@ final class UserRoleController extends Controller
      */
     #[PathParameter('roleId', description: 'User role ID')]
     #[Response(200, description: 'Role updated')]
-    public function update(string $roleId, Request $request): JsonResponse
+    public function update(string $roleId, UpdateUserRoleRequest $request): JsonResponse
     {
-        $role = \App\Models\UserRole::findOrFail($roleId);
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'data.attributes.role' => ['required', Rule::enum(UserRole::class)],
-        ]);
+        $role = $this->userRoleService->updateRole($roleId, $validated['role']);
 
-        $role->update(['role' => $validated['data']['attributes']['role']]);
-
-        return response()->json([
-            'data' => [
-                'type' => 'user-roles',
-                'id' => (string) $role->id,
-                'attributes' => ['role' => $role->role->value],
-            ],
-        ], 200, ['Content-Type' => 'application/vnd.api+json']);
+        return (new UserRoleResource($role))->toResponse($request);
     }
 
     /**
@@ -124,8 +80,7 @@ final class UserRoleController extends Controller
     #[Response(204, description: 'Role revoked')]
     public function destroy(string $roleId): JsonResponse
     {
-        $role = \App\Models\UserRole::findOrFail($roleId);
-        $role->delete();
+        $this->userRoleService->deleteRole($roleId);
 
         return response()->json(null, 204);
     }

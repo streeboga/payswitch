@@ -14,13 +14,8 @@ beforeEach(function () {
 
 test('can create merchant account', function () {
     $response = $this->postJson('/api/v1/merchants', [
-        'data' => [
-            'type' => 'merchants',
-            'attributes' => [
-                'name' => 'Test Merchant',
-                'organization_id' => $this->org->key,
-            ],
-        ],
+        'name' => 'Test Merchant',
+        'organization_id' => $this->org->key,
     ], ['api-key' => 'admin_test_key']);
 
     $response->assertStatus(201)
@@ -33,13 +28,8 @@ test('can create merchant account', function () {
 
 test('can retrieve merchant account by key', function () {
     $createResponse = $this->postJson('/api/v1/merchants', [
-        'data' => [
-            'type' => 'merchants',
-            'attributes' => [
-                'name' => 'Fetch Merchant',
-                'organization_id' => $this->org->key,
-            ],
-        ],
+        'name' => 'Fetch Merchant',
+        'organization_id' => $this->org->key,
     ], ['api-key' => 'admin_test_key']);
 
     $merchantKey = $createResponse->json('data.id');
@@ -53,10 +43,7 @@ test('can retrieve merchant account by key', function () {
 
 test('cannot create merchant without organization_id', function () {
     $response = $this->postJson('/api/v1/merchants', [
-        'data' => [
-            'type' => 'merchants',
-            'attributes' => ['name' => 'No Org'],
-        ],
+        'name' => 'No Org',
     ], ['api-key' => 'admin_test_key']);
 
     $response->assertStatus(422);

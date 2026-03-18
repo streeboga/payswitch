@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
@@ -14,6 +15,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
+    UserRole::create(['user_id' => $this->user->id, 'organization_id' => $org->id, 'role' => 'admin']);
     $this->headers = ['X-Merchant-Key' => $this->merchant->key];
 });
 
@@ -38,11 +40,9 @@ test('routing rules list returns json:api response', function () {
 test('routing rule create returns 201', function () {
     $response = $this->actingAs($this->user)
         ->postJson('/api/v1/dashboard/routing-rules', [
-            'data' => ['type' => 'routing-rules', 'attributes' => [
-                'type' => 'priority',
-                'name' => 'Primary',
-                'rules' => ['connectors' => ['stripe']],
-            ]],
+            'type' => 'priority',
+            'name' => 'Primary',
+            'rules' => ['connectors' => ['stripe']],
         ], $this->headers);
 
     $response->assertStatus(201)
@@ -62,10 +62,8 @@ test('routing rule update works', function () {
 
     $response = $this->actingAs($this->user)
         ->patchJson("/api/v1/dashboard/routing-rules/{$rule->key}", [
-            'data' => ['type' => 'routing-rules', 'id' => $rule->key, 'attributes' => [
-                'name' => 'Updated',
-                'active' => false,
-            ]],
+            'name' => 'Updated',
+            'active' => false,
         ], $this->headers);
 
     $response->assertOk()

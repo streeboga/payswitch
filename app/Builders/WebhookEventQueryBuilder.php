@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Builders;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Streeboga\PaymentData\Models\WebhookEvent;
 
@@ -37,7 +38,47 @@ final class WebhookEventQueryBuilder
 
     public function pending(): self
     {
-        $this->query->where('status', 'pending');
+        $this->query->where('delivered', false)->where('delivery_attempts', 0);
+
+        return $this;
+    }
+
+    public function delivered(): self
+    {
+        $this->query->where('delivered', true);
+
+        return $this;
+    }
+
+    public function failed(): self
+    {
+        $this->query->where('delivered', false)->where('delivery_attempts', '>', 0);
+
+        return $this;
+    }
+
+    public function withEventType(string $eventType): self
+    {
+        $this->query->where('event_type', $eventType);
+
+        return $this;
+    }
+
+    public function orderByLatest(): self
+    {
+        $this->query->orderByDesc('created_at');
+
+        return $this;
+    }
+
+    public function paginate(int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->query->paginate($perPage);
+    }
+
+    public function whereKey(string $key): self
+    {
+        $this->query->where('key', $key);
 
         return $this;
     }

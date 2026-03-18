@@ -52,4 +52,28 @@ interface MerchantRepositoryInterface
     public function findMerchantByKeyOrNull(string $key): ?MerchantAccount;
 
     public function findConnectorByMerchantAndKeyOrNull(int|string $merchantAccountId, string $connectorKey): ?MerchantConnectorAccount;
+
+    /**
+     * @return Collection<int, Organization>
+     */
+    public function listOrganizations(): Collection;
+
+    /**
+     * @return Collection<int, MerchantAccount>
+     */
+    public function listAllMerchants(): Collection;
+
+    /**
+     * @return Collection<int, ApiKey>
+     */
+    public function listApiKeysByMerchant(int|string $merchantAccountId): Collection;
+
+    public function revokeApiKey(int|string $merchantAccountId, string $apiKeyKey): void;
+
+    /**
+     * @return Collection<int, BusinessProfile>
+     */
+    public function listProfilesByMerchant(int|string $merchantAccountId): Collection;
+
+    public function updateProfile(BusinessProfile $profile, array $attributes): BusinessProfile;
 }

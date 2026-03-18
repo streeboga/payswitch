@@ -66,10 +66,7 @@ test('valid admin key authenticates for admin endpoints', function () {
     config(['payswitch.admin_api_key' => 'admin_test_key_123']);
 
     $response = $this->postJson('/api/v1/organizations', [
-        'data' => [
-            'type' => 'organizations',
-            'attributes' => ['name' => 'New Org'],
-        ],
+        'name' => 'New Org',
     ], ['api-key' => 'admin_test_key_123']);
 
     expect($response->status())->not->toBe(401);
@@ -79,10 +76,7 @@ test('secret key on admin endpoint returns 403', function () {
     [$merchant, $rawKey] = createMerchantWithApiKey();
 
     $response = $this->postJson('/api/v1/organizations', [
-        'data' => [
-            'type' => 'organizations',
-            'attributes' => ['name' => 'Org'],
-        ],
+        'name' => 'Org',
     ], ['api-key' => $rawKey]);
 
     $response->assertStatus(403);

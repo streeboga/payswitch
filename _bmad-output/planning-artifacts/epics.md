@@ -3,352 +3,424 @@ stepsCompleted: ['step-01', 'step-02', 'step-03', 'step-04']
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/architecture.md'
+  - 'docs/plans/2026-03-18-dashboard-design.md'
 ---
 
-# payswitch - Разбивка на эпики
+# payswitch — Разбивка на эпики и стори
 
 ## Обзор
 
-Разбивка PRD и Architecture на эпики и истории для имплементации платёжного оркестратора payswitch. API-only MVP с Hyperswitch-совместимым REST API.
+Полная разбивка требований payswitch на эпики и стори. Покрывает: бэкенд MVP (API-only платёжный оркестратор, 45 FR) + Dashboard SPA (React-приложение, 38 UX-DR). Всё как у Hyperswitch.
 
 ## Инвентарь требований
 
 ### Функциональные требования
 
-- FR1: Система определяет идентичность мерчанта из API-ключа автоматически
-- FR2: Админ аутентифицируется Admin API Key для провизионирования
-- FR3: Бэкенд мерчанта аутентифицируется Secret API Key для платёжных операций
-- FR4: Клиентские приложения аутентифицируются Publishable Key
-- FR5: Система валидирует формат API-ключа и отклоняет истёкшие/отозванные
-- FR6: Мерчант создаёт PaymentIntent с суммой и валютой
-- FR7: Мерчант подтверждает платёж с данными метода оплаты
-- FR8: Мерчант захватывает авторизованные средства (manual capture)
-- FR9: Мерчант отменяет платёж
-- FR10: Мерчант получает статус платежа по payment_id
-- FR11: Система обеспечивает валидные переходы статусов
-- FR12: Система поддерживает automatic и manual capture
-- FR13: Мерчант создаёт платёж с confirm: true (create + confirm)
-- FR14: Система генерирует уникальные ID (pay_, client_secret)
-- FR15: Система отслеживает попытки оплаты (payment attempts)
-- FR16: Мерчант создаёт полный или частичный рефанд
-- FR17: Мерчант получает статус рефанда по refund_id
-- FR18: Система направляет рефанд через тот же коннектор
-- FR19: Система генерирует уникальные ID рефандов (ref_)
-- FR20: Мерчант создаёт клиента с опциональными полями
-- FR21: Мерчант получает детали клиента
-- FR22: Мерчант обновляет информацию клиента
-- FR23: Мерчант удаляет клиента
-- FR24: Система автоматически генерирует customer_id (cus_)
-- FR25: Админ создаёт организацию
-- FR26: Админ создаёт merchant account
-- FR27: Админ создаёт бизнес-профиль с webhook URL
-- FR28: Админ генерирует API-ключи (показ только при создании)
-- FR29: Админ отзывает API-ключи
-- FR30: Админ добавляет коннектор (PSP) к мерчанту
-- FR31: Админ просматривает/обновляет/удаляет коннекторы
-- FR32: Система хранит credentials коннекторов зашифрованно
-- FR33: Мерчант указывает конкретный коннектор (явная маршрутизация)
-- FR34: Система поддерживает priority-based fallback
-- FR35: Система выбирает коннектор по методу оплаты и валюте
-- FR36: Система отправляет webhook-уведомления при изменении статуса
-- FR37: Система подписывает webhook payload HMAC-SHA512
-- FR38: Система повторяет неудачные доставки (24 часа)
-- FR39: Система включает уникальный event_id
-- FR40: Система отслеживает статус доставки webhook-а
-- FR41: Система интегрируется через OmniPay gateway interface
-- FR42: Система маппит операции на OmniPay methods
-- FR43: Система поддерживает Stripe через OmniPay
-- FR44: Система поддерживает ЮKassa через OmniPay
-- FR45: Система нормализует PSP-ошибки в единый формат
+FR1: Система определяет идентичность мерчанта из API-ключа автоматически
+FR2: Админ аутентифицируется Admin API Key для провизионирования
+FR3: Бэкенд мерчанта аутентифицируется Secret API Key для платёжных операций
+FR4: Клиентские приложения аутентифицируются Publishable Key
+FR5: Система валидирует формат API-ключа и отклоняет истёкшие/отозванные
+FR6: Мерчант создаёт PaymentIntent с суммой и валютой
+FR7: Мерчант подтверждает платёж с данными метода оплаты
+FR8: Мерчант захватывает авторизованные средства (manual capture)
+FR9: Мерчант отменяет платёж
+FR10: Мерчант получает статус платежа по payment_id
+FR11: Система обеспечивает валидные переходы статусов
+FR12: Система поддерживает automatic и manual capture
+FR13: Мерчант создаёт платёж с confirm: true (create + confirm)
+FR14: Система генерирует уникальные ID (pay_, client_secret)
+FR15: Система отслеживает попытки оплаты (payment attempts)
+FR16: Мерчант создаёт полный или частичный рефанд
+FR17: Мерчант получает статус рефанда по refund_id
+FR18: Система направляет рефанд через тот же коннектор
+FR19: Система генерирует уникальные ID рефандов (ref_)
+FR20: Мерчант создаёт клиента с опциональными полями
+FR21: Мерчант получает детали клиента
+FR22: Мерчант обновляет информацию клиента
+FR23: Мерчант удаляет клиента
+FR24: Система автоматически генерирует customer_id (cus_)
+FR25: Админ создаёт организацию
+FR26: Админ создаёт merchant account
+FR27: Админ создаёт бизнес-профиль с webhook URL
+FR28: Админ генерирует API-ключи (показ только при создании)
+FR29: Админ отзывает API-ключи
+FR30: Админ добавляет коннектор (PSP) к мерчанту
+FR31: Админ просматривает/обновляет/удаляет коннекторы
+FR32: Система хранит credentials коннекторов зашифрованно
+FR33: Мерчант указывает конкретный коннектор (явная маршрутизация)
+FR34: Система поддерживает priority-based fallback
+FR35: Система выбирает коннектор по методу оплаты и валюте
+FR36: Система отправляет webhook-уведомления при изменении статуса
+FR37: Система подписывает webhook payload HMAC-SHA512
+FR38: Система повторяет неудачные доставки (24 часа)
+FR39: Система включает уникальный event_id
+FR40: Система отслеживает статус доставки webhook-а
+FR41: Система интегрируется через OmniPay gateway interface
+FR42: Система маппит операции на OmniPay methods
+FR43: Система поддерживает Stripe через OmniPay
+FR44: Система поддерживает ЮKassa через OmniPay
+FR45: Система нормализует PSP-ошибки в единый формат
 
 ### Нефункциональные требования
 
-- NFR1: Время ответа API создания платежа < 500мс (95-й перцентиль)
-- NFR2: Время ответа GET-эндпоинтов < 200мс (95-й перцентиль)
-- NFR3: Инициация webhook-а в течение 5 секунд
-- NFR4: 100 одновременных платёжных операций
-- NFR5: Все API-эндпоинты только HTTPS
-- NFR6: Credentials зашифрованы AES-256-CBC
-- NFR7: Secret API-ключи хранятся как bcrypt-хэши
-- NFR8: Данные карт не хранятся — pass-through
-- NFR9: Все переходы статусов логируются
-- NFR10: Валидация metadata полей
-- NFR11: Stateless API-слой
-- NFR12: Webhook-доставка через очередь
-- NFR13: БД для партиционирования по merchant_id
-- NFR14: Поддержка 10x роста через горизонтальное масштабирование
-- NFR15: Wire-совместимость с Hyperswitch API
-- NFR16: Соответствие OmniPay gateway interface
-- NFR17: Поддержка HMAC-SHA512 и HMAC-SHA256
+NFR1: API создания платежа < 500мс (95-й перцентиль)
+NFR2: GET-эндпоинты < 200мс (95-й перцентиль)
+NFR3: Инициация webhook-а в течение 5 секунд
+NFR4: 100 одновременных платёжных операций
+NFR5: Все эндпоинты только HTTPS
+NFR6: Credentials зашифрованы AES-256-CBC
+NFR7: Secret API-ключи хранятся как bcrypt-хэши
+NFR8: Данные карт не хранятся — pass-through
+NFR9: Все переходы статусов логируются
+NFR10: Валидация metadata полей
+NFR11: Stateless API-слой
+NFR12: Webhook-доставка через очередь
+NFR13: БД для партиционирования по merchant_id
+NFR14: Поддержка 10x роста через горизонтальное масштабирование
+NFR15: Wire-совместимость с Hyperswitch API
+NFR16: Соответствие OmniPay gateway interface
+NFR17: Поддержка HMAC-SHA512 и HMAC-SHA256
 
-### Дополнительные требования
+### Дополнительные требования (из Architecture)
 
-- Brownfield: расширение существующего Laravel 13 приложения (не starter template)
-- PostgreSQL для production (JSON columns, encrypted fields)
-- Layered architecture: Controller → Action → Service → Repository
-- Payment state machine с enum-based statuses и transition guards
-- Connector abstraction через OmniPay gateway wrapper
-- Custom API key auth middleware отдельно от Fortify session auth
-- Queue-based webhook delivery с retry backoff
-- ID generation через IdGenerator utility (prefixed IDs)
-- Audit logging через Laravel Events (PaymentStatusChanged)
+AR1: PostgreSQL 16+ как основная БД
+AR2: Layered architecture: Controller → Action → Service → Repository → Model
+AR3: Custom API key authentication middleware
+AR4: Payment state machine на Enum с transition guards
+AR5: Connector abstraction через OmniPay wrapper
+AR6: ID generation через IdGenerator utility
+AR7: Webhook signing через WebhookSigner utility
+AR8: Error normalization через ConnectorErrorNormalizer
+AR9: Encrypted fields: Crypt для credentials, Hash для API keys
+AR10: Event-driven: PaymentStatusChanged → LogPaymentAudit + SendWebhookNotification
+AR11: Queue jobs: DeliverWebhookJob, ExpireStalePaymentsJob
+AR12: One migration per table
+AR13: Test structure: Feature/Api/ + Unit/
+AR14: Config file: config/payswitch.php
+AR15: Brownfield compatibility
 
-### Требования к UX-дизайну
+### UX Design Requirements (из Dashboard Design Plan)
 
-Не применимо — API-only MVP, фронтенд не требуется.
+UX-DR1: Standalone React SPA (React 19, TS 5.7, Vite 7, TanStack Router/Query, Zustand, Radix UI, Tailwind 4)
+UX-DR2: Sanctum SPA аутентификация с 2FA
+UX-DR3: Контекстный переключатель Org → Merchant → Profile (каскадные dropdowns, persist в localStorage)
+UX-DR4: Test/Live toggle с подтверждением
+UX-DR5: Sidebar с 5 группами, icon-only, mobile sheet
+UX-DR6: Breadcrumbs на вложенных страницах
+UX-DR7: Command Palette (⌘K) — глобальный поиск
+UX-DR8: Notification Center (колокольчик, WebSocket/polling)
+UX-DR9: Онбординг-визард (5 шагов) + чеклист
+UX-DR10: Overview — метрики, графики, воронка конверсии
+UX-DR11: Payments list — фильтры, сортировка, пагинация, CSV
+UX-DR12: Payment detail — действия, timeline, JSON-viewer
+UX-DR13: Refunds list
+UX-DR14: Disputes list + detail + evidence upload
+UX-DR15: Customers list + detail + payment methods
+UX-DR16: Connectors — карточки, визард подключения, health
+UX-DR17: Connector Health Dashboard
+UX-DR18: Routing Rules — визуальный редактор (priority, rule-based, volume split)
+UX-DR19: Webhooks — expandable rows, retry
+UX-DR20: API Keys — show-once modal, отзыв
+UX-DR21: Test Payment — форма + пресеты
+UX-DR22: Event Logs — timeline
+UX-DR23: Organizations / Merchants / Profiles CRUD (админ)
+UX-DR24: Users — приглашения, RBAC (admin/operator/viewer)
+UX-DR25: Audit Log — expandable diff, экспорт
+UX-DR26: Settings — профиль, безопасность, тема, таймзона, уведомления
+UX-DR27: Notifications — полный список, bulk actions
+UX-DR28: Saved Filters + пресеты
+UX-DR29: DataTable — sticky headers, bulk actions, data density, CSV
+UX-DR30: Keyboard shortcuts (⌘K, g+p, ↑↓ Enter)
+UX-DR31: Форматирование (суммы, даты в user tz, monospace + copy)
+UX-DR32: StatusBadge компонент
+UX-DR33: JSON-viewer компонент
+UX-DR34: Confirm dialog для опасных действий
+UX-DR35: Empty/Error states
+UX-DR36: i18n-ready
+UX-DR37: Тесты: Vitest, Playwright, Storybook
+UX-DR38: Бэкенд API для дашборда (analytics, search, notifications, health, exports)
 
 ### Карта покрытия FR
 
 | FR | Эпик | Описание |
 |----|------|----------|
 | FR1-5 | Эпик 1 | API Key аутентификация и merchant resolution |
-| FR25-29 | Эпик 2 | Провизионирование: организации, мерчанты, профили, API-ключи |
-| FR30-32 | Эпик 3 | Управление коннекторами (PSP) |
-| FR41-45 | Эпик 3 | OmniPay интеграция, Stripe и ЮKassa коннекторы |
-| FR6, FR11-14 | Эпик 4 | Создание платежа, state machine, ID generation |
-| FR7, FR12-13, FR15 | Эпик 5 | Подтверждение платежа, automatic/manual capture |
-| FR8-10 | Эпик 5 | Capture, cancel, retrieve |
-| FR20-24 | Эпик 6 | CRUD клиентов |
+| FR25-29 | Эпик 2 | Провизионирование: организации, мерчанты, профили, ключи |
+| FR30-32, FR41-45 | Эпик 3 | Коннекторы и OmniPay интеграция |
+| FR6, FR11-14 | Эпик 4 | Создание платежа и state machine |
+| FR7-10, FR13, FR15 | Эпик 5 | Жизненный цикл платежа |
+| FR20-24 | Эпик 6 | Управление клиентами |
 | FR16-19 | Эпик 7 | Рефанды |
-| FR33-35 | Эпик 8 | Маршрутизация платежей |
-| FR36-40 | Эпик 9 | Webhook engine |
+| FR33-35 | Эпик 8 | Маршрутизация |
+| FR36-40 | Эпик 9 | Webhook Engine |
+| UX-DR1-2, UX-DR29-36 | Эпик 10 | Dashboard SPA каркас |
+| UX-DR3-8 | Эпик 11 | Dashboard: мультитенантность и навигация |
+| UX-DR10-13, UX-DR38 | Эпик 12 | Dashboard: операции (обзор, платежи, возвраты) |
+| UX-DR15-20 | Эпик 13 | Dashboard: конфигурация (клиенты, коннекторы, маршрутизация, ключи, вебхуки) |
+| UX-DR9, UX-DR21-22 | Эпик 14 | Dashboard: разработка (онбординг, тест-платёж, логи) |
+| UX-DR23-25, UX-DR27 | Эпик 15 | Dashboard: управление (орг, мерчанты, пользователи, аудит) |
+| UX-DR14, UX-DR17, UX-DR24, UX-DR26, UX-DR28, UX-DR37 | Эпик 16 | Dashboard: enterprise (споры, health, роли, настройки, тесты) |
 
 ## Список эпиков
 
-### Эпик 1: Аутентификация по API-ключам и определение мерчанта
-Разработчики могут аутентифицироваться через API-ключи и система автоматически определяет мерчанта из ключа. Базовая инфраструктура аутентификации для всех API-операций.
-**Покрываемые FR:** FR1, FR2, FR3, FR4, FR5
+### Эпик 1: API Key аутентификация и определение мерчанта
+Разработчики аутентифицируются через API-ключи, система автоматически определяет мерчанта.
+**FR:** FR1-5 | **NFR:** NFR5-7, NFR10, NFR15
 
 ### Эпик 2: Провизионирование мерчантов
-Админ может создавать организации, мерчант-аккаунты, бизнес-профили и управлять API-ключами через Admin API.
-**Покрываемые FR:** FR25, FR26, FR27, FR28, FR29
+Админ создаёт иерархию тенантов (Org → Merchant → Profile) и управляет API-ключами.
+**FR:** FR25-29
 
-### Эпик 3: Управление коннекторами и интеграция с PSP
-Админ может подключать платёжные процессоры (Stripe, ЮKassa) к мерчанту, а система интегрируется с ними через OmniPay.
-**Покрываемые FR:** FR30, FR31, FR32, FR41, FR42, FR43, FR44, FR45
+### Эпик 3: Коннекторы и интеграция с PSP
+Админ подключает Stripe и ЮKassa, система интегрируется через OmniPay.
+**FR:** FR30-32, FR41-45 | **NFR:** NFR6, NFR16
 
 ### Эпик 4: Создание платежа и State Machine
-Мерчант может создавать платежи через API, система управляет жизненным циклом платежа через state machine с корректными переходами статусов.
-**Покрываемые FR:** FR6, FR11, FR12, FR14
+Мерчант создаёт платежи, система управляет lifecycle через state machine.
+**FR:** FR6, FR11-14 | **NFR:** NFR1, NFR9
 
-### Эпик 5: Операции жизненного цикла платежа
-Мерчант может подтверждать, захватывать, отменять платежи и получать их статус. Поддержка automatic и manual capture flow.
-**Покрываемые FR:** FR7, FR8, FR9, FR10, FR13, FR15
+### Эпик 5: Жизненный цикл платежа
+Мерчант подтверждает, захватывает, отменяет платежи. Automatic и manual capture.
+**FR:** FR7-10, FR13, FR15
 
 ### Эпик 6: Управление клиентами
-Мерчант может создавать, просматривать, обновлять и удалять клиентов через API.
-**Покрываемые FR:** FR20, FR21, FR22, FR23, FR24
+Мерчант создаёт, просматривает, обновляет и удаляет клиентов.
+**FR:** FR20-24
 
-### Эпик 7: Операции рефандов
-Мерчант может создавать полные и частичные рефанды, система обрабатывает их через тот же коннектор.
-**Покрываемые FR:** FR16, FR17, FR18, FR19
+### Эпик 7: Рефанды
+Мерчант создаёт полные и частичные рефанды.
+**FR:** FR16-19
 
 ### Эпик 8: Маршрутизация платежей
-Мерчант может управлять маршрутизацией платежей — явный выбор коннектора, автоматический выбор по валюте, fallback при ошибках.
-**Покрываемые FR:** FR33, FR34, FR35
+Явный выбор коннектора, автоматический выбор по валюте/методу, priority fallback.
+**FR:** FR33-35
 
 ### Эпик 9: Webhook Engine
-Система надёжно доставляет webhook-уведомления мерчантам при изменении статусов платежей с HMAC подписью и retry policy.
-**Покрываемые FR:** FR36, FR37, FR38, FR39, FR40
+Надёжная доставка webhook-уведомлений с HMAC подписью и retry.
+**FR:** FR36-40 | **NFR:** NFR3, NFR12
+
+### Эпик 10: Dashboard SPA — каркас и UI-kit
+Инициализация React SPA, UI-компоненты, утилиты, auth, layout.
+**UX-DR:** UX-DR1-2, UX-DR29-36
+
+### Эпик 11: Dashboard — мультитенантность и навигация
+Контекстный переключатель, sidebar, breadcrumbs, глобальный поиск, уведомления.
+**UX-DR:** UX-DR3-8
+
+### Эпик 12: Dashboard — операции (обзор, платежи, возвраты)
+Дашборд с аналитикой, список и детали платежей, возвраты.
+**UX-DR:** UX-DR10-13, UX-DR38
+
+### Эпик 13: Dashboard — конфигурация
+Клиенты, коннекторы (визард + карточки), маршрутизация (визуальный редактор), API-ключи, вебхуки.
+**UX-DR:** UX-DR15-20
+
+### Эпик 14: Dashboard — разработка
+Онбординг-визард, тестовый платёж, логи событий.
+**UX-DR:** UX-DR9, UX-DR21-22
+
+### Эпик 15: Dashboard — управление
+Организации, мерчанты, бизнес-профили, пользователи, аудит-лог, уведомления.
+**UX-DR:** UX-DR23-25, UX-DR27
+
+### Эпик 16: Dashboard — enterprise
+Споры, Connector Health Dashboard, RBAC, расширенные настройки, Saved Filters, тесты.
+**UX-DR:** UX-DR14, UX-DR17, UX-DR24, UX-DR26, UX-DR28, UX-DR37
 
 ---
 
-## Эпик 1: Аутентификация по API-ключам и определение мерчанта
+## Эпик 1: API Key аутентификация и определение мерчанта
 
-Разработчики аутентифицируются через API-ключи (Admin, Secret, Publishable), система автоматически определяет мерчанта из ключа без явной передачи merchant_id.
+Разработчики аутентифицируются через API-ключи (Admin, Secret, Publishable), система автоматически определяет мерчанта.
 
-### История 1.1: Схема БД для сущностей аутентификации
+### Стори 1.1: Схема БД для аутентификации и тенантов
 
 Как разработчик,
-Я хочу иметь таблицы БД для организаций, мерчант-аккаунтов, бизнес-профилей и API-ключей,
-Чтобы система аутентификации имела хранилище для иерархии тенантов и API-ключей.
+Я хочу иметь таблицы organizations, merchant_accounts, business_profiles, api_keys,
+Чтобы система аутентификации имела хранилище для иерархии тенантов.
 
 **Критерии приёмки:**
 
-**Дано** чистая база данных
+**Дано** чистая БД
 **Когда** запускаются миграции
-**Тогда** создаются таблицы `organizations`, `merchant_accounts`, `business_profiles`, `api_keys` со всеми колонками по схеме Architecture
-**И** Eloquent-модели `Organization`, `MerchantAccount`, `BusinessProfile`, `ApiKey` существуют с relationships и casts
-**И** утилита `IdGenerator` генерирует префиксированные ID (merchant_, pro_, snd_/prod_)
+**Тогда** создаются 4 таблицы со всеми колонками по схеме Architecture
+**И** Eloquent-модели с relationships и casts существуют
+**И** IdGenerator генерирует префиксированные ID (org_, merchant_, pro_, snd_/prod_)
+**И** config/payswitch.php содержит admin_api_key, id_prefixes, webhook retry config
 
-### История 1.2: Middleware определения API-ключа
+### Стори 1.2: Middleware определения API-ключа
 
-Как разработчик, делающий API-запросы,
-Я хочу, чтобы система парсила и валидировала мой API-ключ из заголовка `api-key`,
-Чтобы я мог аутентифицироваться без явной передачи merchant_id.
+Как разработчик,
+Я хочу, чтобы система парсила мой API-ключ из заголовка `api-key`,
+Чтобы аутентифицироваться без явной передачи merchant_id.
 
 **Критерии приёмки:**
 
 **Дано** запрос с заголовком `api-key: snd_abc123...`
-**Когда** middleware ResolveApiKey обрабатывает запрос
-**Тогда** определяется тип ключа (Admin, Secret, Publishable) по префиксу и lookup
-**И** для Secret-ключей верифицируется соответствие bcrypt-хэшу
-**И** для Admin-ключей сравнивается с `config('payswitch.admin_api_key')`
-**И** устанавливается контекст мерчанта в запросе для дальнейшего использования
-**И** запросы без заголовка `api-key` получают 401 с Hyperswitch-совместимым JSON ошибки
+**Когда** ResolveApiKey middleware обрабатывает запрос
+**Тогда** определяется тип ключа (Admin/Secret/Publishable)
+**И** для Secret-ключей верифицируется bcrypt-хэш
+**И** для Admin сравнивается с config
+**И** устанавливается merchant context
+**И** запросы без api-key получают 401 в Hyperswitch-совместимом формате
 
-### История 1.3: Guard для Admin API Key
+### Стори 1.3: Guard для Admin API Key
 
 Как админ,
-Я хочу аутентифицироваться Admin API Key для операций провизионирования,
-Чтобы только авторизованные админы могли создавать организации и мерчантов.
+Я хочу аутентифицироваться Admin API Key,
+Чтобы только я мог провизионировать тенанты.
 
 **Критерии приёмки:**
 
 **Дано** запрос с валидным Admin API Key
-**Когда** middleware AuthenticateAdminApiKey выполняется
-**Тогда** запрос проходит к контроллеру
-**И** запросы с Secret или Publishable ключами получают 403
-**И** запросы с невалидным Admin-ключом получают 401
+**Когда** AuthenticateAdminApiKey выполняется
+**Тогда** запрос проходит
+**И** Secret/Publishable ключи получают 403
+**И** невалидный Admin-ключ получает 401
 
-### История 1.4: Guard для Secret и Publishable ключей
+### Стори 1.4: Guard для Secret и Publishable ключей
 
 Как разработчик мерчанта,
-Я хочу аутентифицироваться Secret API Key для платёжных операций,
-Чтобы мой бэкенд мог безопасно обрабатывать платежи.
+Я хочу аутентифицироваться Secret API Key,
+Чтобы мой бэкенд мог обрабатывать платежи.
 
 **Критерии приёмки:**
 
 **Дано** запрос с валидным Secret API Key
-**Когда** middleware AuthenticateSecretApiKey выполняется
-**Тогда** контекст мерчанта устанавливается из merchant_id, привязанного к ключу
-**И** истёкшие или отозванные ключи получают 401 с `error.code: "api_key_expired"` или `"api_key_revoked"`
-**И** запросы с Publishable Key к Secret-only эндпоинтам получают 403
+**Когда** AuthenticateSecretApiKey выполняется
+**Тогда** merchant context устанавливается из привязанного merchant_id
+**И** истёкшие ключи → 401 с `api_key_expired`
+**И** отозванные ключи → 401 с `api_key_revoked`
+**И** Publishable Key к Secret-only эндпоинтам → 403
 
-### История 1.5: Конфигурация Payswitch и формат ответов об ошибках
+### Стори 1.5: Формат ошибок и API роуты
 
-Как разработчик, интегрирующийся с payswitch,
-Я хочу получать единообразные Hyperswitch-совместимые ответы об ошибках,
+Как разработчик,
+Я хочу единообразные Hyperswitch-совместимые ответы об ошибках,
 Чтобы обрабатывать ошибки предсказуемо.
 
 **Критерии приёмки:**
 
-**Дано** любая API-ошибка (ошибка аутентификации, валидации, не найдено)
-**Когда** обработчик исключений обрабатывает ошибку
-**Тогда** возвращается JSON: `{"error": {"type": "...", "code": "...", "message": "..."}}`
-**И** config/payswitch.php содержит admin_api_key, id_prefixes, конфигурацию retry webhook-ов
-**И** API-роуты зарегистрированы под префиксом `/api/v1/` в routes/api.php
+**Дано** любая API-ошибка
+**Когда** обработчик исключений обрабатывает
+**Тогда** возвращается `{"error": {"type": "...", "code": "...", "message": "..."}}`
+**И** API-роуты зарегистрированы под `/api/v1/`
+**И** PaymentException hierarchy маппит exceptions на HTTP-коды
 
 ---
 
 ## Эпик 2: Провизионирование мерчантов
 
-Админ может создавать полную иерархию тенантов (Organization → Merchant Account → Business Profile) и управлять API-ключами через Admin API.
+Админ создаёт иерархию тенантов и управляет API-ключами через Admin API.
 
-### История 2.1: Создание организации
+### Стори 2.1: Создание организации
 
 Как админ,
-Я хочу создавать организацию через POST /organization,
-Чтобы группировать мерчант-аккаунты под верхнеуровневой сущностью.
+Я хочу создать организацию через POST /organization,
+Чтобы группировать мерчант-аккаунты.
 
 **Критерии приёмки:**
 
-**Дано** аутентифицированный запрос админа с `{"name": "My Org"}`
-**Когда** вызывается POST /api/v1/organization
-**Тогда** создаётся организация с автоматически сгенерированным org_id
-**И** ответ возвращает объект организации с id, org_id, name, created_at
-**И** валидация отклоняет запросы без обязательного поля `name`
+**Дано** аутентифицированный админ с `{"name": "My Org"}`
+**Когда** POST /api/v1/organization
+**Тогда** создаётся организация с org_id
+**И** ответ содержит id, org_id, name, created_at
+**И** без name → 400
 
-### История 2.2: Создание мерчант-аккаунта
+### Стори 2.2: Создание мерчант-аккаунта
 
 Как админ,
-Я хочу создавать мерчант-аккаунт через POST /accounts,
-Чтобы мерчанты могли начать принимать платежи.
+Я хочу создать мерчант-аккаунт через POST /accounts,
+Чтобы мерчант мог принимать платежи.
 
 **Критерии приёмки:**
 
-**Дано** аутентифицированный запрос админа с org_id
-**Когда** вызывается POST /api/v1/accounts
-**Тогда** создаётся мерчант-аккаунт с автоматически сгенерированными merchant_id (merchant_*) и publishable_key (pk_snd_*)
-**И** ответ включает merchant_id, publishable_key, org_id
-**И** GET /api/v1/accounts/{merchant_id} возвращает детали мерчант-аккаунта
+**Дано** аутентифицированный админ с org_id
+**Когда** POST /api/v1/accounts
+**Тогда** создаётся merchant account с merchant_id (merchant_*) и publishable_key (pk_snd_*)
+**И** GET /accounts/{merchant_id} возвращает детали
 
-### История 2.3: Создание бизнес-профиля
+### Стори 2.3: Создание бизнес-профиля
 
 Как админ,
-Я хочу создавать бизнес-профиль через POST /profiles,
-Чтобы мерчанты могли настраивать webhook URL и параметры оплаты по бизнес-юнитам.
+Я хочу создать бизнес-профиль через POST /profiles,
+Чтобы настроить webhook URL и hash key.
 
 **Критерии приёмки:**
 
-**Дано** аутентифицированный запрос админа с merchant_id, webhook_url
-**Когда** вызывается POST /api/v1/profiles
-**Тогда** создаётся бизнес-профиль с автоматически сгенерированным profile_id (pro_*)
-**И** payment_response_hash_key генерируется автоматически (64 символа), если не указан
-**И** GET /api/v1/profiles/{profile_id} возвращает детали профиля
-**И** профиль ассоциирован с правильным мерчантом
+**Дано** аутентифицированный админ с merchant_id
+**Когда** POST /api/v1/profiles
+**Тогда** создаётся профиль с profile_id (pro_*)
+**И** payment_response_hash_key генерируется автоматически (128 символов)
+**И** GET /profiles/{id} возвращает детали
 
-### История 2.4: Управление API-ключами
+### Стори 2.4: Управление API-ключами
 
 Как админ,
-Я хочу создавать и отзывать API-ключи для мерчантов,
-Чтобы команды мерчантов могли безопасно получить доступ к API.
+Я хочу создавать и отзывать API-ключи,
+Чтобы команды мерчантов получали доступ к API.
 
 **Критерии приёмки:**
 
-**Дано** аутентифицированный запрос админа с merchant_id
-**Когда** вызывается POST /api/v1/api_keys/{merchant_id}
-**Тогда** генерируется новый API-ключ с префиксом snd_ (sandbox) или prod_ (production)
-**И** полный ключ возвращается ТОЛЬКО в ответе на создание (больше никогда)
-**И** хэш ключа (bcrypt) сохраняется в базе данных
-**И** префикс ключа хранится в plaintext для идентификации
-**И** DELETE отзывает ключ, устанавливая timestamp revoked_at
-**И** отозванные ключи не проходят аутентификацию в middleware (История 1.2)
+**Дано** аутентифицированный админ
+**Когда** POST /api/v1/api_keys/{merchant_id}
+**Тогда** генерируется ключ с префиксом snd_/prod_
+**И** полный ключ возвращается ТОЛЬКО в ответе на создание
+**И** bcrypt-хэш сохраняется в БД
+**И** DELETE устанавливает revoked_at
+**И** отозванные ключи не проходят аутентификацию
 
 ---
 
-## Эпик 3: Управление коннекторами и интеграция с PSP
+## Эпик 3: Коннекторы и интеграция с PSP
 
-Админ может подключать платёжные процессоры к мерчанту, а система интегрируется с ними через OmniPay abstraction layer.
+Админ подключает Stripe и ЮKassa через OmniPay abstraction layer.
 
-### История 3.1: CRUD коннекторов через Admin API
+### Стори 3.1: CRUD коннекторов через Admin API
 
 Как админ,
-Я хочу добавлять, просматривать, обновлять и удалять платёжные коннекторы для мерчанта,
-Чтобы мерчанты могли обрабатывать платежи через несколько PSP.
+Я хочу управлять коннекторами мерчанта,
+Чтобы подключать платёжные процессоры.
 
 **Критерии приёмки:**
 
-**Дано** аутентифицированный запрос админа
-**Когда** вызывается POST /api/v1/account/{merchant_id}/connectors с connector_name, connector_account_details, payment_methods_enabled
-**Тогда** создаётся MerchantConnectorAccount с автоматически сгенерированным mca_id (mca_*)
-**И** connector_account_details шифруются через Crypt::encryptString перед сохранением
-**И** GET /api/v1/account/{merchant_id}/connectors возвращает все коннекторы (с расшифрованными деталями)
-**И** GET /api/v1/account/{merchant_id}/connectors/{id} возвращает один коннектор
-**И** POST обновление и DELETE работают корректно
-**И** миграция создаёт таблицу merchant_connector_accounts
+**Дано** аутентифицированный админ
+**Когда** POST /api/v1/account/{merchant_id}/connectors
+**Тогда** создаётся MerchantConnectorAccount с mca_id (mca_*)
+**И** connector_account_details шифруются Crypt::encryptString
+**И** GET возвращает список/детали коннекторов
+**И** UPDATE и DELETE работают
+**И** миграция создаёт merchant_connector_accounts
 
-### История 3.2: Абстрактный слой коннекторов (OmniPay)
+### Стори 3.2: Абстрактный слой OmniPay
 
 Как система,
-Я хочу иметь ConnectorInterface и AbstractConnector, оборачивающие OmniPay,
-Чтобы все PSP-интеграции следовали единому паттерну.
+Я хочу ConnectorInterface + AbstractConnector,
+Чтобы все PSP работали через единый паттерн.
 
 **Критерии приёмки:**
 
-**Дано** ConnectorInterface с методами: authorize(), purchase(), capture(), refund()
-**Когда** AbstractConnector реализует общую логику инициализации OmniPay gateway
-**Тогда** конкретные коннекторы (Stripe, YooKassa) реализуют только PSP-специфичный маппинг
-**И** ConnectorFactory::resolve($connectorName) возвращает правильный экземпляр коннектора
-**И** ConnectorErrorNormalizer маппит PSP-специфичные ошибки в формат Hyperswitch
+**Дано** ConnectorInterface с authorize(), purchase(), capture(), refund()
+**Когда** конкретный коннектор реализует интерфейс
+**Тогда** AbstractConnector инициализирует OmniPay gateway
+**И** ConnectorFactory::resolve($name) возвращает нужный экземпляр
+**И** ConnectorErrorNormalizer маппит PSP-ошибки в Hyperswitch формат
 
-### История 3.3: Реализация коннектора Stripe
+### Стори 3.3: Коннектор Stripe
 
 Как мерчант,
 Я хочу обрабатывать платежи через Stripe,
-Чтобы принимать международные карточные платежи.
+Чтобы принимать международные карты.
 
 **Критерии приёмки:**
 
-**Дано** мерчант с настроенным Stripe-коннектором (auth_type: HeaderKey, api_key: sk_test_*)
+**Дано** мерчант с Stripe-коннектором
 **Когда** платёж обрабатывается через StripeConnector
-**Тогда** authorize() вызывает OmniPay Stripe authorize
-**И** purchase() вызывает OmniPay Stripe purchase
-**И** capture() вызывает OmniPay Stripe capture
-**И** refund() вызывает OmniPay Stripe refund
-**И** ошибки PSP нормализуются через ConnectorErrorNormalizer
+**Тогда** authorize/purchase/capture/refund вызывают OmniPay Stripe
+**И** ошибки нормализуются
 
-### История 3.4: Реализация коннектора ЮKassa
+### Стори 3.4: Коннектор ЮKassa
 
 Как мерчант,
 Я хочу обрабатывать платежи через ЮKassa,
@@ -356,147 +428,133 @@ inputDocuments:
 
 **Критерии приёмки:**
 
-**Дано** мерчант с настроенным коннектором ЮKassa
+**Дано** мерчант с ЮKassa-коннектором
 **Когда** платёж обрабатывается через YooKassaConnector
-**Тогда** authorize(), purchase(), capture(), refund() вызывают соответствующие методы OmniPay YooKassa
-**И** специфичная аутентификация ЮKassa (shop_id + secret_key) обрабатывается корректно
-**И** ошибки PSP нормализуются в формат Hyperswitch
+**Тогда** все операции работают через OmniPay YooKassa
+**И** shop_id + secret_key аутентификация корректна
 
 ---
 
 ## Эпик 4: Создание платежа и State Machine
 
-Мерчант может создавать платежи, система управляет lifecycle через state machine с 11 статусами и принудительными переходами.
+Мерчант создаёт платежи, система управляет lifecycle через state machine с 12 статусами.
 
-### История 4.1: State Machine платежа
+### Стори 4.1: State Machine платежа
 
 Как система,
-Я хочу иметь PaymentStateMachine, обеспечивающую валидные переходы статусов,
-Чтобы платежи никогда не оказывались в невалидных состояниях.
+Я хочу PaymentStateMachine с transition guards,
+Чтобы платежи не попадали в невалидные состояния.
 
 **Критерии приёмки:**
 
-**Дано** enum PaymentStatus со всеми 11 статусами
-**Когда** вызывается PaymentStateMachine::canTransition($from, $to)
-**Тогда** возвращается true только для валидных переходов по диаграмме state machine из PRD
-**И** PaymentStateMachine::transition($payment, $newStatus) обновляет статус и вызывает событие PaymentStatusChanged
-**И** невалидные переходы выбрасывают InvalidStateTransitionException
-**И** событие PaymentStatusChanged триггерит слушателя LogPaymentAudit (записывает в payment_audit_log)
-**И** миграции создают таблицы payment_intents, payment_attempts, payment_audit_log
+**Дано** PaymentStatus enum с 12 статусами
+**Когда** canTransition($from, $to) вызывается
+**Тогда** true только для валидных переходов
+**И** transition() обновляет статус + вызывает PaymentStatusChanged
+**И** невалидные переходы → InvalidStateTransitionException
+**И** LogPaymentAudit записывает в payment_audit_log
+**И** миграции: payment_intents, payment_attempts, payment_audit_log
 
-### История 4.2: Эндпоинт создания платежа
+### Стори 4.2: Эндпоинт создания платежа
 
 Как мерчант,
-Я хочу создавать PaymentIntent через POST /payments,
-Чтобы инициировать платёж для заказа клиента.
+Я хочу создать PaymentIntent через POST /payments,
+Чтобы инициировать оплату.
 
 **Критерии приёмки:**
 
-**Дано** аутентифицированный запрос мерчанта с `{"amount": 6540, "currency": "USD"}`
-**Когда** вызывается POST /api/v1/payments
-**Тогда** создаётся PaymentIntent со статусом `requires_payment_method`
-**И** генерируется payment_id (pay_*), client_secret ({payment_id}_secret_{random})
-**И** ответ соответствует формату Hyperswitch PaymentIntent (payment_id, merchant_id, status, amount, currency, client_secret, created, expires_on и т.д.)
-**И** опциональные поля (customer_id, description, return_url, metadata, capture_method, authentication_type, profile_id) сохраняются при указании
-**И** attempt_count начинается с 1
-**И** session_expiry по умолчанию 900 секунд
+**Дано** аутентифицированный запрос с `{"amount": 6540, "currency": "USD"}`
+**Когда** POST /api/v1/payments
+**Тогда** PaymentIntent создаётся со статусом requires_payment_method
+**И** генерируется pay_* и client_secret
+**И** ответ в Hyperswitch формате
+**И** опциональные поля сохраняются
+**И** session_expiry по умолчанию 900
 
 ---
 
-## Эпик 5: Операции жизненного цикла платежа
+## Эпик 5: Жизненный цикл платежа
 
-Мерчант может подтверждать, захватывать, отменять платежи. Поддержка automatic capture (processing → succeeded) и manual capture (requires_capture → succeeded).
+Подтверждение, захват, отмена. Automatic и manual capture.
 
-### История 5.1: Подтверждение платежа
+### Стори 5.1: Подтверждение платежа
 
 Как мерчант,
-Я хочу подтверждать платёж с данными метода оплаты через POST /payments/{id}/confirm,
-Чтобы платёж был обработан через выбранный коннектор.
+Я хочу подтвердить платёж через POST /payments/{id}/confirm,
+Чтобы платёж был обработан коннектором.
 
 **Критерии приёмки:**
 
-**Дано** PaymentIntent в статусе `requires_payment_method` или `requires_confirmation`
-**Когда** вызывается POST /api/v1/payments/{id}/confirm с payment_method_data (данные карты)
-**Тогда** система определяет коннектор (явный или по умолчанию) через RoutingService
-**И** вызывает purchase() коннектора (automatic capture) или authorize() (manual capture)
-**И** при успехе с automatic capture: статус → `processing` → `succeeded`, устанавливается amount_received
-**И** при успехе с manual capture: статус → `requires_capture`, устанавливается amount_capturable
-**И** при ошибке: статус → `failed`, error_code и error_message заполняются из нормализованной ошибки PSP
-**И** создаётся запись PaymentAttempt с коннектором, статусом и деталями ответа PSP
-**И** confirm: true при POST /payments создаёт и подтверждает в одном вызове (FR13)
+**Дано** PaymentIntent в requires_payment_method/requires_confirmation
+**Когда** POST /confirm с payment_method_data
+**Тогда** RoutingService определяет коннектор
+**И** automatic capture: purchase() → succeeded, amount_received
+**И** manual capture: authorize() → requires_capture, amount_capturable
+**И** ошибка: → failed, error_code/message
+**И** создаётся PaymentAttempt
+**И** confirm: true при POST /payments работает (FR13)
 
-### История 5.2: Захват платежа
+### Стори 5.2: Захват платежа
 
 Как мерчант,
-Я хочу захватывать авторизованные средства через POST /payments/{id}/capture,
-Чтобы получить оплату после ручной проверки.
+Я хочу захватить авторизованные средства,
+Чтобы получить оплату после проверки.
 
 **Критерии приёмки:**
 
-**Дано** PaymentIntent в статусе `requires_capture`
-**Когда** вызывается POST /api/v1/payments/{id}/capture с `{"amount_to_capture": 6540}`
-**Тогда** система вызывает capture() коннектора с указанной суммой
-**И** при успехе: статус → `succeeded`, amount_received обновляется
-**И** amount_to_capture должен быть ≤ amount_capturable (иначе ошибка 400)
-**И** захват платежа не в статусе requires_capture возвращает 400 (контроль state machine)
+**Дано** PaymentIntent в requires_capture
+**Когда** POST /capture с amount_to_capture
+**Тогда** capture() коннектора → succeeded
+**И** amount_to_capture ≤ amount_capturable (иначе 400)
+**И** не requires_capture → 400
 
-### История 5.3: Отмена платежа и получение статуса
+### Стори 5.3: Отмена и получение статуса
 
 Как мерчант,
-Я хочу отменять платежи и получать их детали,
-Чтобы управлять жизненным циклом платежей.
+Я хочу отменять платежи и получать детали,
+Чтобы управлять заказами.
 
 **Критерии приёмки:**
 
-**Дано** PaymentIntent не в терминальном статусе (succeeded, failed, cancelled, expired)
-**Когда** вызывается POST /api/v1/payments/{id}/cancel
-**Тогда** статус → `cancelled`, cancellation_reason опционален
-**И** отмена платежа в терминальном статусе возвращает 400
+**Дано** PaymentIntent не в терминальном статусе
+**Когда** POST /cancel
+**Тогда** статус → cancelled
+**И** терминальный статус → 400
 
-**Дано** любой payment_id
-**Когда** вызывается GET /api/v1/payments/{id}
-**Тогда** возвращается полный объект PaymentIntent в Hyperswitch-совместимом формате
-**И** ненайденный payment_id возвращает 404
+**Дано** payment_id
+**Когда** GET /payments/{id}
+**Тогда** полный объект в Hyperswitch формате
+**И** не найден → 404
 
 ---
 
 ## Эпик 6: Управление клиентами
 
-Мерчант может создавать, просматривать, обновлять и удалять клиентов.
+CRUD клиентов через API.
 
-### История 6.1: CRUD клиентов
+### Стори 6.1: CRUD клиентов
 
 Как мерчант,
-Я хочу управлять клиентами через API,
+Я хочу управлять клиентами,
 Чтобы привязывать платежи к профилям клиентов.
 
 **Критерии приёмки:**
 
-**Дано** аутентифицированный запрос мерчанта
-**Когда** вызывается POST /api/v1/customers с name, email, phone, metadata
-**Тогда** создаётся клиент с автоматически сгенерированным customer_id (cus_*) или кастомным ID, если указан
-**И** длина customer_id — 1-64 символа
-
-**Дано** customer_id
-**Когда** вызывается GET /api/v1/customers/{id}
-**Тогда** возвращаются детали клиента
-
-**Когда** вызывается POST /api/v1/customers/{id} с обновлёнными полями
-**Тогда** клиент обновляется
-
-**Когда** вызывается DELETE /api/v1/customers/{id}
-**Тогда** клиент удаляется
-
-**И** миграция создаёт таблицу customers со всеми полями по схеме
-**И** клиенты ограничены scope-ом аутентифицированного мерчанта
+**Дано** аутентифицированный мерчант
+**Когда** POST /customers с name, email, phone, metadata
+**Тогда** создаётся клиент с cus_* ID (или кастомным)
+**И** GET /customers/{id} возвращает детали
+**И** POST /customers/{id} обновляет
+**И** DELETE /customers/{id} удаляет
+**И** клиенты скоупятся по мерчанту
 
 ---
 
-## Эпик 7: Операции рефандов
+## Эпик 7: Рефанды
 
-Мерчант может создавать полные и частичные рефанды.
+Полные и частичные рефанды.
 
-### История 7.1: Создание и получение рефандов
+### Стори 7.1: Создание и получение рефандов
 
 Как мерчант,
 Я хочу создавать рефанды для успешных платежей,
@@ -505,90 +563,755 @@ inputDocuments:
 **Критерии приёмки:**
 
 **Дано** успешный платёж
-**Когда** вызывается POST /api/v1/refunds с `{"payment_id": "pay_xxx", "amount": 3000}`
-**Тогда** создаётся рефанд с автоматически сгенерированным refund_id (ref_*)
-**И** рефанд направляется через тот же коннектор, который обработал исходный платёж
-**И** вызывается метод refund() коннектора
-**И** при успехе: статус рефанда → `succeeded`
-**И** при ошибке: статус рефанда → `failed` с деталями ошибки
-**И** частичный рефанд: сумма должна быть ≤ amount_received платежа
-**И** ответ соответствует формату Hyperswitch refund (refund_id, payment_id, amount, currency, status, connector)
-
-**Дано** refund_id
-**Когда** вызывается GET /api/v1/refunds/{id}
-**Тогда** возвращаются детали рефанда
-
-**И** миграция создаёт таблицу refunds по схеме
+**Когда** POST /refunds с payment_id и amount
+**Тогда** рефанд с ref_* ID создаётся
+**И** направляется через тот же коннектор
+**И** refund() вызывается
+**И** успех → succeeded, ошибка → failed
+**И** частичный: amount ≤ amount_received
+**И** GET /refunds/{id} возвращает детали
 
 ---
 
 ## Эпик 8: Маршрутизация платежей
 
-Мерчант может управлять маршрутизацией — явный выбор коннектора, автоматический выбор, fallback.
+Явный выбор, автоматический выбор, priority fallback.
 
-### История 8.1: Сервис маршрутизации
+### Стори 8.1: Сервис маршрутизации
 
 Как мерчант,
 Я хочу, чтобы система направляла платежи на правильный коннектор,
-Чтобы платежи обрабатывались через оптимальный PSP.
+Чтобы оплата шла через оптимальный PSP.
 
 **Критерии приёмки:**
 
-**Дано** платёж с явно указанным коннектором (routing.data.connector = "stripe")
-**Когда** RoutingService определяет коннектор
-**Тогда** возвращает указанный коннектор, если он активен и поддерживает метод оплаты
+**Дано** явно указанный коннектор
+**Когда** RoutingService resolve
+**Тогда** возвращает указанный (если активен)
 
-**Дано** платёж без явного указания коннектора
-**Когда** RoutingService определяет коннектор
-**Тогда** выбирает на основе payment_method + currency из активных коннекторов мерчанта
+**Дано** без явного указания
+**Когда** resolve
+**Тогда** выбирает по payment_method + currency
 
-**Дано** платёж, который не прошёл через основной коннектор
-**Когда** включён priority-based fallback
-**Тогда** система повторяет через следующий доступный коннектор в порядке приоритета
-**И** создаётся новая запись PaymentAttempt для повторной попытки
-**И** attempt_count увеличивается на PaymentIntent
+**Дано** основной коннектор не прошёл
+**Когда** fallback включён
+**Тогда** повтор через следующий в приоритете
+**И** новый PaymentAttempt, attempt_count++
 
 ---
 
 ## Эпик 9: Webhook Engine
 
-Система надёжно доставляет webhook-уведомления при изменении статусов платежей.
+Надёжная доставка webhook-уведомлений.
 
-### История 9.1: Создание webhook-событий и подписание
+### Стори 9.1: Создание webhook-событий и подписание
 
 Как система,
-Я хочу создавать webhook-события при изменении статуса платежа,
-Чтобы мерчанты получали уведомления в реальном времени.
+Я хочу создавать webhook-события при изменении статуса,
+Чтобы мерчанты получали уведомления.
 
 **Критерии приёмки:**
 
-**Дано** вызвано событие PaymentStatusChanged
-**Когда** слушатель SendWebhookNotification обрабатывает его
-**Тогда** создаётся запись WebhookEvent с уникальным event_id, event_type, content (полный объект платежа)
-**И** задача DeliverWebhookJob отправляется в очередь
-**И** миграция создаёт таблицу webhook_events по схеме
+**Дано** PaymentStatusChanged event
+**Когда** SendWebhookNotification обрабатывает
+**Тогда** WebhookEvent с event_id, event_type, content создаётся
+**И** DeliverWebhookJob отправляется в очередь
+**И** HMAC-SHA512 подпись в x-webhook-signature-512
 
-**Дано** webhook payload для доставки
-**Когда** WebhookSigner подписывает его
-**Тогда** вычисляется HMAC-SHA512 с использованием payment_response_hash_key бизнес-профиля
-**И** подпись отправляется в заголовке `x-webhook-signature-512`
-
-### История 9.2: Доставка и retry webhook-ов
+### Стори 9.2: Доставка и retry
 
 Как мерчант,
-Я хочу, чтобы доставка webhook-ов повторялась при ошибках,
-Чтобы я не пропускал уведомления о статусе платежей.
+Я хочу, чтобы webhook-и повторялись при ошибках,
+Чтобы не пропускать уведомления.
 
 **Критерии приёмки:**
 
-**Дано** выполняется DeliverWebhookJob
-**Когда** HTTP POST на webhook_url мерчанта возвращает 2xx
-**Тогда** WebhookEvent помечается как доставленный
+**Дано** DeliverWebhookJob
+**Когда** POST на webhook_url → 2xx
+**Тогда** delivered = true
 
-**Когда** HTTP POST возвращает не-2xx или таймаутит
-**Тогда** delivery_attempts увеличивается
-**И** задача перепланируется с backoff: 1мин, 5мин, 5мин, 10мин×5, 1час×5, 6час×3
-**И** после 16 попыток (24 часа) событие помечается как неудачное
+**Когда** не-2xx или таймаут
+**Тогда** delivery_attempts++, backoff: 1м, 5м, 10м×5, 1ч×5, 6ч×3
+**И** после 16 попыток → failed
 
-**И** webhook payload включает event_id для идемпотентности
-**И** webhook payload включает timestamp updated для определения порядка
+---
+
+## Эпик 10: Dashboard SPA — каркас и UI-kit
+
+Инициализация React SPA с UI-компонентами, утилитами, auth и layout.
+
+### Стори 10.1: Инициализация SPA проекта
+
+Как разработчик фронтенда,
+Я хочу инициализированный React SPA проект,
+Чтобы начать строить дашборд.
+
+**Критерии приёмки:**
+
+**Дано** новый SPA проект
+**Когда** настроен
+**Тогда** Vite 7 + React 19 + TypeScript 5.7 настроен
+**И** TanStack Router с базовым роутингом работает
+**И** TanStack Query provider подключён
+**И** Zustand stores инициализированы (auth, context, preferences)
+**И** Tailwind CSS 4 настроен
+**И** Radix UI подключён
+**И** Структура каталогов по плану (api/, components/, hooks/, pages/, stores/, lib/)
+**И** ESLint + Prettier настроены
+
+### Стори 10.2: API-клиент и типы
+
+Как разработчик,
+Я хочу типизированный API-клиент,
+Чтобы безопасно взаимодействовать с бэкендом.
+
+**Критерии приёмки:**
+
+**Дано** настроенный SPA
+**Когда** API-клиент создан
+**Тогда** ky (HTTP-клиент) настроен с base URL, CSRF, error handling
+**И** TypeScript-типы из JSON:API ответов сгенерированы
+**И** endpoints/ содержит файлы по ресурсам (payments.ts, merchants.ts, ...)
+**И** 401 → редирект на /login
+**И** ошибки парсятся в единый формат
+
+### Стори 10.3: Sanctum SPA аутентификация
+
+Как пользователь,
+Я хочу логиниться в дашборд,
+Чтобы управлять платёжной системой.
+
+**Критерии приёмки:**
+
+**Дано** страница /login
+**Когда** пользователь вводит email + пароль
+**Тогда** GET /sanctum/csrf-cookie → POST /login
+**И** при успехе → редирект на /overview
+**И** 2FA challenge → страница ввода кода
+**И** GET /api/v1/user возвращает пользователя + роль + организации
+**И** auth store (Zustand) обновляется
+**И** /logout завершает сессию
+
+### Стори 10.4: UI-kit — базовые компоненты
+
+Как разработчик,
+Я хочу библиотеку UI-компонентов,
+Чтобы строить страницы быстро и единообразно.
+
+**Критерии приёмки:**
+
+**Дано** компоненты Radix UI
+**Когда** UI-kit создан
+**Тогда** StatusBadge с цветовой схемой (succeeded=зелёный, failed=красный, etc.)
+**И** CopyButton (clipboard + tooltip "Скопировано!")
+**И** MoneyFormat (минорные→основные, Intl.NumberFormat, пробел-разделитель)
+**И** DateFormat (relative + absolute tooltip, user timezone через date-fns-tz)
+**И** JsonViewer (collapsible tree, подсветка, copy)
+**И** ConfirmDialog (опасные действия, ввод названия для критичных)
+**И** EmptyState (иконка + заголовок + подсказка + CTA)
+**И** ErrorState (retry, 401→login, 404, 500)
+**И** Все компоненты работают в light и dark теме
+
+### Стори 10.5: DataTable компонент
+
+Как пользователь,
+Я хочу мощные таблицы с фильтрами и сортировкой,
+Чтобы удобно работать с данными.
+
+**Критерии приёмки:**
+
+**Дано** TanStack Table
+**Когда** DataTable создан
+**Тогда** серверная сортировка через query params
+**И** серверная пагинация (20/50/100)
+**И** sticky headers при скролле
+**И** bulk selection (checkboxes) + toolbar с actions
+**И** data density (compact/comfortable/spacious)
+**И** сворачиваемая панель фильтров
+**И** экспорт CSV
+**И** empty/loading/error states
+**И** мобильный: карточки вместо строк
+
+### Стори 10.6: Keyboard shortcuts
+
+Как пользователь,
+Я хочу клавиатурные сокращения,
+Чтобы быстрее навигироваться.
+
+**Критерии приёмки:**
+
+**Дано** SPA загружен
+**Когда** пользователь нажимает ⌘K
+**Тогда** открывается Command Palette
+**И** g+p → Платежи, g+r → Возвраты, g+c → Клиенты, g+o → Обзор
+**И** ↑↓ в таблицах, Enter → открыть, Space → выбрать
+**И** Escape закрывает диалоги
+**И** хоткеи отключены в input/textarea
+**И** ⌘/ показывает справку по хоткеям
+
+---
+
+## Эпик 11: Dashboard — мультитенантность и навигация
+
+Контекстный переключатель, sidebar, breadcrumbs, глобальный поиск, уведомления.
+
+### Стори 11.1: Контекстный переключатель Org → Merchant → Profile
+
+Как админ,
+Я хочу переключаться между организациями, мерчантами и профилями,
+Чтобы работать в нужном контексте.
+
+**Критерии приёмки:**
+
+**Дано** header bar
+**Когда** пользователь выбирает организацию
+**Тогда** каскадно загружаются мерчанты
+**И** выбор мерчанта → загружаются профили
+**И** "Все профили" доступен
+**И** persist в localStorage
+**И** переключение инвалидирует кэш TanStack Query
+**И** все API-запросы скоупятся к выбранному контексту
+**И** мерчант-пользователь не видит picker'ы (один контекст)
+
+### Стори 11.2: Test/Live toggle
+
+Как пользователь,
+Я хочу переключаться между тестовым и боевым режимом,
+Чтобы видеть соответствующие данные.
+
+**Критерии приёмки:**
+
+**Дано** toggle в header
+**Когда** переключение на Live
+**Тогда** confirm dialog показывается
+**И** красная индикация Live-режима
+**И** данные фильтруются по test_mode
+**И** тестовые данные помечены фиолетовым badge
+
+### Стори 11.3: Sidebar навигация
+
+Как пользователь,
+Я хочу удобную sidebar навигацию,
+Чтобы быстро переходить между разделами.
+
+**Критерии приёмки:**
+
+**Дано** sidebar
+**Когда** отрисован
+**Тогда** 5 групп: Операции, Конфигурация, Разработка, Управление, Аккаунт
+**И** badges на Споры и Вебхуки (count)
+**И** сворачивается в icon-only
+**И** mobile: sheet
+**И** активный пункт подсвечен
+**И** "Управление" видно только админам
+
+### Стори 11.4: Breadcrumbs
+
+Как пользователь,
+Я хочу breadcrumbs на вложенных страницах,
+Чтобы понимать где я нахожусь и быстро возвращаться.
+
+**Критерии приёмки:**
+
+**Дано** вложенная страница (напр. /payments/pay_abc123)
+**Когда** отрисован
+**Тогда** "Платежи → pay_abc123"
+**И** каждый сегмент кликабелен (кроме последнего)
+
+### Стори 11.5: Глобальный поиск (Command Palette)
+
+Как пользователь,
+Я хочу искать сущности по ID, имени, email через ⌘K,
+Чтобы мгновенно находить нужное.
+
+**Критерии приёмки:**
+
+**Дано** ⌘K нажат
+**Когда** оверлей открывается
+**Тогда** поиск по ID (pay_*, ref_*, cust_*, merchant_*, mca_*, org_*, bp_*, rr_*, we_*)
+**И** поиск по имени/email
+**И** быстрые действия ("Создать платёж", "Подключить коннектор")
+**И** навигация ("Перейти к Платежам")
+**И** результаты группируются по типу
+**И** ↑↓ Enter Escape клавиатурная навигация
+**И** debounce 300ms
+
+### Стори 11.6: Notification Center
+
+Как пользователь,
+Я хочу видеть уведомления о важных событиях,
+Чтобы не пропускать критичные ситуации.
+
+**Критерии приёмки:**
+
+**Дано** колокольчик в header
+**Когда** клик
+**Тогда** dropdown panel с уведомлениями
+**И** типы: failed payments, споры, webhook failures, connector alerts, API key expiry
+**И** badge count непрочитанных
+**И** клик на уведомление → переход к сущности
+**И** "Отметить всё прочитанным"
+**И** обновление через polling 30с (или WebSocket)
+
+---
+
+## Эпик 12: Dashboard — операции
+
+Дашборд аналитики, платежи, возвраты.
+
+### Стори 12.1: Бэкенд API для аналитики
+
+Как дашборд,
+Я хочу API-эндпоинты для аналитики,
+Чтобы отображать метрики и графики.
+
+**Критерии приёмки:**
+
+**Дано** бэкенд
+**Когда** эндпоинты созданы
+**Тогда** GET /analytics/overview → метрики (оборот, конверсия, возвраты, средний чек, споры)
+**И** GET /analytics/charts → данные по дням (платежи, оборот)
+**И** GET /analytics/funnel → воронка (created → confirmed → succeeded)
+**И** GET /analytics/payment-methods → распределение по методам (donut)
+**И** GET /analytics/failure-reasons → причины отказов
+**И** все эндпоинты скоупятся по merchant + period filter
+
+### Стори 12.2: Страница Overview
+
+Как пользователь,
+Я хочу видеть сводную аналитику,
+Чтобы понимать состояние бизнеса.
+
+**Критерии приёмки:**
+
+**Дано** страница /overview
+**Когда** загружена
+**Тогда** фильтр периода (Сегодня/7д/30д/Квартал/Произвольный)
+**И** карточки метрик (оборот+тренд, конверсия, отказы, возвраты, средний чек, споры)
+**И** графики: платежи по дням (линейный), оборот по дням (столбцы)
+**И** воронка конверсии (created → confirmed → succeeded с % dropout)
+**И** конверсия по коннекторам (bar chart)
+**И** распределение по методам оплаты (donut)
+**И** причины отказов (horizontal bar)
+**И** таблица "Последние платежи" (10 записей, ссылка "Все →")
+
+### Стори 12.3: Бэкенд — список платежей с фильтрами
+
+Как дашборд,
+Я хочу API списка платежей с фильтрами,
+Чтобы отображать отфильтрованные данные.
+
+**Критерии приёмки:**
+
+**Дано** GET /api/v1/payments
+**Когда** с query params
+**Тогда** фильтры: status, connector, currency, amount_from/to, date_from/to, capture_method, customer_id
+**И** сортировка: created_at, amount, status
+**И** пагинация: page, per_page (20/50/100)
+**И** export: GET /payments/export?format=csv
+**И** скоупинг по merchant context
+
+### Стори 12.4: Страница Payments list
+
+Как пользователь,
+Я хочу видеть список платежей с фильтрами,
+Чтобы находить и анализировать транзакции.
+
+**Критерии приёмки:**
+
+**Дано** страница /payments
+**Когда** загружена
+**Тогда** DataTable: ID (ссылка), сумма, валюта, статус (badge), коннектор, клиент, capture method, попыток, дата
+**И** фильтры: статус (multi-select), коннектор, валюта, сумма от/до, дата, capture method, поиск по ID
+**И** сортировка по сумме, статусу, дате
+**И** пагинация 20/50/100
+**И** кнопка "Экспорт CSV"
+
+### Стори 12.5: Страница Payment detail
+
+Как пользователь,
+Я хочу видеть полную информацию о платеже,
+Чтобы диагностировать проблемы и управлять транзакцией.
+
+**Критерии приёмки:**
+
+**Дано** страница /payments/:paymentKey
+**Когда** загружена
+**Тогда** шапка: ID (крупно + copy), статус badge
+**И** кнопки: Capture (если requires_capture, диалог с суммой), Cancel (confirm), Refund (если succeeded, диалог сумма+причина)
+**И** информация: 2 колонки (суммы, коннектор, клиент, return_url, описание, dates)
+**И** секция "Попытки": таблица (#, коннектор, статус, сумма, transaction_id+copy, ошибка, дата)
+**И** секция "Возвраты": таблица (ID-ссылка, сумма, статус, причина, коннектор, дата)
+**И** секция "Timeline": вертикальная хронология (создан → подтверждён → attempt #1 → succeeded)
+**И** секция "Метаданные": JsonViewer
+**И** секция "Ошибка": красный alert с error_code + message
+
+### Стори 12.6: Бэкенд — список возвратов + страница Refunds
+
+Как пользователь,
+Я хочу видеть список возвратов,
+Чтобы отслеживать рефанды.
+
+**Критерии приёмки:**
+
+**Дано** GET /api/v1/refunds с фильтрами (status, date, payment_id)
+**Когда** настроен
+**Тогда** пагинация + сортировка работают
+
+**Дано** страница /refunds
+**Когда** загружена
+**Тогда** DataTable: ID (ref_*), платёж (pay_*-ссылка), сумма, валюта, статус (badge), причина, коннектор, дата
+**И** фильтры: статус, дата, поиск по ID
+
+---
+
+## Эпик 13: Dashboard — конфигурация
+
+Клиенты, коннекторы, маршрутизация, API-ключи, вебхуки.
+
+### Стори 13.1: Страницы Customers list + detail
+
+Как пользователь,
+Я хочу управлять клиентами через дашборд,
+Чтобы не использовать API напрямую.
+
+**Критерии приёмки:**
+
+**Дано** страница /customers
+**Когда** загружена
+**Тогда** DataTable: ID, имя, email, телефон, кол-во методов, кол-во платежей, дата
+**И** фильтры: поиск по имени/email/ID
+**И** кнопка "Создать клиента" → диалог (name, email, phone, description)
+
+**Дано** /customers/:customerKey
+**Когда** загружена
+**Тогда** шапка: ID + имя, кнопки "Редактировать" / "Удалить"
+**И** информация: email, телефон, описание, metadata (JSON), дата
+**И** секция "Способы оплаты": таблица (ID, тип, бренд-иконка, last4, срок, default badge, коннектор) + действия (default, delete)
+**И** секция "Платежи клиента": PaymentsTable с фильтром customer_id
+
+### Стори 13.2: Страница Connectors (карточки + визард)
+
+Как пользователь,
+Я хочу подключать коннекторы через визуальный визард,
+Чтобы не работать с API напрямую.
+
+**Критерии приёмки:**
+
+**Дано** страница /connectors
+**Когда** загружена
+**Тогда** карточная сетка: логотип, статус (🟢/🔴), имя, ID+copy, методы (badges), режим, health (uptime%/latency)
+**И** меню: Редактировать, Включить/Отключить, Удалить
+
+**Дано** кнопка "Подключить коннектор"
+**Когда** визард запущен
+**Тогда** Шаг 1: выбор коннектора (карточки с описанием)
+**И** Шаг 2: реквизиты (типизированные поля по коннектору + "Проверить подключение")
+**И** Шаг 3: методы оплаты (multi-select) + тест-режим (toggle)
+**И** Шаг 4: привязка к профилю (optional)
+
+**Дано** /connectors/:connectorKey
+**Когда** загружена
+**Тогда** полная страница редактирования с предзаполненными полями
+
+### Стори 13.3: Страница Routing Rules (визуальный редактор)
+
+Как пользователь,
+Я хочу визуально настраивать маршрутизацию,
+Чтобы управлять распределением платежей.
+
+**Критерии приёмки:**
+
+**Дано** страница /routing
+**Когда** загружена
+**Тогда** таблица: название, тип (badge), приоритет, профиль, toggle активности, дата
+
+**Дано** создание Priority правила
+**Когда** форма
+**Тогда** drag & drop сортировка коннекторов
+
+**Дано** создание Rule-Based правила
+**Когда** форма
+**Тогда** условия: IF [field] [operator] [value] → [connector], default connector
+
+**Дано** создание Volume Split правила
+**Когда** форма
+**Тогда** слайдеры + визуальная полоска, сумма = 100%
+
+### Стори 13.4: Страница API Keys
+
+Как пользователь,
+Я хочу управлять API-ключами через дашборд,
+Чтобы безопасно создавать и отзывать ключи.
+
+**Критерии приёмки:**
+
+**Дано** страница /api-keys
+**Когда** загружена
+**Тогда** таблица: название, префикс (monospace), истекает, статус (badge), дата
+**И** "Создать API-ключ" → диалог (название)
+**И** после создания → модалка show-once (ключ monospace + copy + предупреждение)
+**И** "Отозвать" → confirm dialog
+
+### Стори 13.5: Страница Webhooks
+
+Как пользователь,
+Я хочу видеть лог вебхуков и повторять доставку,
+Чтобы диагностировать проблемы интеграции.
+
+**Критерии приёмки:**
+
+**Дано** бэкенд: GET /webhook-events (с пагинацией и фильтрами), POST /webhook-events/{id}/retry
+**Когда** настроен
+
+**Дано** страница /webhooks
+**Когда** загружена
+**Тогда** таблица: ID, тип (badge), платёж (ссылка), доставлен (✅/❌/🔄), попыток, ошибка, дата
+**И** фильтры: тип, статус доставки, дата
+**И** expandable row: payload (JsonViewer), HTTP-статусы попыток, кнопка "Отправить повторно"
+**И** bulk retry для неудавшихся
+
+---
+
+## Эпик 14: Dashboard — разработка
+
+Онбординг, тестовый платёж, логи событий.
+
+### Стори 14.1: Онбординг-визард
+
+Как новый пользователь,
+Я хочу пошаговую настройку системы,
+Чтобы быстро начать работу.
+
+**Критерии приёмки:**
+
+**Дано** мерчант без коннекторов
+**Когда** пользователь логинится
+**Тогда** редирект на /onboarding
+
+**Дано** визард
+**Когда** проходит шаги
+**Тогда** Шаг 1: Создать организацию (если нет)
+**И** Шаг 2: Создать мерчанта
+**И** Шаг 3: Подключить коннектор (визард из 13.2)
+**И** Шаг 4: Маршрутизация (можно пропустить)
+**И** Шаг 5: Тестовый платёж
+**И** прогресс-бар на каждом шаге
+**И** после завершения → /overview
+
+**Дано** /overview с незавершённым онбордингом
+**Когда** загружена
+**Тогда** чеклист-виджет (✅ Org создана, ✅ Мерчант, ⬜ Коннектор, ⬜ Тест-платёж)
+
+### Стори 14.2: Тестовый платёж из UI
+
+Как разработчик,
+Я хочу проводить тестовые платежи из дашборда,
+Чтобы проверить настройку без написания кода.
+
+**Критерии приёмки:**
+
+**Дано** бэкенд: POST /test-payments (create + confirm в одном запросе)
+**Когда** настроен
+
+**Дано** страница /test-payment
+**Когда** загружена
+**Тогда** форма: сумма (default 10000), валюта (RUB), метод (card), данные карты (предзаполнены 4242...), capture method
+**И** пресеты: ✅ Успешный, ❌ Decline (4000000000000002), 🔄 3DS (4000000000003220)
+**И** результат: карточка (статус, ID-ссылка, сумма, коннектор)
+**И** кнопки "Ещё один", "Детали"
+
+### Стори 14.3: Страница Event Logs
+
+Как пользователь,
+Я хочу видеть timeline событий,
+Чтобы отслеживать что происходит в системе.
+
+**Критерии приёмки:**
+
+**Дано** бэкенд: GET /event-logs (webhooks + status changes)
+**Когда** настроен
+
+**Дано** страница /event-logs
+**Когда** загружена
+**Тогда** таблица: время, тип (badge), ресурс (ссылка), описание, коннектор
+**И** фильтры: тип, ресурс, дата, поиск по ID
+
+---
+
+## Эпик 15: Dashboard — управление
+
+Организации, мерчанты, профили, пользователи, аудит-лог, уведомления.
+
+### Стори 15.1: Страницы Organizations и Merchants (CRUD)
+
+Как админ,
+Я хочу управлять организациями и мерчантами,
+Чтобы настраивать мультитенантную структуру.
+
+**Критерии приёмки:**
+
+**Дано** страница /organizations (только админ)
+**Когда** загружена
+**Тогда** таблица: ID, название, кол-во мерчантов, дата
+**И** "Создать организацию" → диалог (название)
+**И** детальная: информация + список мерчантов
+
+**Дано** страница /merchants (только админ)
+**Когда** загружена
+**Тогда** таблица: ID, название, publishable key (mono+copy), профилей, коннекторов, дата
+**И** "Создать мерчанта" → диалог (название)
+**И** детальная с табами: обзор, профили, ключи, коннекторы, маршрутизация
+
+### Стори 15.2: Страница Business Profiles
+
+Как пользователь,
+Я хочу управлять бизнес-профилями,
+Чтобы настраивать webhook URL и привязки.
+
+**Критерии приёмки:**
+
+**Дано** страница /profiles
+**Когда** загружена
+**Тогда** таблица: ID, webhook URL, коннекторов, правил, дата
+**И** "Создать профиль" → диалог (webhook_url)
+**И** детальная: редактирование webhook_url, привязанные коннекторы, правила
+
+### Стори 15.3: Страница Audit Log
+
+Как админ,
+Я хочу видеть лог действий пользователей,
+Чтобы контролировать изменения в системе.
+
+**Критерии приёмки:**
+
+**Дано** бэкенд: GET /audit-log (spatie/laravel-activitylog), GET /audit-log/export?format=csv
+**Когда** настроен
+
+**Дано** страница /audit-log
+**Когда** загружена
+**Тогда** таблица: время, пользователь, действие, ресурс (ссылка), изменения (expandable diff), IP
+**И** фильтры: пользователь, действие, тип ресурса, дата
+**И** экспорт CSV
+
+### Стори 15.4: Страница Notifications (полная)
+
+Как пользователь,
+Я хочу видеть все уведомления,
+Чтобы не пропускать важные события.
+
+**Критерии приёмки:**
+
+**Дано** страница /notifications
+**Когда** загружена
+**Тогда** таблица: тип (иконка+badge), текст, ресурс (ссылка), время, статус (прочитано/нет)
+**И** фильтры: тип, статус, дата
+**И** bulk actions: "Отметить все прочитанными", "Удалить прочитанные"
+
+---
+
+## Эпик 16: Dashboard — enterprise
+
+Споры, Connector Health, RBAC, расширенные настройки, Saved Filters, тесты.
+
+### Стори 16.1: Страницы Disputes (споры)
+
+Как пользователь,
+Я хочу управлять спорами и чарджбэками,
+Чтобы защищать бизнес от необоснованных возвратов.
+
+**Критерии приёмки:**
+
+**Дано** бэкенд: модель Dispute + миграции + CRUD API
+**Когда** настроен
+
+**Дано** страница /disputes
+**Когда** загружена
+**Тогда** таблица: ID, платёж (ссылка), сумма, тип (badge), статус (badge), причина, дедлайн (красный если <3д), коннектор, дата
+
+**Дано** /disputes/:disputeKey
+**Когда** загружена
+**Тогда** информация + связанный платёж
+**И** загрузка доказательств (файлы + текст)
+**И** timeline: opened → evidence → resolved
+
+### Стори 16.2: Connector Health Dashboard
+
+Как пользователь,
+Я хочу мониторить здоровье коннекторов,
+Чтобы реагировать на деградацию.
+
+**Критерии приёмки:**
+
+**Дано** бэкенд: GET /connectors/{key}/health, GET /connectors/{key}/health/history
+**Когда** настроен
+
+**Дано** /connectors/:connectorKey/health
+**Когда** загружена
+**Тогда** график latency за 24h/7d/30d
+**И** график error rate
+**И** успешность по операциям (authorize, capture, refund)
+**И** последние ошибки (таблица)
+**И** сравнение с другими коннекторами (bar chart)
+
+### Стори 16.3: Пользователи и RBAC
+
+Как админ,
+Я хочу управлять пользователями и ролями,
+Чтобы контролировать доступ к дашборду.
+
+**Критерии приёмки:**
+
+**Дано** бэкенд: Users/Roles модель + RBAC + приглашения API
+**Когда** настроен
+
+**Дано** страница /users
+**Когда** загружена
+**Тогда** таблица: имя, email, роль (badge), 2FA, последний вход, статус
+**И** "Пригласить" → диалог (email, роль)
+**И** роли: admin (полный), operator (CRUD платежей без настроек), viewer (только чтение)
+**И** sidebar секция "Управление" скрыта для не-админов
+**И** API-эндпоинты проверяют роль
+
+### Стори 16.4: Расширенные настройки
+
+Как пользователь,
+Я хочу настраивать таймзону, внешний вид и уведомления,
+Чтобы дашборд работал удобно.
+
+**Критерии приёмки:**
+
+**Дано** страница /settings
+**Когда** загружена
+**Тогда** табы: Профиль (имя, email, аватар), Безопасность (пароль, 2FA, recovery codes), Внешний вид (тема + data density), Региональные (таймзона IANA, формат даты/чисел, base currency), Уведомления (per event type, каналы)
+
+### Стори 16.5: Saved Filters
+
+Как пользователь,
+Я хочу сохранять наборы фильтров,
+Чтобы быстро применять частые запросы.
+
+**Критерии приёмки:**
+
+**Дано** любая таблица с фильтрами
+**Когда** "Сохранить фильтр" нажат
+**Тогда** диалог: название фильтра
+**И** dropdown "Мои фильтры" для применения
+**И** управление: переименовать, удалить
+**И** preset'ы: "Неуспешные за сегодня", "Требуют capture", "Недоставленные вебхуки"
+**И** хранение: localStorage + опционально серверная синхронизация
+
+### Стори 16.6: Тесты фронтенда
+
+Как разработчик,
+Я хочу тестовую инфраструктуру,
+Чтобы код был надёжным.
+
+**Критерии приёмки:**
+
+**Дано** SPA проект
+**Когда** тесты настроены
+**Тогда** Vitest: unit тесты для formatMoney, formatDate, stores, hooks
+**И** Testing Library: integration тесты для форм, Command Palette, Context Switcher, DataTable
+**И** Playwright: E2E тесты для auth flow, платёжного flow, настройка коннектора, мультитенантность, responsive
+**И** Storybook (опционально): каталог UI-компонентов

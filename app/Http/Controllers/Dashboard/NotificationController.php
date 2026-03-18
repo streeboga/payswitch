@@ -6,7 +6,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AppNotificationResource;
-use App\Models\AppNotification;
+use App\Services\NotificationService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
@@ -17,6 +17,10 @@ use Illuminate\Http\Request;
 #[Group('Dashboard Notifications', description: 'User notification management', weight: 22)]
 final class NotificationController extends Controller
 {
+    public function __construct(
+        private readonly NotificationService $notificationService,
+    ) {}
+
     /**
      * List notifications
      *
@@ -28,21 +32,12 @@ final class NotificationController extends Controller
     #[Response(200, description: 'Paginated notification list')]
     public function index(Request $request): JsonResponse
     {
-        $query = AppNotification::where('user_id', $request->user()->id);
-
-        if ($type = $request->input('filter.type')) {
-            $query->where('type', $type);
-        }
-
-        $read = $request->input('filter.read');
-        if ($read === 'true') {
-            $query->whereNotNull('read_at');
-        } elseif ($read === 'false') {
-            $query->whereNull('read_at');
-        }
-
-        $perPage = min((int) $request->input('page.size', 20), 100);
-        $paginator = $query->orderByDesc('created_at')->paginate($perPage);
+        $paginator = $this->notificationService->list(
+            userId: $request->user()->id,
+            type: $request->input('filter.type'),
+            read: $request->input('filter.read'),
+            perPage: (int) $request->input('page.size', 20),
+        );
 
         return AppNotificationResource::jsonApiCollection($paginator, $request);
     }
@@ -57,11 +52,7 @@ final class NotificationController extends Controller
     #[Response(404, description: 'Notification not found')]
     public function markRead(string $notificationKey, Request $request): JsonResponse
     {
-        $notification = AppNotification::where('user_id', $request->user()->id)
-            ->where('key', $notificationKey)
-            ->firstOrFail();
-
-        $notification->update(['read_at' => now()]);
+        $notification = $this->notificationService->markRead($request->user()->id, $notificationKey);
 
         return (new AppNotificationResource($notification))->toResponse($request);
     }
@@ -74,9 +65,7 @@ final class NotificationController extends Controller
     #[Response(200, description: 'All notifications marked as read')]
     public function markAllRead(Request $request): JsonResponse
     {
-        AppNotification::where('user_id', $request->user()->id)
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
+        $this->notificationService->markAllRead($request->user()->id);
 
         return response()->json([
             'data' => ['type' => 'notification-actions', 'id' => '1', 'attributes' => ['status' => 'done']],
@@ -92,11 +81,7 @@ final class NotificationController extends Controller
     #[Response(204, description: 'Notification deleted')]
     public function destroy(string $notificationKey, Request $request): JsonResponse
     {
-        $notification = AppNotification::where('user_id', $request->user()->id)
-            ->where('key', $notificationKey)
-            ->firstOrFail();
-
-        $notification->delete();
+        $this->notificationService->delete($request->user()->id, $notificationKey);
 
         return response()->json(null, 204);
     }
@@ -109,9 +94,7 @@ final class NotificationController extends Controller
     #[Response(200, description: 'Unread count')]
     public function unreadCount(Request $request): JsonResponse
     {
-        $count = AppNotification::where('user_id', $request->user()->id)
-            ->whereNull('read_at')
-            ->count();
+        $count = $this->notificationService->unreadCount($request->user()->id);
 
         return response()->json(['count' => $count]);
     }

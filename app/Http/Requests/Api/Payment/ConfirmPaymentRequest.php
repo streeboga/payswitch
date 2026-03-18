@@ -12,16 +12,16 @@ final class ConfirmPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.payment_method' => ['required', 'string'],
-            'data.attributes.payment_method_data' => ['required', 'array'],
-            'data.attributes.payment_method_data.*' => ['sometimes'],
-            'data.attributes.connector' => ['sometimes', 'string'],
-            'data.attributes.payment_method_id' => ['sometimes', 'string'],
+            'payment_method' => ['required', 'string'],
+            'payment_method_data' => ['required', 'array'],
+            'payment_method_data.*' => ['sometimes'],
+            'connector' => ['sometimes', 'string'],
+            'payment_method_id' => ['sometimes', 'string'],
         ];
     }
 
     public function toDto(): ConfirmPaymentData
     {
-        return ConfirmPaymentData::from($this->validated('data.attributes'));
+        return ConfirmPaymentData::from($this->validated());
     }
 }

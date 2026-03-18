@@ -13,7 +13,7 @@ use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
 
-final class MerchantRepository implements MerchantRepositoryInterface
+final readonly class MerchantRepository implements MerchantRepositoryInterface
 {
     private function connectorQuery(): MerchantConnectorQueryBuilder
     {
@@ -32,7 +32,9 @@ final class MerchantRepository implements MerchantRepositoryInterface
 
     public function createBusinessProfile(array $attributes): BusinessProfile
     {
-        return BusinessProfile::create($attributes);
+        $profile = BusinessProfile::create($attributes);
+
+        return $profile->load('merchantAccount');
     }
 
     public function createApiKey(array $attributes): ApiKey
@@ -57,7 +59,7 @@ final class MerchantRepository implements MerchantRepositoryInterface
 
     public function findProfileByKey(string $key): BusinessProfile
     {
-        return BusinessProfile::where('key', $key)->firstOrFail();
+        return BusinessProfile::with('merchantAccount')->where('key', $key)->firstOrFail();
     }
 
     public function findConnectorByKey(string $key): MerchantConnectorAccount
@@ -132,5 +134,44 @@ final class MerchantRepository implements MerchantRepositoryInterface
     public function findConnectorByMerchantAndKeyOrNull(int|string $merchantAccountId, string $connectorKey): ?MerchantConnectorAccount
     {
         return $this->connectorQuery()->forMerchant($merchantAccountId)->whereKey($connectorKey)->first();
+    }
+
+    public function listOrganizations(): Collection
+    {
+        return Organization::orderByDesc('created_at')->get();
+    }
+
+    public function listAllMerchants(): Collection
+    {
+        return MerchantAccount::with('organization')->orderByDesc('created_at')->get();
+    }
+
+    public function listApiKeysByMerchant(int|string $merchantAccountId): Collection
+    {
+        return ApiKey::where('merchant_account_id', $merchantAccountId)
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+    public function revokeApiKey(int|string $merchantAccountId, string $apiKeyKey): void
+    {
+        $apiKey = ApiKey::where('merchant_account_id', $merchantAccountId)
+            ->where(function ($q) use ($apiKeyKey) {
+                $q->where('key', $apiKeyKey)->orWhere('id', $apiKeyKey);
+            })
+            ->firstOrFail();
+        $apiKey->revoke();
+    }
+
+    public function listProfilesByMerchant(int|string $merchantAccountId): Collection
+    {
+        return BusinessProfile::with('merchantAccount')->where('merchant_account_id', $merchantAccountId)->get();
+    }
+
+    public function updateProfile(BusinessProfile $profile, array $attributes): BusinessProfile
+    {
+        $profile->update($attributes);
+
+        return $profile->fresh('merchantAccount');
     }
 }

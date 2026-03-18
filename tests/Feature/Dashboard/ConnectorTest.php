@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -15,6 +16,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
+    UserRole::create(['user_id' => $this->user->id, 'organization_id' => $org->id, 'role' => 'admin']);
     BusinessProfile::create(['merchant_account_id' => $this->merchant->id]);
     $this->headers = ['X-Merchant-Key' => $this->merchant->key];
 });
@@ -43,13 +45,11 @@ test('connector create returns 201', function () {
 
     $response = $this->actingAs($this->user)
         ->postJson('/api/v1/dashboard/connectors', [
-            'data' => ['type' => 'connectors', 'attributes' => [
-                'connector_name' => 'stripe',
-                'connector_type' => 'fiz_operations',
-                'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
-                'profile_id' => $profile->key,
-                'test_mode' => true,
-            ]],
+            'connector_name' => 'stripe',
+            'connector_type' => 'fiz_operations',
+            'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
+            'profile_id' => $profile->key,
+            'test_mode' => true,
         ], $this->headers);
 
     $response->assertStatus(201)

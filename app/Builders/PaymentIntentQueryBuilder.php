@@ -51,9 +51,9 @@ final class PaymentIntentQueryBuilder
         return $this;
     }
 
-    public function withStatus(string $status): self
+    public function withStatus(string|\BackedEnum $status): self
     {
-        $this->query->where('status', $status);
+        $this->query->where('status', $status instanceof \BackedEnum ? $status->value : $status);
 
         return $this;
     }

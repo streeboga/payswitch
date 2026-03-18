@@ -17,12 +17,7 @@ function adminHeaders(): array
 
 test('can create organization with JSON:API format', function () {
     $response = $this->postJson('/api/v1/organizations', [
-        'data' => [
-            'type' => 'organizations',
-            'attributes' => [
-                'name' => 'Test Organization',
-            ],
-        ],
+        'name' => 'Test Organization',
     ], adminHeaders());
 
     $response->assertStatus(201)
@@ -43,12 +38,7 @@ test('can create organization with JSON:API format', function () {
 });
 
 test('cannot create organization without name', function () {
-    $response = $this->postJson('/api/v1/organizations', [
-        'data' => [
-            'type' => 'organizations',
-            'attributes' => [],
-        ],
-    ], adminHeaders());
+    $response = $this->postJson('/api/v1/organizations', [], adminHeaders());
 
     $response->assertStatus(422)
         ->assertJsonStructure(['errors' => [['status', 'code', 'detail', 'source']]]);
@@ -56,10 +46,7 @@ test('cannot create organization without name', function () {
 
 test('cannot create organization without admin key', function () {
     $response = $this->postJson('/api/v1/organizations', [
-        'data' => [
-            'type' => 'organizations',
-            'attributes' => ['name' => 'Org'],
-        ],
+        'name' => 'Org',
     ]);
 
     $response->assertStatus(401);

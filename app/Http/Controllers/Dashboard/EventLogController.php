@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\EventLogResource;
 use App\Services\EventLogService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Event Logs', description: 'Combined webhook and payment status change timeline', weight: 18)]
 final class EventLogController extends Controller
@@ -32,6 +34,7 @@ final class EventLogController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('event-log.viewAny', [$merchantId]);
 
         $paginator = $this->eventLogService->list($merchantId, [
             'type' => $request->input('filter.type'),
@@ -39,33 +42,6 @@ final class EventLogController extends Controller
             'to' => $request->input('filter.to'),
         ], (int) $request->input('page.size', 20));
 
-        $items = collect($paginator->items())->map(fn ($row, $index) => [
-            'type' => 'event-logs',
-            'id' => $row->event_id,
-            'attributes' => [
-                'event_type' => $row->type,
-                'action' => $row->action,
-                'resource_id' => $row->resource_id,
-                'status' => $row->status,
-                'detail' => $row->detail,
-                'created_at' => $row->created_at,
-            ],
-        ])->toArray();
-
-        return response()->json([
-            'data' => $items,
-            'links' => [
-                'first' => $paginator->url(1),
-                'last' => $paginator->url($paginator->lastPage()),
-                'prev' => $paginator->previousPageUrl(),
-                'next' => $paginator->nextPageUrl(),
-            ],
-            'meta' => [
-                'current_page' => $paginator->currentPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-                'last_page' => $paginator->lastPage(),
-            ],
-        ], 200, ['Content-Type' => 'application/vnd.api+json']);
+        return EventLogResource::jsonApiCollection($paginator, $request);
     }
 }

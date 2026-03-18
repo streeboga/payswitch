@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\SavedFilter;
+use App\Http\Requests\Dashboard\StoreSavedFilterRequest;
+use App\Http\Resources\SavedFilterResource;
+use App\Services\SavedFilterService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
@@ -15,6 +17,10 @@ use Illuminate\Http\Request;
 #[Group('Dashboard Saved Filters', description: 'Saved filter presets', weight: 27)]
 final class SavedFilterController extends Controller
 {
+    public function __construct(
+        private readonly SavedFilterService $savedFilterService,
+    ) {}
+
     /**
      * List saved filters
      *
@@ -23,27 +29,9 @@ final class SavedFilterController extends Controller
     #[Response(200, description: 'Saved filter list')]
     public function index(Request $request): JsonResponse
     {
-        $filters = SavedFilter::where('user_id', $request->user()->id)
-            ->orderBy('sort_order')
-            ->get();
+        $filters = $this->savedFilterService->list($request->user()->id);
 
-        $items = $filters->map(fn (SavedFilter $f) => [
-            'type' => 'saved-filters',
-            'id' => (string) $f->id,
-            'attributes' => [
-                'table_name' => $f->table_name,
-                'name' => $f->name,
-                'filters' => $f->filters,
-                'is_preset' => $f->is_preset,
-                'sort_order' => $f->sort_order,
-            ],
-        ])->toArray();
-
-        return response()->json(
-            ['data' => $items],
-            200,
-            ['Content-Type' => 'application/vnd.api+json'],
-        );
+        return SavedFilterResource::jsonApiList($filters, $request);
     }
 
     /**
@@ -53,30 +41,16 @@ final class SavedFilterController extends Controller
      */
     #[Response(201, description: 'Filter saved')]
     #[Response(422, description: 'Validation error')]
-    public function store(Request $request): JsonResponse
+    public function store(StoreSavedFilterRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'data.attributes.table_name' => 'required|string|in:payments,refunds,disputes,webhook-events,customers',
-            'data.attributes.name' => 'required|string|max:100',
-            'data.attributes.filters' => 'required|array',
-        ]);
+        $validated = $request->validated();
 
-        $filter = SavedFilter::create([
-            'user_id' => $request->user()->id,
-            ...$validated['data']['attributes'],
-        ]);
+        $filter = $this->savedFilterService->create(
+            $request->user()->id,
+            $validated,
+        );
 
-        return response()->json([
-            'data' => [
-                'type' => 'saved-filters',
-                'id' => (string) $filter->id,
-                'attributes' => [
-                    'table_name' => $filter->table_name,
-                    'name' => $filter->name,
-                    'filters' => $filter->filters,
-                ],
-            ],
-        ], 201, ['Content-Type' => 'application/vnd.api+json']);
+        return (new SavedFilterResource($filter))->withStatus(201)->toResponse($request);
     }
 
     /**
@@ -88,10 +62,7 @@ final class SavedFilterController extends Controller
     #[Response(204, description: 'Filter deleted')]
     public function destroy(string $filterId, Request $request): JsonResponse
     {
-        $filter = SavedFilter::where('user_id', $request->user()->id)
-            ->findOrFail($filterId);
-
-        $filter->delete();
+        $this->savedFilterService->delete($filterId, $request->user()->id);
 
         return response()->json(null, 204);
     }

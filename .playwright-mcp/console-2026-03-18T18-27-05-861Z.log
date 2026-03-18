@@ -1,0 +1,133 @@
+[  880088ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  880154ms] [ERROR] Each child in a list should have a unique "key" prop.%s%s See https://react.dev/link/warning-keys for more information. 
+
+Check the render method of `TableBody`.  It was passed a child from DataTable. @ http://localhost:3000/@vite/client:509
+[  880705ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  881472ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  882552ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  882937ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  883617ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  888202ms] [ERROR] Each child in a list should have a unique "key" prop.%s%s See https://react.dev/link/warning-keys for more information. 
+
+Check the render method of `TableBody`.  It was passed a child from DataTable. @ http://localhost:3000/@vite/client:509
+[  888221ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  888591ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  889289ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  890371ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  890755ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  891433ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  894138ms] [ERROR] Each child in a list should have a unique "key" prop.%s%s See https://react.dev/link/warning-keys for more information. 
+
+Check the render method of `TableBody`.  It was passed a child from DataTable. @ http://localhost:3000/@vite/client:509
+[  894155ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  894539ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  895217ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  896299ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  896684ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  897366ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  907254ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  907289ms] [ERROR] Each child in a list should have a unique "key" prop.%s%s See https://react.dev/link/warning-keys for more information. 
+
+Check the render method of `TableBody`.  It was passed a child from DataTable. @ http://localhost:3000/@vite/client:509
+[  907662ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  908363ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  909445ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  909846ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  910530ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  981659ms] [ERROR] Each child in a list should have a unique "key" prop.%s%s See https://react.dev/link/warning-keys for more information. 
+
+Check the render method of `TableBody`.  It was passed a child from DataTable. @ http://localhost:3000/@vite/client:509
+[  981786ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  982679ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  983431ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  984510ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  984918ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[  985610ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1858151ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1858530ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1859207ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1860285ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1860666ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1861387ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1862243ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1862625ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1863301ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1864384ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1864761ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1865439ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1880598ms] [ERROR] %o
+
+%s
+
+%s
+ ReferenceError: densityPadding is not defined
+    at http://localhost:3000/src/components/data-table/data-table.tsx?t=1773860306396:135:21
+    at Array.map (<anonymous>)
+    at http://localhost:3000/src/components/data-table/data-table.tsx?t=1773860306396:134:127
+    at Array.map (<anonymous>)
+    at DataTable (http://localhost:3000/src/components/data-table/data-table.tsx?t=1773860306396:134:40)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:12868:12)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:4213:19)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:5569:16)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:6140:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:851:66) The above error occurred in the <DataTable> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundaryImpl. @ http://localhost:3000/@vite/client:509
+[ 1880608ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:3000/@vite/client:509
+[ 1880609ms] [WARNING] Warning: densityPadding is not defined @ http://localhost:3000/@vite/client:509
+[ 1881917ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/src/components/data-table/data-table.tsx?t=1773860307764:0
+[ 1881917ms] [ERROR] [vite] Failed to reload /src/components/data-table/data-table.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:3000/@vite/client:509
+[ 1886314ms] [ERROR] %o
+
+%s
+
+%s
+ ReferenceError: densityPadding is not defined
+    at http://localhost:3000/src/components/data-table/data-table.tsx?t=1773860312032:136:21
+    at Array.map (<anonymous>)
+    at http://localhost:3000/src/components/data-table/data-table.tsx?t=1773860312032:135:127
+    at Array.map (<anonymous>)
+    at DataTable (http://localhost:3000/src/components/data-table/data-table.tsx?t=1773860312032:135:40)
+    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:12868:12)
+    at renderWithHooks (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:4213:19)
+    at updateFunctionComponent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:5569:16)
+    at beginWork (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:6140:20)
+    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=5f6ea67a:851:66) The above error occurred in the <DataTable> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundaryImpl. @ http://localhost:3000/@vite/client:509
+[ 1886314ms] [WARNING] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute! @ http://localhost:3000/@vite/client:509
+[ 1886315ms] [WARNING] Warning: densityPadding is not defined @ http://localhost:3000/@vite/client:509
+[ 1886863ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1887254ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1887944ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1889029ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1889415ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1890100ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1894398ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1894775ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1895459ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1896543ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1896936ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1897611ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1992126ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1992499ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1993184ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1994267ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1994672ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1996335ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1996894ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1997581ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1998881ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1999265ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 1999948ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 2001034ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 2001418ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 2002093ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 2059064ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/notifications/unread-count:0
+[ 2059443ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/notifications/unread-count:0
+[ 2060129ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/notifications/unread-count:0
+[ 2061208ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/notifications/unread-count:0
+[ 2061583ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/notifications/unread-count:0
+[ 2062261ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/notifications/unread-count:0
+[ 2873333ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 2873882ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 2874734ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 2875824ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 2876206ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0
+[ 2876893ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/merchants/merchant_01KM11R7RFKJSF46D5X3DQ4YF0/profiles?page%5Bsize%5D=100:0

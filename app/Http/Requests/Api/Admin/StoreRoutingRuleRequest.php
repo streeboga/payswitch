@@ -14,17 +14,17 @@ final class StoreRoutingRuleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.type' => ['required', 'string', Rule::enum(RoutingRuleType::class)],
-            'data.attributes.name' => ['required', 'string', 'max:255'],
-            'data.attributes.rules' => ['required', 'array'],
-            'data.attributes.active' => ['sometimes', 'boolean'],
-            'data.attributes.priority' => ['sometimes', 'integer', 'min:0'],
-            'data.attributes.business_profile_id' => ['sometimes', 'string'],
+            'type' => ['required', 'string', Rule::enum(RoutingRuleType::class)],
+            'name' => ['required', 'string', 'max:255'],
+            'rules' => ['required', 'array'],
+            'active' => ['sometimes', 'boolean'],
+            'priority' => ['sometimes', 'integer', 'min:0'],
+            'business_profile_id' => ['sometimes', 'string'],
         ];
     }
 
     public function toDto(): CreateRoutingRuleData
     {
-        return CreateRoutingRuleData::from($this->validated('data.attributes'));
+        return CreateRoutingRuleData::from($this->validated());
     }
 }

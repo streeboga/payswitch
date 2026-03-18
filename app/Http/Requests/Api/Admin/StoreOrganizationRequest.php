@@ -12,12 +12,12 @@ final class StoreOrganizationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
         ];
     }
 
     public function toDto(): CreateOrganizationData
     {
-        return CreateOrganizationData::from($this->validated('data.attributes'));
+        return CreateOrganizationData::from($this->validated());
     }
 }

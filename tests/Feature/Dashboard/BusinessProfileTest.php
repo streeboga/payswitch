@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -14,6 +15,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
+    UserRole::create(['user_id' => $this->user->id, 'organization_id' => $org->id, 'role' => 'admin']);
     $this->headers = ['X-Merchant-Key' => $this->merchant->key];
 });
 
@@ -31,9 +33,7 @@ test('profiles list returns json:api response', function () {
 test('profile create returns 201', function () {
     $response = $this->actingAs($this->user)
         ->postJson('/api/v1/dashboard/profiles', [
-            'data' => ['type' => 'profiles', 'attributes' => [
-                'webhook_url' => 'https://example.com/webhook',
-            ]],
+            'webhook_url' => 'https://example.com/webhook',
         ], $this->headers);
 
     $response->assertStatus(201)
@@ -56,9 +56,7 @@ test('profile update works', function () {
 
     $response = $this->actingAs($this->user)
         ->patchJson("/api/v1/dashboard/profiles/{$profile->key}", [
-            'data' => ['type' => 'profiles', 'id' => $profile->key, 'attributes' => [
-                'webhook_url' => 'https://new.example.com/hook',
-            ]],
+            'webhook_url' => 'https://new.example.com/hook',
         ], $this->headers);
 
     $response->assertOk()

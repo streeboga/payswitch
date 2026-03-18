@@ -12,6 +12,7 @@ use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Refunds', description: 'Refund list for the dashboard', weight: 11)]
 final class DashboardRefundController extends Controller
@@ -39,6 +40,7 @@ final class DashboardRefundController extends Controller
     public function index(RefundListRequest $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('payment.viewAny', [$merchantId]);
         $filters = array_filter([...$request->filters(), 'sort' => $request->sortParam()]);
 
         return RefundResource::jsonApiCollection(

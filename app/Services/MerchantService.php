@@ -22,6 +22,37 @@ final readonly class MerchantService
         private MerchantRepositoryInterface $merchantRepository,
     ) {}
 
+    /**
+     * @return Collection<int, Organization>
+     */
+    public function listOrganizations(): Collection
+    {
+        return $this->merchantRepository->listOrganizations();
+    }
+
+    public function findOrganization(string $orgKey): Organization
+    {
+        return $this->merchantRepository->findOrganizationByKey($orgKey);
+    }
+
+    /**
+     * @return Collection<int, MerchantAccount>
+     */
+    public function listAllMerchants(): Collection
+    {
+        return $this->merchantRepository->listAllMerchants();
+    }
+
+    /**
+     * @return Collection<int, MerchantAccount>
+     */
+    public function listMerchantsByOrganization(string $orgKey): Collection
+    {
+        $org = $this->merchantRepository->findOrganizationByKey($orgKey);
+
+        return $org->load('merchantAccounts')->merchantAccounts;
+    }
+
     public function createOrganization(CreateOrganizationData $dto): Organization
     {
         return $this->merchantRepository->createOrganization($dto->toArray());
@@ -62,9 +93,7 @@ final readonly class MerchantService
      */
     public function listApiKeys(int|string $merchantId): Collection
     {
-        return ApiKey::where('merchant_account_id', $merchantId)
-            ->orderByDesc('created_at')
-            ->get();
+        return $this->merchantRepository->listApiKeysByMerchant($merchantId);
     }
 
     /**
@@ -89,7 +118,6 @@ final readonly class MerchantService
     public function revokeApiKey(string $merchantKey, string $keyId): void
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
-        $apiKey = $merchant->apiKeys()->findOrFail($keyId);
-        $apiKey->revoke();
+        $this->merchantRepository->revokeApiKey($merchant->id, $keyId);
     }
 }

@@ -10,7 +10,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Models\Refund;
 
-final class RefundRepository implements RefundRepositoryInterface
+final readonly class RefundRepository implements RefundRepositoryInterface
 {
     private function query(): RefundQueryBuilder
     {
@@ -59,6 +59,6 @@ final class RefundRepository implements RefundRepositoryInterface
             $builder->latest();
         }
 
-        return $builder->paginate($perPage);
+        return $builder->with('paymentIntent')->paginate($perPage);
     }
 }

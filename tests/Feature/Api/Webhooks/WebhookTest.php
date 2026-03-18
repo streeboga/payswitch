@@ -47,11 +47,9 @@ beforeEach(function () {
 test('webhook event created on payment status change', function () {
     // Create and confirm payment → triggers PaymentStatusChanged → webhook event
     $create = $this->postJson('/api/v1/payments', [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'amount' => 5000, 'currency' => 'USD', 'confirm' => true,
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'amount' => 5000, 'currency' => 'USD', 'confirm' => true,
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], ['api-key' => $this->rawKey]);
 
     $this->assertDatabaseHas('webhook_events', [
@@ -62,11 +60,9 @@ test('webhook event created on payment status change', function () {
 
 test('webhook event has unique event_id', function () {
     $this->postJson('/api/v1/payments', [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'amount' => 5000, 'currency' => 'USD', 'confirm' => true,
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'amount' => 5000, 'currency' => 'USD', 'confirm' => true,
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], ['api-key' => $this->rawKey]);
 
     $event = WebhookEvent::first();
@@ -75,11 +71,9 @@ test('webhook event has unique event_id', function () {
 
 test('DeliverWebhookJob is dispatched on payment status change', function () {
     $this->postJson('/api/v1/payments', [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'amount' => 5000, 'currency' => 'USD', 'confirm' => true,
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'amount' => 5000, 'currency' => 'USD', 'confirm' => true,
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], ['api-key' => $this->rawKey]);
 
     Queue::assertPushed(DeliverWebhookJob::class);
@@ -87,11 +81,9 @@ test('DeliverWebhookJob is dispatched on payment status change', function () {
 
 test('webhook event content contains full payment object', function () {
     $this->postJson('/api/v1/payments', [
-        'data' => ['type' => 'payments', 'attributes' => [
-            'amount' => 5000, 'currency' => 'USD', 'confirm' => true,
-            'payment_method' => 'card',
-            'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
-        ]],
+        'amount' => 5000, 'currency' => 'USD', 'confirm' => true,
+        'payment_method' => 'card',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], ['api-key' => $this->rawKey]);
 
     $event = WebhookEvent::first();
@@ -103,7 +95,7 @@ test('webhook event content contains full payment object', function () {
 
 test('cancelled payment creates webhook event', function () {
     $create = $this->postJson('/api/v1/payments', [
-        'data' => ['type' => 'payments', 'attributes' => ['amount' => 1000, 'currency' => 'USD']],
+        'amount' => 1000, 'currency' => 'USD',
     ], ['api-key' => $this->rawKey]);
 
     $paymentId = $create->json('data.id');

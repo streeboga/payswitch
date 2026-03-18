@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Builders\RoutingRuleQueryBuilder;
 use App\Repositories\Contracts\RoutingRuleRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\RoutingRule;
 
-final class RoutingRuleRepository implements RoutingRuleRepositoryInterface
+final readonly class RoutingRuleRepository implements RoutingRuleRepositoryInterface
 {
     public function create(array $attributes): RoutingRule
     {
@@ -17,8 +18,9 @@ final class RoutingRuleRepository implements RoutingRuleRepositoryInterface
 
     public function findByKey(string $key, int|string $merchantAccountId): RoutingRule
     {
-        return RoutingRule::where('key', $key)
-            ->where('merchant_account_id', $merchantAccountId)
+        return RoutingRuleQueryBuilder::make()
+            ->forMerchant($merchantAccountId)
+            ->whereKey($key)
             ->firstOrFail();
     }
 
@@ -36,16 +38,18 @@ final class RoutingRuleRepository implements RoutingRuleRepositoryInterface
 
     public function getActiveByMerchant(int|string $merchantAccountId): Collection
     {
-        return RoutingRule::where('merchant_account_id', $merchantAccountId)
-            ->where('active', true)
-            ->orderByDesc('priority')
+        return RoutingRuleQueryBuilder::make()
+            ->forMerchant($merchantAccountId)
+            ->active()
+            ->orderByPriority()
             ->get();
     }
 
     public function getAllByMerchant(int|string $merchantAccountId): Collection
     {
-        return RoutingRule::where('merchant_account_id', $merchantAccountId)
-            ->orderByDesc('priority')
+        return RoutingRuleQueryBuilder::make()
+            ->forMerchant($merchantAccountId)
+            ->orderByPriority()
             ->get();
     }
 }

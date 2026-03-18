@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\RefundStatus;
 
-final class AnalyticsRepository implements AnalyticsRepositoryInterface
+final readonly class AnalyticsRepository implements AnalyticsRepositoryInterface
 {
     private const string SUCCEEDED = PaymentStatus::Succeeded->value;
 
@@ -48,17 +48,12 @@ final class AnalyticsRepository implements AnalyticsRepositoryInterface
             ->selectRaw("SUM(CASE WHEN status = '{$rs}' THEN amount ELSE 0 END) as refund_amount")
             ->first();
 
-        $successRate = $payments->total_count > 0
-            ? round(($payments->successful_count / $payments->total_count) * 100, 2)
-            : 0;
-
         return [
             'total_count' => (int) $payments->total_count,
             'successful_count' => (int) $payments->successful_count,
             'failed_count' => (int) $payments->failed_count,
             'total_amount' => (int) $payments->total_amount,
             'net_amount' => (int) $payments->net_amount,
-            'success_rate' => $successRate,
             'refund_count' => (int) $refunds->refund_count,
             'refund_amount' => (int) $refunds->refund_amount,
         ];

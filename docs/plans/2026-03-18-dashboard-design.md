@@ -24,6 +24,11 @@
 | HTTP-клиент | ky (обёртка над fetch) |
 | Уведомления | Sonner |
 | Иконки | Lucide React |
+| Даты + таймзоны | date-fns + date-fns-tz |
+| Drag & Drop | @dnd-kit (для routing rules, priority sort) |
+| Unit-тесты | Vitest + Testing Library |
+| E2E-тесты | Playwright |
+| Компонент каталог | Storybook (опционально) |
 
 ### Структура проекта
 
@@ -102,12 +107,18 @@ Organization
 ### Header Bar
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│ [Logo]  │  [Org ▾] [Merchant ▾] [Profile ▾]  │  [🟡 Test ⇄ Live]  │  [👤 User ▾]  │
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ [Logo]  │  [Org ▾] [Merchant ▾] [Profile ▾]  │  [⌘K Поиск]  │  [🔔]  │  [🟡 Test ⇄ Live]  │  [👤 User ▾]  │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Меню пользователя: имя, email, настройки, внешний вид, выход.
+**Элементы:**
+- **Логотип** — Payswitch, ссылка на главную
+- **Контекстный переключатель** — три каскадных dropdown (см. раздел 3)
+- **Глобальный поиск (⌘K)** — Command Palette (см. раздел 4.2)
+- **Notification Center (🔔)** — колокольчик с badge count (см. раздел 4.3)
+- **Test/Live toggle** — переключатель окружения
+- **Меню пользователя** — имя, email, настройки, внешний вид, таймзона, выход
 
 ### Sidebar
 
@@ -146,6 +157,67 @@ Organization
 - Активный пункт подсвечен
 - Счётчики (badges) на Споры и Вебхуки
 - Секция "Управление" видна только админам
+
+### Breadcrumbs
+
+Все вложенные страницы показывают breadcrumbs под header bar:
+
+```
+Платежи → pay_abc123
+Платежи → pay_abc123 → Возврат
+Клиенты → cust_xyz789
+Мерчанты → merchant_abc → Коннекторы
+```
+
+- Каждый сегмент — кликабельная ссылка (кроме последнего)
+- Последний сегмент — текущая страница (не кликабельный, bold)
+- Навигация "назад" через breadcrumbs, не кнопка браузера
+
+### 4.2 Глобальный поиск (Command Palette)
+
+**Хоткей:** `⌘K` (macOS) / `Ctrl+K` (Windows/Linux)
+**Триггер:** также иконка поиска в header bar
+
+**Поведение:**
+- Оверлей с полем ввода (как в GitHub, Linear, Raycast)
+- Поиск по ID любой сущности: `pay_*`, `ref_*`, `cust_*`, `merchant_*`, `mca_*`, `org_*`, `bp_*`, `rr_*`, `we_*`
+- Поиск по имени: мерчанты, клиенты, организации, правила маршрутизации
+- Поиск по email клиента
+- Быстрые действия: "Создать платёж", "Подключить коннектор", "Создать клиента"
+- Навигация: "Перейти к Платежам", "Перейти к Настройкам"
+- Результаты группируются по типу: Платежи, Клиенты, Мерчанты, Действия, Навигация
+- Клавиатурная навигация: ↑↓ выбор, Enter — открыть, Escape — закрыть
+- Debounced поиск (300ms)
+- Кэширование последних результатов
+
+**API:** `GET /api/v1/search?q=...&types=payment,customer,merchant`
+
+### 4.3 Notification Center
+
+**Расположение:** иконка колокольчика в header bar с badge count.
+
+**Типы уведомлений:**
+- Неуспешные платежи (failed payments)
+- Открытые споры / новые чарджбэки
+- Неудачные доставки вебхуков (failed webhook deliveries)
+- Коннектор стал недоступен (connector health alert)
+- Отозванные или истекающие API-ключи
+- Системные уведомления (maintenance, updates)
+
+**UI:**
+- Клик на колокольчик — dropdown panel (не отдельная страница)
+- Список уведомлений с timestamp, иконкой типа, кратким текстом
+- Клик на уведомление — переход к соответствующей сущности
+- Кнопка "Отметить всё как прочитанное"
+- Непрочитанные — выделены фоном
+- Максимум 50 последних, ссылка "Все уведомления" → `/notifications`
+
+**Обновление:** WebSocket (preferred) или polling каждые 30 секунд.
+
+**API:**
+- `GET /api/v1/notifications` — список
+- `POST /api/v1/notifications/mark-read` — пометить прочитанными
+- `GET /api/v1/notifications/unread-count` — количество непрочитанных
 
 ---
 
@@ -347,19 +419,39 @@ Organization
 #### Список — карточная сетка
 
 ```
-┌──────────────────────────┐
-│  [Stripe Logo]  🟢 Активен │
-│  Stripe                    │
-│  mca_abc123...  [copy]     │
-│                            │
-│  Методы: 💳 Card, 🏦 Bank │
-│  Режим: 🟡 Test           │
-│                            │
-│  [Настроить]  [⋮ Меню]    │
-└──────────────────────────┘
+┌───────────────────────────────┐
+│  [Stripe Logo]  🟢 Активен    │
+│  Stripe                       │
+│  mca_abc123...  [copy]        │
+│                               │
+│  Методы: 💳 Card, 🏦 Bank    │
+│  Режим: 🟡 Test              │
+│                               │
+│  Health: 🟢 99.8% | 120ms    │
+│                               │
+│  [Настроить]  [⋮ Меню]       │
+└───────────────────────────────┘
 ```
 
-Меню (⋮): Редактировать, Включить/Отключить, Удалить.
+Меню (⋮): Редактировать, Включить/Отключить, Health Dashboard, Удалить.
+
+#### Connector Health (встроено в карточку + детальная страница)
+
+Каждая карточка коннектора показывает:
+- **Статус:** 🟢 Healthy / 🟡 Degraded / 🔴 Down
+- **Uptime:** % за последние 24 часа
+- **Latency:** средняя за последний час (ms)
+
+**Health Dashboard (`/connectors/:connectorKey/health`):**
+- График latency за 24h / 7d / 30d
+- График error rate за период
+- Успешность по типам операций (authorize, capture, refund)
+- Последние ошибки (таблица: время, операция, error_code, message)
+- Сравнение с другими коннекторами (bar chart)
+
+**API:**
+- `GET /api/v1/connectors/{key}/health` — текущий статус + метрики
+- `GET /api/v1/connectors/{key}/health/history?period=24h` — история
 
 #### Визард подключения
 
@@ -571,8 +663,41 @@ Timeline всех событий: webhook events + payment state changes.
 **Табы:**
 - **Профиль** — имя, email, аватар
 - **Безопасность** — смена пароля, 2FA (вкл/откл), recovery codes
-- **Внешний вид** — тема (light/dark/system)
-- **Уведомления** — email per event type
+- **Внешний вид** — тема (light/dark/system), data density (compact/comfortable/spacious)
+- **Региональные** — таймзона (select из IANA list, default: Europe/Moscow), формат даты, формат чисел, базовая валюта для аналитики
+- **Уведомления** — email per event type, настройка каналов (email, in-app, webhook)
+
+### 6.18 Уведомления (`/notifications`)
+
+Полная страница всех уведомлений (расширение Notification Center из хедера).
+
+**Таблица:**
+
+| Колонка | Тип |
+|---------|-----|
+| Тип | иконка + badge |
+| Текст | описание события |
+| Ресурс | ссылка на сущность |
+| Время | relative |
+| Статус | прочитано / непрочитано |
+
+**Фильтры:** тип, статус (прочитано/нет), дата.
+**Bulk actions:** "Отметить все как прочитанные", "Удалить прочитанные".
+
+### 6.19 Saved Filters (Сохранённые фильтры)
+
+На каждой странице с таблицей:
+- Кнопка "Сохранить фильтр" рядом с панелью фильтров
+- Диалог: название фильтра
+- Dropdown "Мои фильтры" для быстрого применения
+- Управление: переименовать, удалить
+
+**Хранение:** localStorage + опционально серверная синхронизация (`GET/POST /api/v1/user/saved-filters`).
+
+**Предустановленные фильтры (системные):**
+- Платежи: "Неуспешные за сегодня", "Требуют capture", "Большие суммы (>100k)"
+- Возвраты: "На ревью", "Неуспешные"
+- Вебхуки: "Недоставленные"
 
 ---
 
@@ -599,10 +724,29 @@ TanStack Table:
 - Серверная сортировка (query params)
 - Серверная пагинация (offset, 20/50/100)
 - Фильтры (сворачиваемая панель сверху)
+- **Saved Filters** — сохранение/загрузка наборов фильтров (см. 6.19)
 - Empty state: иконка + текст + CTA
 - Loading: skeleton
+- **Sticky headers** — при скролле заголовки таблицы остаются видимыми (`position: sticky`)
 - Bulk selection (checkboxes)
+- **Bulk actions toolbar** — появляется при выборе записей: "Выбрано N записей" + кнопки действий
+- **Data density** — compact/comfortable/spacious (из настроек пользователя, переключается через dropdown в таблице)
 - Мобильный: карточки вместо строк
+- **Экспорт CSV** — кнопка на каждой таблице, экспортирует с текущими фильтрами
+
+**Bulk actions по таблицам:**
+
+| Таблица | Доступные bulk actions |
+|---------|----------------------|
+| Платежи | Export CSV, Bulk Refund (для succeeded) |
+| Возвраты | Export CSV |
+| Клиенты | Export CSV, Bulk Delete |
+| Вебхуки | Export CSV, Bulk Retry (для failed) |
+| Коннекторы | Bulk Enable/Disable |
+| Routing Rules | Bulk Activate/Deactivate |
+| API-ключи | Bulk Revoke |
+| Аудит-лог | Export CSV |
+| Уведомления | Mark as Read, Delete |
 
 ### Формы
 
@@ -633,9 +777,33 @@ TanStack Table:
 
 ### Форматирование
 
-- **Суммы:** минорные → основные: `12345` → `123,45 ₽`. Пробел-разделитель тысяч
-- **Даты:** относительные ("5 мин. назад") + абсолютные в tooltip
+- **Суммы:** минорные → основные: `12345` → `123,45 ₽`. Пробел-разделитель тысяч. Используем `Intl.NumberFormat` с locale из настроек
+- **Многовалютность:** символ валюты из ISO 4217. Аналитика агрегирует в базовую валюту мерчанта (настройка в профиле). Конвертация на бэкенде
+- **Даты:** относительные ("5 мин. назад") + абсолютные в tooltip. **Все даты отображаются в таймзоне пользователя** (из настроек). API всегда возвращает UTC, фронт конвертирует. Используем `date-fns` или `dayjs` с timezone support
 - **Ключи/ID:** monospace, copy, truncate + tooltip
+
+### Keyboard Shortcuts
+
+Глобальные хоткеи:
+
+| Хоткей | Действие |
+|--------|----------|
+| `⌘K` / `Ctrl+K` | Открыть Command Palette (глобальный поиск) |
+| `⌘/` / `Ctrl+/` | Показать список хоткеев (справка) |
+| `g p` | Перейти к Платежам |
+| `g r` | Перейти к Возвратам |
+| `g c` | Перейти к Клиентам |
+| `g o` | Перейти к Обзору |
+| `g s` | Перейти к Настройкам |
+| `Escape` | Закрыть диалог / dropdown / Command Palette |
+
+В таблицах:
+| `↑` / `↓` | Навигация по строкам |
+| `Enter` | Открыть выбранную запись |
+| `Space` | Выбрать/снять выбор строки (checkbox) |
+| `⌘A` | Выбрать все записи на странице |
+
+Хоткеи отключаются когда фокус в input/textarea.
 
 ### Empty States
 
@@ -668,34 +836,95 @@ TanStack Table:
 
 ### Нужно добавить
 
+#### Auth & User
 | Эндпоинт | Зачем |
 |-----------|-------|
-| `GET /api/v1/auth/user` | Текущий пользователь + роль + доступные организации |
+| `GET /api/v1/auth/user` | Текущий пользователь + роль + доступные организации + таймзона + preferences |
 | `POST /api/v1/auth/login` | Sanctum SPA auth |
 | `POST /api/v1/auth/logout` | Завершение сессии |
+| `PATCH /api/v1/auth/user/preferences` | Обновить таймзону, data density, base currency, locale |
+
+#### Мультитенантность
+| Эндпоинт | Зачем |
+|-----------|-------|
 | `GET /api/v1/organizations` | Список организаций |
-| `GET /api/v1/organizations/{orgKey}/merchants` | Мерчанты организации |
-| `GET /api/v1/payments` + фильтры | Список платежей с status, connector, date, amount фильтрами |
-| `GET /api/v1/refunds` + фильтры | Список возвратов |
-| `GET /api/v1/merchants/{key}/api-keys` | Список API-ключей мерчанта |
+| `GET /api/v1/organizations/{orgKey}/merchants` | Мерчанты организации (для каскадного picker'а) |
 | `GET /api/v1/merchants/{key}/profiles` | Список профилей мерчанта |
 | `PATCH /api/v1/profiles/{key}` | Обновление профиля |
-| `GET /api/v1/webhook-events` | Лог вебхуков с пагинацией |
+
+#### Списки с фильтрацией
+| Эндпоинт | Зачем |
+|-----------|-------|
+| `GET /api/v1/payments` + фильтры | status, connector, date, amount, currency, capture_method, customer_id |
+| `GET /api/v1/refunds` + фильтры | status, date, payment_id |
+| `GET /api/v1/merchants/{key}/api-keys` | Список API-ключей мерчанта |
+| `GET /api/v1/webhook-events` | Лог вебхуков с пагинацией и фильтрами |
+
+#### Действия
+| Эндпоинт | Зачем |
+|-----------|-------|
 | `POST /api/v1/webhook-events/{id}/retry` | Ручной retry вебхука |
+| `POST /api/v1/webhook-events/bulk-retry` | Bulk retry неудавшихся |
+| `POST /api/v1/payments/bulk-refund` | Bulk refund для списка payment_ids |
+| `POST /api/v1/test-payments` | Создать + подтвердить в одном запросе |
+| `GET /api/v1/payments/export?format=csv` | Экспорт с текущими фильтрами |
+| `GET /api/v1/refunds/export?format=csv` | Экспорт возвратов |
+| `GET /api/v1/customers/export?format=csv` | Экспорт клиентов |
+
+#### Аналитика
+| Эндпоинт | Зачем |
+|-----------|-------|
 | `GET /api/v1/analytics/overview` | Агрегированные метрики (считать на бэке) |
 | `GET /api/v1/analytics/charts` | Данные для графиков (по дням, по коннекторам) |
 | `GET /api/v1/analytics/funnel` | Воронка конверсии: created → confirmed → succeeded |
-| `GET /api/v1/audit-log` | Лог действий (spatie activity_log) |
-| `GET /api/v1/event-logs` | Объединённый лог: webhooks + status changes |
-| `POST /api/v1/test-payments` | Создать + подтвердить в одном запросе |
+| `GET /api/v1/analytics/payment-methods` | Распределение по методам оплаты (для donut chart) |
+| `GET /api/v1/analytics/failure-reasons` | Топ причин отказов |
 
-### Отложено (фазы 3-4)
+#### Connector Health
+| Эндпоинт | Зачем |
+|-----------|-------|
+| `GET /api/v1/connectors/{key}/health` | Текущий статус: uptime %, latency avg, error rate |
+| `GET /api/v1/connectors/{key}/health/history` | История метрик за период (24h/7d/30d) |
+
+#### Поиск
+| Эндпоинт | Зачем |
+|-----------|-------|
+| `GET /api/v1/search?q=...&types=payment,customer,...` | Глобальный поиск для Command Palette |
+
+#### Уведомления
+| Эндпоинт | Зачем |
+|-----------|-------|
+| `GET /api/v1/notifications` | Список уведомлений с пагинацией |
+| `GET /api/v1/notifications/unread-count` | Количество непрочитанных (для badge) |
+| `POST /api/v1/notifications/mark-read` | Пометить как прочитанные (bulk) |
+| `DELETE /api/v1/notifications/{id}` | Удалить уведомление |
+
+#### Логи и аудит
+| Эндпоинт | Зачем |
+|-----------|-------|
+| `GET /api/v1/audit-log` | Лог действий (spatie activity_log) |
+| `GET /api/v1/audit-log/export?format=csv` | Экспорт аудит-лога |
+| `GET /api/v1/event-logs` | Объединённый лог: webhooks + status changes |
+
+#### Saved Filters
+| Эндпоинт | Зачем |
+|-----------|-------|
+| `GET /api/v1/user/saved-filters` | Получить сохранённые фильтры пользователя |
+| `POST /api/v1/user/saved-filters` | Сохранить набор фильтров |
+| `DELETE /api/v1/user/saved-filters/{id}` | Удалить сохранённый фильтр |
+
+### Бэкенд — отложено (фазы 3-4)
 
 | Что | Зачем |
 |-----|-------|
-| Disputes: модель + миграции + CRUD | Раздел "Споры" |
-| Users/Roles: модель + RBAC + приглашения | Раздел "Пользователи" |
-| Notifications: настройка email per event type | Настройки → Уведомления |
+| Disputes: модель + миграции + CRUD API | Раздел "Споры" |
+| Users/Roles: модель + RBAC + приглашения API | Раздел "Пользователи" |
+| Notifications: модель + генерация + доставка (email, in-app, WebSocket) | Notification Center + Настройки |
+| Connector Health: сбор метрик (latency, errors) из PaymentAttempts | Health Dashboard |
+| Search: полнотекстовый поиск (Scout + Meilisearch или Elasticsearch) | Command Palette |
+| User Preferences: модель + миграция (timezone, locale, density, base_currency) | Настройки |
+| Saved Filters: модель + миграция | Сохранённые фильтры |
+| Export Jobs: очередь для больших экспортов (>10k записей) | CSV Export |
 
 ---
 
@@ -704,32 +933,46 @@ TanStack Table:
 ### Фаза 1 — Каркас + Core
 
 1. Инициализация SPA: Vite, роутинг, API-клиент, auth (Sanctum)
-2. Layout: header (контекстный переключатель + Test/Live), sidebar
-3. Обзор — метрики, графики, воронка конверсии, последние платежи
-4. Платежи — список с фильтрами + детальная + capture/cancel/refund
-5. Возвраты — список
+2. Layout: header (контекстный переключатель + Test/Live + ⌘K поиск), sidebar с breadcrumbs
+3. Глобальный поиск (Command Palette ⌘K)
+4. Keyboard shortcuts (глобальные + таблицы)
+5. Таймзоны (настройка + отображение всех дат в таймзоне пользователя)
+6. Обзор — метрики, графики, воронка конверсии, последние платежи
+7. Платежи — список с фильтрами + детальная + capture/cancel/refund + timeline
+8. Возвраты — список с фильтрами
+9. DataTable (sticky headers, пагинация, сортировка, экспорт CSV, empty/loading/error states)
 
 ### Фаза 2 — Операции + Конфигурация
 
-6. Клиенты — список + детальная + способы оплаты
-7. Коннекторы — карточки + визард подключения + редактирование
-8. Маршрутизация — список + визуальный редактор (priority, rule-based, volume split)
-9. API-ключи — список + создание + отзыв
-10. Вебхуки — список + детали + retry
+10. Клиенты — список + детальная + способы оплаты
+11. Коннекторы — карточки + визард подключения + редактирование + health индикатор в карточке
+12. Маршрутизация — список + визуальный редактор (priority, rule-based, volume split)
+13. API-ключи — список + создание (show-once modal) + отзыв
+14. Вебхуки — список + expandable row + retry + bulk retry
+15. Notification Center (колокольчик в хедере + dropdown panel)
+16. Bulk actions на всех таблицах (refund, retry, export, enable/disable)
+17. Data density (compact/comfortable/spacious)
+18. Экспорт CSV на всех таблицах
 
-### Фаза 3 — Управление
+### Фаза 3 — Управление + Продвинутые фичи
 
-11. Организации / Мерчанты / Профили — CRUD-страницы
-12. Тестовый платёж — форма + пресеты
-13. Онбординг — визард + чеклист
-14. Логи событий — timeline
+19. Организации / Мерчанты / Профили — CRUD-страницы
+20. Тестовый платёж — форма + пресеты (success, decline, 3DS)
+21. Онбординг — визард (5 шагов) + чеклист-виджет на Overview
+22. Логи событий — timeline с фильтрами
+23. Saved Filters — сохранение/загрузка наборов фильтров + preset'ы
+24. Connector Health Dashboard — latency, error rate, uptime графики
+25. Страница уведомлений (`/notifications`)
+26. Многовалютность в аналитике — базовая валюта + конвертация
 
 ### Фаза 4 — Enterprise
 
-15. Споры (Disputes) — список + детальная + evidence
-16. Пользователи и роли — RBAC + приглашения
-17. Аудит-лог — лог действий
-18. Расширенная аналитика — экспорт, доп. графики
+27. Споры (Disputes) — список + детальная + evidence upload + timeline
+28. Пользователи и роли — RBAC (admin/operator/viewer) + приглашения
+29. Аудит-лог — лог действий + expandable diff + экспорт
+30. Расширенная аналитика — доп. графики, экспорт отчётов
+31. Настройки уведомлений — per event type, каналы (email, in-app)
+32. Региональные настройки — locale, формат даты/чисел
 
 ---
 
@@ -742,3 +985,44 @@ TanStack Table:
 - **Темизация:** light/dark/system, все компоненты корректны в обеих темах
 - **Безопасность:** XSS (React default), CSRF (Sanctum), секреты не в localStorage
 - **i18n-ready:** тексты через файлы локализации, готовность к английскому языку
+- **Таймзоны:** API возвращает UTC, фронт конвертирует в таймзону пользователя. `date-fns-tz` или `dayjs/timezone`
+- **Многовалютность:** `Intl.NumberFormat`, символы валют из ISO 4217, агрегация в base currency на бэкенде
+- **Data density:** 3 режима отображения таблиц (compact/comfortable/spacious), сохраняется в preferences
+
+---
+
+## 11. Тестирование фронтенда
+
+### Unit-тесты (Vitest)
+
+- Утилиты: `formatMoney`, `formatDate`, `convertTimezone`, `parseJsonApi`
+- Zustand stores: context switcher state, auth state, preferences
+- Hooks: `useCurrentContext`, `usePermissions`, `useKeyboardShortcut`
+- Компоненты: StatusBadge, MoneyFormat, CopyButton, DataTable (рендеринг, сортировка, пагинация)
+
+### Integration-тесты (Vitest + Testing Library)
+
+- Формы: валидация (Zod), submit, серверные ошибки
+- Command Palette: поиск, навигация, клавиатура
+- Context Switcher: каскадный выбор, инвалидация кэша
+- DataTable: фильтры, сортировка, bulk selection
+
+### E2E-тесты (Playwright)
+
+- **Auth flow:** логин → 2FA → dashboard
+- **Платёжный flow:** список → фильтры → детальная → capture → refund
+- **Настройка:** создание коннектора (визард) → создание правила маршрутизации → тестовый платёж
+- **Мультитенантность:** переключение org → merchant → profile, проверка фильтрации данных
+- **Test/Live переключение:** confirm dialog, фильтрация данных
+- **Онбординг:** полный визард от создания org до тестового платежа
+- **Responsive:** тесты на мобильном viewport (sidebar → sheet, таблицы → карточки)
+
+### Storybook (опционально)
+
+Каталог UI-компонентов:
+- Все компоненты из `components/ui/` с вариантами (sizes, states, themes)
+- StatusBadge со всеми статусами
+- DataTable с моковыми данными
+- Формы со всеми состояниями (empty, filled, error, loading)
+- Command Palette
+- Context Switcher

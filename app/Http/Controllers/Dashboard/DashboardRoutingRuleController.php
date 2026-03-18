@@ -4,22 +4,23 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
-use App\Enums\RoutingRuleType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\StoreDashboardRoutingRuleRequest;
+use App\Http\Requests\Dashboard\UpdateDashboardRoutingRuleRequest;
 use App\Http\Resources\RoutingRuleResource;
-use App\Repositories\Contracts\RoutingRuleRepositoryInterface;
+use App\Services\RoutingRuleService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Routing Rules', description: 'Routing rule management for the dashboard', weight: 14)]
 final class DashboardRoutingRuleController extends Controller
 {
     public function __construct(
-        private readonly RoutingRuleRepositoryInterface $routingRuleRepository,
+        private readonly RoutingRuleService $routingRuleService,
     ) {}
 
     /**
@@ -31,7 +32,8 @@ final class DashboardRoutingRuleController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-        $rules = $this->routingRuleRepository->getAllByMerchant($merchantId);
+        Gate::authorize('routing-rule.viewAny', [$merchantId]);
+        $rules = $this->routingRuleService->listByMerchant($merchantId);
 
         return RoutingRuleResource::jsonApiList($rules, $request);
     }
@@ -43,24 +45,14 @@ final class DashboardRoutingRuleController extends Controller
      */
     #[Response(201, description: 'Routing rule created')]
     #[Response(422, description: 'Validation error')]
-    public function store(Request $request): JsonResponse
+    public function store(StoreDashboardRoutingRuleRequest $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('routing-rule.create', [$merchantId]);
 
-        $validated = $request->validate([
-            'data.attributes.type' => ['required', Rule::enum(RoutingRuleType::class)],
-            'data.attributes.name' => 'required|string|max:255',
-            'data.attributes.rules' => 'required|array',
-            'data.attributes.active' => 'sometimes|boolean',
-            'data.attributes.priority' => 'sometimes|integer|min:0',
-        ]);
+        $validated = $request->validated();
 
-        $attrs = $validated['data']['attributes'];
-
-        $rule = $this->routingRuleRepository->create([
-            'merchant_account_id' => $merchantId,
-            ...$attrs,
-        ]);
+        $rule = $this->routingRuleService->create($merchantId, $validated);
 
         return (new RoutingRuleResource($rule))
             ->withStatus(201)
@@ -79,7 +71,8 @@ final class DashboardRoutingRuleController extends Controller
     public function show(string $ruleKey, Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-        $rule = $this->routingRuleRepository->findByKey($ruleKey, $merchantId);
+        Gate::authorize('routing-rule.view', [$merchantId]);
+        $rule = $this->routingRuleService->findByKey($ruleKey, $merchantId);
 
         return (new RoutingRuleResource($rule))->toResponse($request);
     }
@@ -92,20 +85,14 @@ final class DashboardRoutingRuleController extends Controller
     #[PathParameter('ruleKey', description: 'Routing rule public key', example: 'rr_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Routing rule updated')]
     #[Response(404, description: 'Routing rule not found')]
-    public function update(string $ruleKey, Request $request): JsonResponse
+    public function update(string $ruleKey, UpdateDashboardRoutingRuleRequest $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('routing-rule.update', [$merchantId]);
 
-        $validated = $request->validate([
-            'data.attributes.type' => ['sometimes', Rule::enum(RoutingRuleType::class)],
-            'data.attributes.name' => 'sometimes|string|max:255',
-            'data.attributes.rules' => 'sometimes|array',
-            'data.attributes.active' => 'sometimes|boolean',
-            'data.attributes.priority' => 'sometimes|integer|min:0',
-        ]);
+        $validated = $request->validated();
 
-        $rule = $this->routingRuleRepository->findByKey($ruleKey, $merchantId);
-        $rule = $this->routingRuleRepository->update($rule, $validated['data']['attributes'] ?? []);
+        $rule = $this->routingRuleService->update($ruleKey, $merchantId, $validated);
 
         return (new RoutingRuleResource($rule))->toResponse($request);
     }
@@ -121,8 +108,8 @@ final class DashboardRoutingRuleController extends Controller
     public function destroy(string $ruleKey, Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-        $rule = $this->routingRuleRepository->findByKey($ruleKey, $merchantId);
-        $this->routingRuleRepository->delete($rule);
+        Gate::authorize('routing-rule.delete', [$merchantId]);
+        $this->routingRuleService->delete($ruleKey, $merchantId);
 
         return response()->json(null, 204);
     }

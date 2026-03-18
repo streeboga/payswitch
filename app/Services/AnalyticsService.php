@@ -15,7 +15,13 @@ final readonly class AnalyticsService
 
     public function overview(int|string $merchantId, PeriodFilter $period): array
     {
-        return $this->repository->overview($merchantId, $period);
+        $data = $this->repository->overview($merchantId, $period);
+
+        $data['success_rate'] = $data['total_count'] > 0
+            ? round(($data['successful_count'] / $data['total_count']) * 100, 2)
+            : 0;
+
+        return $data;
     }
 
     public function charts(int|string $merchantId, PeriodFilter $period): array

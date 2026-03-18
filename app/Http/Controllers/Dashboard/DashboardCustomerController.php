@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Dashboard;
 use App\DataTransferObjects\Customer\CreateCustomerData;
 use App\DataTransferObjects\Customer\UpdateCustomerData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\StoreDashboardCustomerRequest;
+use App\Http\Requests\Dashboard\UpdateDashboardCustomerRequest;
 use App\Http\Resources\CustomerResource;
 use App\Services\CustomerService;
 use Dedoc\Scramble\Attributes\Group;
@@ -14,6 +16,7 @@ use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Customers', description: 'Customer management for the dashboard', weight: 12)]
 final class DashboardCustomerController extends Controller
@@ -31,6 +34,7 @@ final class DashboardCustomerController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('customer.viewAny', [$merchantId]);
         $customers = $this->customerService->list($merchantId);
 
         return CustomerResource::jsonApiList($customers, $request);
@@ -43,21 +47,15 @@ final class DashboardCustomerController extends Controller
      */
     #[Response(201, description: 'Customer created')]
     #[Response(422, description: 'Validation error')]
-    public function store(Request $request): JsonResponse
+    public function store(StoreDashboardCustomerRequest $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('customer.create', [$merchantId]);
 
-        $validated = $request->validate([
-            'data.attributes.name' => 'sometimes|string|max:255',
-            'data.attributes.email' => 'sometimes|email|max:255',
-            'data.attributes.phone' => 'sometimes|string|max:20',
-            'data.attributes.phone_country_code' => 'sometimes|string|max:5',
-            'data.attributes.description' => 'sometimes|string|max:1000',
-            'data.attributes.metadata' => 'sometimes|array',
-        ]);
+        $validated = $request->validated();
 
         $customer = $this->customerService->create(
-            CreateCustomerData::from($validated['data']['attributes'] ?? []),
+            CreateCustomerData::from($validated),
             $merchantId,
         );
 
@@ -78,6 +76,7 @@ final class DashboardCustomerController extends Controller
     public function show(string $customerKey, Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('customer.view', [$merchantId]);
         $customer = $this->customerService->find($customerKey, $merchantId);
 
         return (new CustomerResource($customer))->toResponse($request);
@@ -92,22 +91,16 @@ final class DashboardCustomerController extends Controller
     #[Response(200, description: 'Customer updated')]
     #[Response(404, description: 'Customer not found')]
     #[Response(422, description: 'Validation error')]
-    public function update(string $customerKey, Request $request): JsonResponse
+    public function update(string $customerKey, UpdateDashboardCustomerRequest $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('customer.update', [$merchantId]);
 
-        $validated = $request->validate([
-            'data.attributes.name' => 'sometimes|string|max:255',
-            'data.attributes.email' => 'sometimes|email|max:255',
-            'data.attributes.phone' => 'sometimes|string|max:20',
-            'data.attributes.phone_country_code' => 'sometimes|string|max:5',
-            'data.attributes.description' => 'sometimes|string|max:1000',
-            'data.attributes.metadata' => 'sometimes|array',
-        ]);
+        $validated = $request->validated();
 
         $customer = $this->customerService->update(
             $customerKey,
-            UpdateCustomerData::from($validated['data']['attributes'] ?? []),
+            UpdateCustomerData::from($validated),
             $merchantId,
         );
 
@@ -125,6 +118,7 @@ final class DashboardCustomerController extends Controller
     public function destroy(string $customerKey, Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('customer.delete', [$merchantId]);
         $this->customerService->delete($customerKey, $merchantId);
 
         return response()->json(null, 204);

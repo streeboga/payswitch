@@ -5,19 +5,25 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\SubmitDisputeEvidenceRequest;
+use App\Http\Resources\DisputeEvidenceResource;
 use App\Http\Resources\DisputeResource;
-use App\Models\Dispute;
-use App\Models\DisputeEvidence;
+use App\Services\DisputeService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Disputes', description: 'Dispute management for the dashboard', weight: 23)]
 final class DisputeController extends Controller
 {
+    public function __construct(
+        private readonly DisputeService $disputeService,
+    ) {}
+
     /**
      * List disputes
      *
@@ -30,17 +36,14 @@ final class DisputeController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-        $query = Dispute::where('merchant_account_id', $merchantId);
+        Gate::authorize('dispute.viewAny', [$merchantId]);
 
-        if ($status = $request->input('filter.status')) {
-            $query->where('status', $status);
-        }
-        if ($type = $request->input('filter.type')) {
-            $query->where('type', $type);
-        }
-
-        $perPage = min((int) $request->input('page.size', 20), 100);
-        $paginator = $query->orderByDesc('created_at')->paginate($perPage);
+        $paginator = $this->disputeService->list(
+            merchantAccountId: $merchantId,
+            status: $request->input('filter.status'),
+            type: $request->input('filter.type'),
+            perPage: (int) $request->input('page.size', 20),
+        );
 
         return DisputeResource::jsonApiCollection($paginator, $request);
     }
@@ -56,10 +59,8 @@ final class DisputeController extends Controller
     public function show(string $disputeKey, Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-
-        $dispute = Dispute::where('merchant_account_id', $merchantId)
-            ->where('key', $disputeKey)
-            ->firstOrFail();
+        Gate::authorize('dispute.view', [$merchantId]);
+        $dispute = $this->disputeService->find($disputeKey, $merchantId);
 
         return (new DisputeResource($dispute))->toResponse($request);
     }
@@ -72,45 +73,25 @@ final class DisputeController extends Controller
     #[PathParameter('disputeKey', description: 'Dispute public key')]
     #[Response(201, description: 'Evidence submitted')]
     #[Response(404, description: 'Dispute not found')]
-    public function submitEvidence(string $disputeKey, Request $request): JsonResponse
+    public function submitEvidence(string $disputeKey, SubmitDisputeEvidenceRequest $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('dispute.submitEvidence', [$merchantId]);
+        $dispute = $this->disputeService->find($disputeKey, $merchantId);
 
-        $dispute = Dispute::where('merchant_account_id', $merchantId)
-            ->where('key', $disputeKey)
-            ->firstOrFail();
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'data.attributes.type' => 'required|string',
-            'data.attributes.text_content' => 'sometimes|string',
-            'data.attributes.file' => 'sometimes|file|max:10240',
-        ]);
-
-        $attrs = $validated['data']['attributes'];
+        $attrs = $validated;
         $filePath = null;
 
-        if ($request->hasFile('data.attributes.file')) {
-            $filePath = $request->file('data.attributes.file')->store("disputes/{$dispute->key}", 'local');
+        if ($request->hasFile('file')) {
+            $filePath = $request->file('file')->store("disputes/{$dispute->key}", 'local');
         }
 
-        $evidence = DisputeEvidence::create([
-            'dispute_id' => $dispute->id,
-            'type' => $attrs['type'],
-            'text_content' => $attrs['text_content'] ?? null,
-            'file_path' => $filePath,
-        ]);
+        $evidence = $this->disputeService->createEvidence($dispute, $attrs, $filePath);
 
-        return response()->json([
-            'data' => [
-                'type' => 'dispute-evidences',
-                'id' => (string) $evidence->id,
-                'attributes' => [
-                    'type' => $evidence->type,
-                    'file_path' => $evidence->file_path,
-                    'text_content' => $evidence->text_content,
-                    'created_at' => $evidence->created_at->toIso8601String(),
-                ],
-            ],
-        ], 201, ['Content-Type' => 'application/vnd.api+json']);
+        return (new DisputeEvidenceResource($evidence))
+            ->withStatus(201)
+            ->toResponse($request);
     }
 }

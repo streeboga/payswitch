@@ -6,20 +6,20 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\WebhookEventResource;
-use App\Jobs\DeliverWebhookJob;
-use App\Repositories\Contracts\WebhookEventRepositoryInterface;
+use App\Services\WebhookEventService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Webhook Events', description: 'Webhook event monitoring and retry', weight: 16)]
 final class DashboardWebhookEventController extends Controller
 {
     public function __construct(
-        private readonly WebhookEventRepositoryInterface $webhookEventRepository,
+        private readonly WebhookEventService $webhookEventService,
     ) {}
 
     /**
@@ -35,8 +35,9 @@ final class DashboardWebhookEventController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('webhook-event.viewAny', [$merchantId]);
 
-        $paginator = $this->webhookEventRepository->paginateForMerchant($merchantId, [
+        $paginator = $this->webhookEventService->paginateForMerchant($merchantId, [
             'status' => $request->input('filter.status'),
             'event_type' => $request->input('filter.event_type'),
         ], (int) $request->input('page.size', 20));
@@ -55,9 +56,8 @@ final class DashboardWebhookEventController extends Controller
     public function retry(string $eventKey, Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-        $event = $this->webhookEventRepository->findByKeyForMerchant($eventKey, $merchantId);
-
-        DeliverWebhookJob::dispatch($event->id);
+        Gate::authorize('webhook-event.retry', [$merchantId]);
+        $event = $this->webhookEventService->retry($eventKey, $merchantId);
 
         return response()->json([
             'data' => [

@@ -12,12 +12,12 @@ final class StoreApiKeyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.name' => ['sometimes', 'string', 'max:255'],
+            'name' => ['sometimes', 'string', 'max:255'],
         ];
     }
 
     public function toDto(): CreateApiKeyData
     {
-        return CreateApiKeyData::from($this->validated('data.attributes') ?? []);
+        return CreateApiKeyData::from($this->validated());
     }
 }

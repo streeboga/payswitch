@@ -28,4 +28,11 @@ final class ApiKeyResource extends JsonApiResource
 
         return $attrs;
     }
+
+    public function toLinks(Request $request): array
+    {
+        return [
+            'self' => "/api/v1/dashboard/api-keys/{$this->key}",
+        ];
+    }
 }

@@ -1,0 +1,2 @@
+[     202ms] [WARNING] react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next {code: NO_I18NEXT_INSTANCE} @ http://localhost:3000/@vite/client:509
+[   14146ms] [WARNING] react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next {code: NO_I18NEXT_INSTANCE} @ http://localhost:3000/@vite/client:509

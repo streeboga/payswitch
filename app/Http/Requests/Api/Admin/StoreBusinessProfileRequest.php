@@ -12,13 +12,13 @@ final class StoreBusinessProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.merchant_id' => ['required', 'string'],
-            'data.attributes.webhook_url' => ['sometimes', 'url', 'max:2048'],
+            'merchant_id' => ['required', 'string'],
+            'webhook_url' => ['sometimes', 'url', 'max:2048'],
         ];
     }
 
     public function toDto(): CreateBusinessProfileData
     {
-        return CreateBusinessProfileData::from($this->validated('data.attributes'));
+        return CreateBusinessProfileData::from($this->validated());
     }
 }

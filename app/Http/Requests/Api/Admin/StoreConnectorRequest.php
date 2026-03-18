@@ -12,17 +12,17 @@ final class StoreConnectorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.connector_name' => ['required', 'string'],
-            'data.attributes.connector_type' => ['required', 'string'],
-            'data.attributes.connector_account_details' => ['required', 'array'],
-            'data.attributes.profile_id' => ['sometimes', 'string'],
-            'data.attributes.payment_methods_enabled' => ['sometimes', 'array'],
-            'data.attributes.test_mode' => ['sometimes', 'boolean'],
+            'connector_name' => ['required', 'string'],
+            'connector_type' => ['required', 'string'],
+            'connector_account_details' => ['required', 'array'],
+            'profile_id' => ['sometimes', 'string'],
+            'payment_methods_enabled' => ['sometimes', 'array'],
+            'test_mode' => ['sometimes', 'boolean'],
         ];
     }
 
     public function toDto(): CreateConnectorData
     {
-        return CreateConnectorData::from($this->validated('data.attributes'));
+        return CreateConnectorData::from($this->validated());
     }
 }

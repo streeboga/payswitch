@@ -20,9 +20,12 @@ final readonly class ConnectorService
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
 
+        $profileId = $this->resolveProfileId($dto->profile_id)
+            ?? $this->merchantRepository->findProfileByMerchant($merchant->id)?->id;
+
         return $this->merchantRepository->createConnector([
             'merchant_account_id' => $merchant->id,
-            'business_profile_id' => $this->resolveProfileId($dto->profile_id),
+            'business_profile_id' => $profileId,
             'connector_name' => $dto->connector_name,
             'connector_type' => $dto->connector_type,
             'connector_account_details' => $dto->connector_account_details,

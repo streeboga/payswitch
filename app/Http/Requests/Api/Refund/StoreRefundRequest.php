@@ -12,13 +12,13 @@ class StoreRefundRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'data.attributes.payment_id' => ['required', 'string'],
-            'data.attributes.amount' => ['required', 'integer', 'min:1'],
+            'payment_id' => ['required', 'string'],
+            'amount' => ['required', 'integer', 'min:1'],
         ];
     }
 
     public function toDto(): CreateRefundData
     {
-        return CreateRefundData::from($this->validated('data.attributes'));
+        return CreateRefundData::from($this->validated());
     }
 }

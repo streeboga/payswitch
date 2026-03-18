@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
-use App\DataTransferObjects\Admin\CreateApiKeyData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\StoreDashboardApiKeyRequest;
 use App\Http\Resources\ApiKeyResource;
 use App\Services\MerchantService;
 use Dedoc\Scramble\Attributes\Group;
@@ -13,6 +13,7 @@ use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard API Keys', description: 'API key management for the dashboard', weight: 15)]
 final class DashboardApiKeyController extends Controller
@@ -30,6 +31,7 @@ final class DashboardApiKeyController extends Controller
     public function index(Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('api-key.viewAny', [$merchantId]);
 
         return ApiKeyResource::jsonApiList(
             $this->merchantService->listApiKeys($merchantId),
@@ -44,17 +46,15 @@ final class DashboardApiKeyController extends Controller
      */
     #[Response(201, description: 'API key created with raw key')]
     #[Response(422, description: 'Validation error')]
-    public function store(Request $request): JsonResponse
+    public function store(StoreDashboardApiKeyRequest $request): JsonResponse
     {
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('api-key.create', [$merchantId]);
         $merchantKey = $request->attributes->get('merchant_key');
-
-        $validated = $request->validate([
-            'data.attributes.name' => 'required|string|max:255',
-        ]);
 
         $result = $this->merchantService->createApiKey(
             $merchantKey,
-            CreateApiKeyData::from($validated['data']['attributes']),
+            $request->toDto(),
         );
 
         return (new ApiKeyResource($result['apiKey']))
@@ -73,6 +73,8 @@ final class DashboardApiKeyController extends Controller
     #[Response(404, description: 'API key not found')]
     public function destroy(string $keyId, Request $request): JsonResponse
     {
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('api-key.delete', [$merchantId]);
         $merchantKey = $request->attributes->get('merchant_key');
         $this->merchantService->revokeApiKey($merchantKey, $keyId);
 

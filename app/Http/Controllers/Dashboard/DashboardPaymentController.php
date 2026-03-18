@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\PaymentListRequest;
 use App\Http\Resources\PaymentIntentResource;
-use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Services\DashboardPaymentService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
@@ -15,6 +14,7 @@ use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Group('Dashboard Payments', description: 'Payment list and export for the dashboard', weight: 10)]
@@ -22,7 +22,6 @@ final class DashboardPaymentController extends Controller
 {
     public function __construct(
         private readonly DashboardPaymentService $paymentService,
-        private readonly PaymentIntentRepositoryInterface $paymentRepository,
     ) {}
 
     /**
@@ -49,6 +48,7 @@ final class DashboardPaymentController extends Controller
     public function index(PaymentListRequest $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('payment.viewAny', [$merchantId]);
         $filters = array_filter([...$request->filters(), 'sort' => $request->sortParam()]);
 
         return PaymentIntentResource::jsonApiCollection(
@@ -68,7 +68,8 @@ final class DashboardPaymentController extends Controller
     public function show(string $paymentKey, Request $request): JsonResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
-        $payment = $this->paymentRepository->findByKey($paymentKey, $merchantId);
+        Gate::authorize('payment.view', [$merchantId]);
+        $payment = $this->paymentService->find($paymentKey, $merchantId);
 
         return (new PaymentIntentResource($payment))->toResponse($request);
     }
@@ -83,6 +84,7 @@ final class DashboardPaymentController extends Controller
     public function export(PaymentListRequest $request): StreamedResponse
     {
         $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('payment.export', [$merchantId]);
         $filters = array_filter([...$request->filters(), 'sort' => $request->sortParam()]);
 
         $cursor = $this->paymentService->exportCursor($merchantId, $filters);

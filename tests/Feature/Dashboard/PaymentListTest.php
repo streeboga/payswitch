@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -15,6 +16,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
+    UserRole::create(['user_id' => $this->user->id, 'organization_id' => $org->id, 'role' => 'admin']);
     $this->headers = ['X-Merchant-Key' => $this->merchant->key];
 });
 

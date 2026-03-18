@@ -25,15 +25,10 @@ beforeEach(function () {
 
 test('can create customer', function () {
     $response = $this->postJson('/api/v1/customers', [
-        'data' => [
-            'type' => 'customers',
-            'attributes' => [
-                'name' => 'John Doe',
-                'email' => 'john@example.com',
-                'phone' => '+14155551234',
-                'metadata' => ['tier' => 'premium'],
-            ],
-        ],
+        'name' => 'John Doe',
+        'email' => 'john@example.com',
+        'phone' => '+14155551234',
+        'metadata' => ['tier' => 'premium'],
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(201)
@@ -47,14 +42,9 @@ test('can create customer', function () {
 
 test('can create customer with custom id', function () {
     $response = $this->postJson('/api/v1/customers', [
-        'data' => [
-            'type' => 'customers',
-            'id' => 'my_custom_id_123',
-            'attributes' => [
-                'name' => 'Custom ID User',
-                'email' => 'custom@example.com',
-            ],
-        ],
+        'id' => 'my_custom_id_123',
+        'name' => 'Custom ID User',
+        'email' => 'custom@example.com',
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(201)
@@ -63,10 +53,7 @@ test('can create customer with custom id', function () {
 
 test('can retrieve customer', function () {
     $create = $this->postJson('/api/v1/customers', [
-        'data' => [
-            'type' => 'customers',
-            'attributes' => ['name' => 'Jane', 'email' => 'jane@example.com'],
-        ],
+        'name' => 'Jane', 'email' => 'jane@example.com',
     ], ['api-key' => $this->rawKey]);
 
     $customerId = $create->json('data.id');
@@ -80,20 +67,13 @@ test('can retrieve customer', function () {
 
 test('can update customer via PATCH', function () {
     $create = $this->postJson('/api/v1/customers', [
-        'data' => [
-            'type' => 'customers',
-            'attributes' => ['name' => 'Old Name', 'email' => 'old@example.com'],
-        ],
+        'name' => 'Old Name', 'email' => 'old@example.com',
     ], ['api-key' => $this->rawKey]);
 
     $customerId = $create->json('data.id');
 
     $response = $this->patchJson("/api/v1/customers/{$customerId}", [
-        'data' => [
-            'type' => 'customers',
-            'id' => $customerId,
-            'attributes' => ['name' => 'New Name'],
-        ],
+        'name' => 'New Name',
     ], ['api-key' => $this->rawKey]);
 
     $response->assertOk()
@@ -103,10 +83,7 @@ test('can update customer via PATCH', function () {
 
 test('can delete customer', function () {
     $create = $this->postJson('/api/v1/customers', [
-        'data' => [
-            'type' => 'customers',
-            'attributes' => ['name' => 'Delete Me', 'email' => 'del@example.com'],
-        ],
+        'name' => 'Delete Me', 'email' => 'del@example.com',
     ], ['api-key' => $this->rawKey]);
 
     $customerId = $create->json('data.id');
@@ -120,10 +97,7 @@ test('can delete customer', function () {
 
 test('customer is scoped to authenticated merchant', function () {
     $this->postJson('/api/v1/customers', [
-        'data' => [
-            'type' => 'customers',
-            'attributes' => ['name' => 'Scoped', 'email' => 's@example.com'],
-        ],
+        'name' => 'Scoped', 'email' => 's@example.com',
     ], ['api-key' => $this->rawKey]);
 
     // Different merchant

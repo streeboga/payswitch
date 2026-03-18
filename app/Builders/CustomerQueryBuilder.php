@@ -45,10 +45,12 @@ final class CustomerQueryBuilder
 
     public function search(string $term): self
     {
-        $this->query->where(function (Builder $q) use ($term) {
-            $q->where('name', 'like', "%{$term}%")
-                ->orWhere('email', 'like', "%{$term}%")
-                ->orWhere('key', 'like', "%{$term}%");
+        $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $term);
+
+        $this->query->where(function (Builder $q) use ($escaped) {
+            $q->where('name', 'like', "%{$escaped}%")
+                ->orWhere('email', 'like', "%{$escaped}%")
+                ->orWhere('key', 'like', "%{$escaped}%");
         });
 
         return $this;

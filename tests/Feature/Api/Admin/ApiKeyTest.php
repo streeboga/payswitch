@@ -16,12 +16,7 @@ beforeEach(function () {
 
 test('can create api key for merchant', function () {
     $response = $this->postJson("/api/v1/merchants/{$this->merchant->key}/api-keys", [
-        'data' => [
-            'type' => 'api-keys',
-            'attributes' => [
-                'name' => 'Production Key',
-            ],
-        ],
+        'name' => 'Production Key',
     ], ['api-key' => 'admin_test_key']);
 
     $response->assertStatus(201)
@@ -39,10 +34,7 @@ test('can create api key for merchant', function () {
 
 test('raw api key is shown only at creation', function () {
     $create = $this->postJson("/api/v1/merchants/{$this->merchant->key}/api-keys", [
-        'data' => [
-            'type' => 'api-keys',
-            'attributes' => ['name' => 'Once Key'],
-        ],
+        'name' => 'Once Key',
     ], ['api-key' => 'admin_test_key']);
 
     $keyId = $create->json('data.id');
@@ -54,10 +46,7 @@ test('raw api key is shown only at creation', function () {
 
 test('can revoke api key', function () {
     $create = $this->postJson("/api/v1/merchants/{$this->merchant->key}/api-keys", [
-        'data' => [
-            'type' => 'api-keys',
-            'attributes' => ['name' => 'Revocable'],
-        ],
+        'name' => 'Revocable',
     ], ['api-key' => 'admin_test_key']);
 
     $keyId = $create->json('data.id');

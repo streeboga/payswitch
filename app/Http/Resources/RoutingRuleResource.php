@@ -24,4 +24,11 @@ final class RoutingRuleResource extends JsonApiResource
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }
+
+    public function toLinks(Request $request): array
+    {
+        return [
+            'self' => "/api/v1/dashboard/routing-rules/{$this->key}",
+        ];
+    }
 }

@@ -10,7 +10,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\Customer;
 
-final class CustomerRepository implements CustomerRepositoryInterface
+final readonly class CustomerRepository implements CustomerRepositoryInterface
 {
     private function query(): CustomerQueryBuilder
     {

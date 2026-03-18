@@ -1,0 +1,7 @@
+[     165ms] [WARNING] react-i18next:: useTranslation: You will need to pass in an i18next instance by using initReactI18next {code: NO_I18NEXT_INSTANCE} @ http://localhost:3000/@vite/client:509
+[   11293ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/event-logs?page%5Bnumber%5D=1&page%5Bsize%5D=20&sort=-created_at:0
+[   11698ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/event-logs?page%5Bnumber%5D=1&page%5Bsize%5D=20&sort=-created_at:0
+[   12395ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/event-logs?page%5Bnumber%5D=1&page%5Bsize%5D=20&sort=-created_at:0
+[   13482ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/event-logs?page%5Bnumber%5D=1&page%5Bsize%5D=20&sort=-created_at:0
+[   13876ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/event-logs?page%5Bnumber%5D=1&page%5Bsize%5D=20&sort=-created_at:0
+[   14591ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3000/api/v1/dashboard/event-logs?page%5Bnumber%5D=1&page%5Bsize%5D=20&sort=-created_at:0

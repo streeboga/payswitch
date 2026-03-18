@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Builders\PaymentMethodQueryBuilder;
 use App\Repositories\Contracts\PaymentMethodRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\PaymentMethod;
 
-final class PaymentMethodRepository implements PaymentMethodRepositoryInterface
+final readonly class PaymentMethodRepository implements PaymentMethodRepositoryInterface
 {
     public function create(array $attributes): PaymentMethod
     {
@@ -17,15 +18,17 @@ final class PaymentMethodRepository implements PaymentMethodRepositoryInterface
 
     public function findByKey(string $key, int|string $merchantAccountId): PaymentMethod
     {
-        return PaymentMethod::where('key', $key)
-            ->where('merchant_account_id', $merchantAccountId)
+        return PaymentMethodQueryBuilder::make()
+            ->whereKey($key)
+            ->forMerchant($merchantAccountId)
             ->firstOrFail();
     }
 
     public function findByCustomer(int $customerId, int|string $merchantAccountId): Collection
     {
-        return PaymentMethod::where('customer_id', $customerId)
-            ->where('merchant_account_id', $merchantAccountId)
+        return PaymentMethodQueryBuilder::make()
+            ->forCustomer($customerId)
+            ->forMerchant($merchantAccountId)
             ->get();
     }
 
@@ -36,9 +39,10 @@ final class PaymentMethodRepository implements PaymentMethodRepositoryInterface
 
     public function unsetDefaultForCustomer(int $customerId, int|string $merchantAccountId, int $excludeId): void
     {
-        PaymentMethod::where('customer_id', $customerId)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->where('id', '!=', $excludeId)
+        PaymentMethodQueryBuilder::make()
+            ->forCustomer($customerId)
+            ->forMerchant($merchantAccountId)
+            ->excludeId($excludeId)
             ->update(['is_default' => false]);
     }
 

@@ -10,7 +10,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
 
-final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
+final readonly class PaymentIntentRepository implements PaymentIntentRepositoryInterface
 {
     private function query(): PaymentIntentQueryBuilder
     {
