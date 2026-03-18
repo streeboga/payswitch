@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Builders\PaymentIntentQueryBuilder;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Streeboga\PaymentData\Models\PaymentIntent;
@@ -11,6 +12,11 @@ use Streeboga\PaymentData\Models\PaymentMethod;
 
 final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
 {
+    private function query(): PaymentIntentQueryBuilder
+    {
+        return PaymentIntentQueryBuilder::make();
+    }
+
     public function create(array $attributes): PaymentIntent
     {
         return PaymentIntent::create($attributes);
@@ -18,24 +24,17 @@ final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
 
     public function findByKey(string $key, int|string $merchantAccountId): PaymentIntent
     {
-        return PaymentIntent::where('key', $key)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->firstOrFail();
+        return $this->query()->forMerchant($merchantAccountId)->byKey($key)->firstOrFail();
     }
 
     public function findByKeyLocked(string $key, int|string $merchantAccountId): PaymentIntent
     {
-        return PaymentIntent::where('key', $key)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->lockForUpdate()
-            ->firstOrFail();
+        return $this->query()->forMerchant($merchantAccountId)->byKey($key)->locked()->firstOrFail();
     }
 
     public function findByKeyOrNull(string $key, int|string $merchantAccountId): ?PaymentIntent
     {
-        return PaymentIntent::where('key', $key)
-            ->where('merchant_account_id', $merchantAccountId)
-            ->first();
+        return $this->query()->forMerchant($merchantAccountId)->byKey($key)->first();
     }
 
     public function update(PaymentIntent $payment, array $attributes): PaymentIntent
@@ -47,16 +46,19 @@ final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
 
     public function paginate(int|string $merchantAccountId, array $filters = [], ?string $sort = null, int $perPage = 20): LengthAwarePaginator
     {
-        $query = PaymentIntent::where('merchant_account_id', $merchantAccountId);
+        $builder = $this->query()->forMerchant($merchantAccountId);
 
         if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+            $builder->withStatus($filters['status']);
         }
 
+        if (! $sort) {
+            $builder->latest();
+        }
+
+        $query = $builder->getQuery();
         if ($sort) {
             $query->orderBy($sort);
-        } else {
-            $query->latest();
         }
 
         return $query->paginate($perPage);
@@ -64,19 +66,17 @@ final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
 
     public function paginateAll(int $perPage = 20): LengthAwarePaginator
     {
-        return PaymentIntent::query()
-            ->latest()
-            ->paginate($perPage);
+        return $this->query()->latest()->getQuery()->paginate($perPage);
     }
 
     public function findByKeyGlobal(string $key): PaymentIntent
     {
-        return PaymentIntent::where('key', $key)->firstOrFail();
+        return $this->query()->byKey($key)->firstOrFail();
     }
 
     public function findByIdLocked(int $id): ?PaymentIntent
     {
-        return PaymentIntent::where('id', $id)->lockForUpdate()->first();
+        return $this->query()->byId($id)->locked()->first();
     }
 
     public function incrementAttemptCount(PaymentIntent $payment): void
