@@ -43,6 +43,57 @@ test('organization merchants returns merchant list', function () {
         ->assertJsonPath('data.0.type', 'merchants');
 });
 
+test('organization can be created', function () {
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/v1/dashboard/organizations', ['name' => 'New Org'], $this->headers);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.type', 'organizations')
+        ->assertJsonPath('data.attributes.name', 'New Org');
+});
+
+test('organization can be updated', function () {
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/v1/dashboard/organizations/{$this->org->key}", [
+            'name' => 'Updated Org',
+        ], $this->headers);
+
+    $response->assertOk()
+        ->assertJsonPath('data.attributes.name', 'Updated Org');
+});
+
+test('organization update requires name', function () {
+    $response = $this->actingAs($this->user)
+        ->patchJson("/api/v1/dashboard/organizations/{$this->org->key}", [
+            'name' => '',
+        ], $this->headers);
+
+    $response->assertUnprocessable();
+});
+
+test('organization can be deleted', function () {
+    $response = $this->actingAs($this->user)
+        ->deleteJson("/api/v1/dashboard/organizations/{$this->org->key}", [], $this->headers);
+
+    $response->assertNoContent();
+    $this->assertDatabaseMissing('organizations', ['id' => $this->org->id]);
+});
+
+test('organization deletion cascades to merchants', function () {
+    $this->actingAs($this->user)
+        ->deleteJson("/api/v1/dashboard/organizations/{$this->org->key}", [], $this->headers);
+
+    $this->assertDatabaseMissing('merchant_accounts', ['id' => $this->merchant->id]);
+});
+
+test('organization includes merchants_count', function () {
+    $response = $this->actingAs($this->user)
+        ->getJson('/api/v1/dashboard/organizations', $this->headers);
+
+    $response->assertOk()
+        ->assertJsonPath('data.0.attributes.merchants_count', 1);
+});
+
 test('organizations require authentication', function () {
     $response = $this->getJson('/api/v1/dashboard/organizations', $this->headers);
     $response->assertUnauthorized();

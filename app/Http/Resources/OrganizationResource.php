@@ -17,7 +17,7 @@ final class OrganizationResource extends JsonApiResource
     {
         return [
             'name' => $this->name,
-            'merchants_count' => $this->merchantAccounts_count ?? 0,
+            'merchants_count' => $this->merchant_accounts_count ?? 0,
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }
