@@ -91,12 +91,12 @@ test('3DS card results in requires_customer_action status', function () {
 
     $response = ($this->confirmWithCard)($paymentId, '4000000000003220');
 
-    $response->assertOk();
+    $response->assertOk()
+        ->assertJsonPath('data.attributes.status', 'requires_customer_action');
 
-    // TestConnector returns requires_action code — the payment flow may map this
-    // to requires_customer_action, succeeded, or failed depending on implementation
-    expect($response->json('data.attributes.status'))
-        ->toBeIn(['requires_customer_action', 'succeeded', 'failed']);
+    $this->assertDatabaseHas('payment_attempts', [
+        'status' => 'requires_action',
+    ]);
 });
 
 test('failed payment attempt is recorded in payment_attempts', function () {

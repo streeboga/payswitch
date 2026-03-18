@@ -10,6 +10,7 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentConnectors\ConnectorFactory;
+use Streeboga\PaymentData\Enums\AuthenticationType;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Exceptions\PaymentException;
@@ -78,6 +79,8 @@ final readonly class PaymentConfirmationService
 
             if ($result['success']) {
                 $this->applySuccessStatus($payment, $mca->connector_name);
+            } elseif (($result['code'] ?? null) === 'requires_action') {
+                $this->applyRequiresActionStatus($payment, $mca->connector_name, $result);
             } else {
                 $fallbackMca = $this->routingService->fallback($merchantAccountId, [$mca->connector_name]);
 
@@ -126,13 +129,19 @@ final readonly class PaymentConfirmationService
             return ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_exception'];
         }
 
+        $attemptStatus = match (true) {
+            $result['success'] => PaymentAttemptStatus::Succeeded,
+            ($result['code'] ?? null) === 'requires_action' => PaymentAttemptStatus::RequiresAction,
+            default => PaymentAttemptStatus::Failed,
+        };
+
         $this->paymentRepository->createAttempt($payment, [
             'connector' => $mca->connector_name,
             'connector_transaction_id' => $result['transaction_id'] ?? null,
-            'status' => $result['success'] ? PaymentAttemptStatus::Succeeded->value : PaymentAttemptStatus::Failed->value,
+            'status' => $attemptStatus->value,
             'amount' => $payment->amount,
-            'error_code' => $result['success'] ? null : ($result['code'] ?? null),
-            'error_message' => $result['success'] ? null : ($result['message'] ?? null),
+            'error_code' => $attemptStatus === PaymentAttemptStatus::Succeeded ? null : ($result['code'] ?? null),
+            'error_message' => $attemptStatus === PaymentAttemptStatus::Succeeded ? null : ($result['message'] ?? null),
         ]);
         $this->paymentRepository->incrementAttemptCount($payment);
 
@@ -150,6 +159,19 @@ final readonly class PaymentConfirmationService
             'status' => $newStatus,
             'amount_received' => $newStatus === PaymentStatus::Succeeded ? $payment->amount : null,
             'connector' => $connectorName,
+        ]);
+    }
+
+    private function applyRequiresActionStatus(PaymentIntent $payment, string $connectorName, array $result): void
+    {
+        PaymentStateMachine::assertTransition($payment->status, PaymentStatus::RequiresCustomerAction);
+        $this->paymentRepository->update($payment, [
+            'status' => PaymentStatus::RequiresCustomerAction,
+            'authentication_type' => AuthenticationType::ThreeDs,
+            'connector' => $connectorName,
+            'metadata' => array_merge($payment->metadata ?? [], [
+                'redirect_url' => $result['data']['redirect_url'] ?? null,
+            ]),
         ]);
     }
 
