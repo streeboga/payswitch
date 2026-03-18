@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\RoutingRuleRepositoryInterface;
+use App\Enums\RoutingRuleType;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\RoutingRule;
@@ -99,9 +100,9 @@ final class RoutingService
         }
 
         return match ($rule->type) {
-            'priority' => $this->evaluatePriorityRule($config, $merchantAccountId),
-            'rule_based' => $this->evaluateRuleBasedRule($config, $currency, $amount, $merchantAccountId),
-            'volume_split' => $this->evaluateVolumeSplitRule($config, $merchantAccountId),
+            RoutingRuleType::Priority->value => $this->evaluatePriorityRule($config, $merchantAccountId),
+            RoutingRuleType::RuleBased->value => $this->evaluateRuleBasedRule($config, $currency, $amount, $merchantAccountId),
+            RoutingRuleType::VolumeSplit->value => $this->evaluateVolumeSplitRule($config, $merchantAccountId),
             default => null,
         };
     }

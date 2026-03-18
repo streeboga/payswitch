@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\PaymentAttemptStatus;
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
@@ -123,7 +124,7 @@ final class PaymentService
             } catch (\Throwable $e) {
                 $this->paymentRepository->createAttempt($payment, [
                     'connector' => $mca->connector_name,
-                    'status' => 'failed',
+                    'status' => PaymentAttemptStatus::Failed->value,
                     'amount' => $payment->amount,
                     'error_code' => 'connector_exception',
                     'error_message' => $e->getMessage(),
@@ -135,7 +136,7 @@ final class PaymentService
                 $this->paymentRepository->createAttempt($payment, [
                     'connector' => $mca->connector_name,
                     'connector_transaction_id' => $result['transaction_id'] ?? null,
-                    'status' => $result['success'] ? 'succeeded' : 'failed',
+                    'status' => $result['success'] ? PaymentAttemptStatus::Succeeded->value : PaymentAttemptStatus::Failed->value,
                     'amount' => $payment->amount,
                     'error_code' => $result['success'] ? null : ($result['code'] ?? null),
                     'error_message' => $result['success'] ? null : ($result['message'] ?? null),
@@ -175,7 +176,7 @@ final class PaymentService
                     $this->paymentRepository->createAttempt($payment, [
                         'connector' => $fallbackMca->connector_name,
                         'connector_transaction_id' => $fallbackResult['transaction_id'] ?? null,
-                        'status' => $fallbackResult['success'] ? 'succeeded' : 'failed',
+                        'status' => $fallbackResult['success'] ? PaymentAttemptStatus::Succeeded->value : PaymentAttemptStatus::Failed->value,
                         'amount' => $payment->amount,
                         'error_code' => $fallbackResult['success'] ? null : ($fallbackResult['code'] ?? null),
                         'error_message' => $fallbackResult['success'] ? null : ($fallbackResult['message'] ?? null),
