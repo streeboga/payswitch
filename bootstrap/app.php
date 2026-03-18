@@ -4,15 +4,15 @@ use App\Http\Middleware\AuthenticateAdminApiKey;
 use App\Http\Middleware\AuthenticateSecretApiKey;
 use App\Http\Middleware\ForceJsonApiContentType;
 use App\Http\Middleware\HandleAppearance;
-use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveApiKey;
+use App\Http\Middleware\ResolveMerchantContext;
 use App\Providers\RepositoryServiceProvider;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 use Streeboga\PaymentData\Exceptions\ApiAuthenticationException;
 use Streeboga\PaymentData\Exceptions\ConnectorException;
 use Streeboga\PaymentData\Exceptions\PaymentException;
@@ -34,8 +34,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             HandleAppearance::class,
-            HandleInertiaRequests::class,
-            AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        $middleware->api(prepend: [
+            EnsureFrontendRequestsAreStateful::class,
         ]);
 
         $middleware->alias([
@@ -43,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.api_key' => ResolveApiKey::class,
             'auth.admin_api_key' => AuthenticateAdminApiKey::class,
             'auth.secret_api_key' => AuthenticateSecretApiKey::class,
+            'resolve.merchant' => ResolveMerchantContext::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Builders;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Models\Refund;
@@ -48,6 +49,52 @@ final class RefundQueryBuilder
         $this->query->where('status', $status instanceof RefundStatus ? $status->value : $status);
 
         return $this;
+    }
+
+    public function createdBetween(string $from, string $to): self
+    {
+        $this->query->whereBetween('created_at', [$from, $to]);
+
+        return $this;
+    }
+
+    public function search(string $term): self
+    {
+        $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $term);
+
+        $this->query->where(function (Builder $q) use ($escaped) {
+            $q->where('key', 'like', "%{$escaped}%")
+                ->orWhere('reason', 'like', "%{$escaped}%")
+                ->orWhere('error_message', 'like', "%{$escaped}%");
+        });
+
+        return $this;
+    }
+
+    public function sortBy(string $sort): self
+    {
+        $direction = str_starts_with($sort, '-') ? 'desc' : 'asc';
+        $column = ltrim($sort, '-');
+
+        $allowed = ['created_at', 'amount', 'status'];
+
+        if (in_array($column, $allowed, true)) {
+            $this->query->orderBy($column, $direction);
+        }
+
+        return $this;
+    }
+
+    public function latest(): self
+    {
+        $this->query->latest();
+
+        return $this;
+    }
+
+    public function paginate(int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->query->paginate($perPage);
     }
 
     public function sumAmount(): int

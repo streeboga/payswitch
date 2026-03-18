@@ -6,8 +6,34 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentMethodController;
 use App\Http\Controllers\Api\V1\RefundController;
 use App\Http\Controllers\Api\V1\WebhookReceiverController;
+use App\Http\Controllers\Auth\UserController;
+use App\Http\Controllers\Dashboard\AnalyticsController;
+use App\Http\Controllers\Dashboard\DashboardPaymentController;
+use App\Http\Controllers\Dashboard\DashboardRefundController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('v1')->group(function () {
+    // Dashboard SPA — authenticated user
+    Route::get('/user', [UserController::class, 'show'])->middleware('auth:sanctum');
+});
+
+// Dashboard API — Sanctum session auth + merchant context
+Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', 'throttle:60,1'])->group(function () {
+    // Analytics (Story 12-1)
+    Route::get('/analytics/overview', [AnalyticsController::class, 'overview']);
+    Route::get('/analytics/charts', [AnalyticsController::class, 'charts']);
+    Route::get('/analytics/funnel', [AnalyticsController::class, 'funnel']);
+    Route::get('/analytics/payment-methods', [AnalyticsController::class, 'paymentMethods']);
+    Route::get('/analytics/failure-reasons', [AnalyticsController::class, 'failureReasons']);
+
+    // Payments list (Story 12-3)
+    Route::get('/payments', [DashboardPaymentController::class, 'index']);
+    Route::get('/payments/export', [DashboardPaymentController::class, 'export']);
+
+    // Refunds list (Story 12-6)
+    Route::get('/refunds', [DashboardRefundController::class, 'index']);
+});
 
 Route::prefix('v1')->middleware('json-api')->group(function () {
     // Incoming PSP webhooks (no auth)

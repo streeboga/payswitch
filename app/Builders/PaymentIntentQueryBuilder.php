@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Builders;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\LazyCollection;
 use Streeboga\PaymentData\Models\PaymentIntent;
 
 final class PaymentIntentQueryBuilder
@@ -28,7 +30,7 @@ final class PaymentIntentQueryBuilder
         return $this;
     }
 
-    public function byKey(string $key): self
+    public function whereKey(string $key): self
     {
         $this->query->where('key', $key);
 
@@ -56,11 +58,88 @@ final class PaymentIntentQueryBuilder
         return $this;
     }
 
+    public function withCurrency(string $currency): self
+    {
+        $this->query->where('currency', $currency);
+
+        return $this;
+    }
+
+    public function withConnector(string $connector): self
+    {
+        $this->query->where('connector', $connector);
+
+        return $this;
+    }
+
+    public function withCaptureMethod(string $captureMethod): self
+    {
+        $this->query->where('capture_method', $captureMethod);
+
+        return $this;
+    }
+
+    public function amountBetween(?int $min, ?int $max): self
+    {
+        if ($min !== null) {
+            $this->query->where('amount', '>=', $min);
+        }
+        if ($max !== null) {
+            $this->query->where('amount', '<=', $max);
+        }
+
+        return $this;
+    }
+
+    public function createdBetween(string $from, string $to): self
+    {
+        $this->query->whereBetween('created_at', [$from, $to]);
+
+        return $this;
+    }
+
+    public function search(string $term): self
+    {
+        $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $term);
+
+        $this->query->where(function (Builder $q) use ($escaped) {
+            $q->where('key', 'like', "%{$escaped}%")
+                ->orWhere('description', 'like', "%{$escaped}%")
+                ->orWhere('error_message', 'like', "%{$escaped}%");
+        });
+
+        return $this;
+    }
+
+    public function sortBy(string $sort): self
+    {
+        $direction = str_starts_with($sort, '-') ? 'desc' : 'asc';
+        $column = ltrim($sort, '-');
+
+        $allowed = ['created_at', 'amount', 'status'];
+
+        if (in_array($column, $allowed, true)) {
+            $this->query->orderBy($column, $direction);
+        }
+
+        return $this;
+    }
+
+    public function paginate(int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->query->paginate($perPage);
+    }
+
     public function latest(): self
     {
         $this->query->latest();
 
         return $this;
+    }
+
+    public function cursor(): LazyCollection
+    {
+        return $this->query->cursor();
     }
 
     public function firstOrFail(): PaymentIntent

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Contracts;
 
+use App\Builders\PaymentIntentQueryBuilder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
@@ -35,4 +36,8 @@ interface PaymentIntentRepositoryInterface
     public function findLastSuccessfulAttempt(PaymentIntent $payment): ?object;
 
     public function findPaymentMethodByKey(string $key, int|string $merchantAccountId): ?PaymentMethod;
+
+    public function paginateFiltered(int|string $merchantAccountId, array $filters = [], int $perPage = 20): LengthAwarePaginator;
+
+    public function filteredQuery(int|string $merchantAccountId, array $filters = []): PaymentIntentQueryBuilder;
 }

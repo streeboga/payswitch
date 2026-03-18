@@ -24,17 +24,17 @@ final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
 
     public function findByKey(string $key, int|string $merchantAccountId): PaymentIntent
     {
-        return $this->query()->forMerchant($merchantAccountId)->byKey($key)->firstOrFail();
+        return $this->query()->forMerchant($merchantAccountId)->whereKey($key)->firstOrFail();
     }
 
     public function findByKeyLocked(string $key, int|string $merchantAccountId): PaymentIntent
     {
-        return $this->query()->forMerchant($merchantAccountId)->byKey($key)->locked()->firstOrFail();
+        return $this->query()->forMerchant($merchantAccountId)->whereKey($key)->locked()->firstOrFail();
     }
 
     public function findByKeyOrNull(string $key, int|string $merchantAccountId): ?PaymentIntent
     {
-        return $this->query()->forMerchant($merchantAccountId)->byKey($key)->first();
+        return $this->query()->forMerchant($merchantAccountId)->whereKey($key)->first();
     }
 
     public function update(PaymentIntent $payment, array $attributes): PaymentIntent
@@ -71,7 +71,7 @@ final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
 
     public function findByKeyGlobal(string $key): PaymentIntent
     {
-        return $this->query()->byKey($key)->firstOrFail();
+        return $this->query()->whereKey($key)->firstOrFail();
     }
 
     public function findByIdLocked(int $id): ?PaymentIntent
@@ -99,5 +99,47 @@ final class PaymentIntentRepository implements PaymentIntentRepositoryInterface
         return PaymentMethod::where('key', $key)
             ->where('merchant_account_id', $merchantAccountId)
             ->first();
+    }
+
+    public function paginateFiltered(int|string $merchantAccountId, array $filters = [], int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->filteredQuery($merchantAccountId, $filters)->paginate($perPage);
+    }
+
+    public function filteredQuery(int|string $merchantAccountId, array $filters = []): PaymentIntentQueryBuilder
+    {
+        $builder = $this->query()->forMerchant($merchantAccountId);
+
+        if (! empty($filters['status'])) {
+            $builder->withStatus($filters['status']);
+        }
+        if (! empty($filters['currency'])) {
+            $builder->withCurrency($filters['currency']);
+        }
+        if (! empty($filters['connector'])) {
+            $builder->withConnector($filters['connector']);
+        }
+        if (! empty($filters['capture_method'])) {
+            $builder->withCaptureMethod($filters['capture_method']);
+        }
+        if (isset($filters['amount_min']) || isset($filters['amount_max'])) {
+            $builder->amountBetween(
+                isset($filters['amount_min']) ? (int) $filters['amount_min'] : null,
+                isset($filters['amount_max']) ? (int) $filters['amount_max'] : null,
+            );
+        }
+        if (! empty($filters['from']) && ! empty($filters['to'])) {
+            $builder->createdBetween($filters['from'], $filters['to']);
+        }
+        if (! empty($filters['search'])) {
+            $builder->search($filters['search']);
+        }
+        if (! empty($filters['sort'])) {
+            $builder->sortBy($filters['sort']);
+        } else {
+            $builder->latest();
+        }
+
+        return $builder;
     }
 }
