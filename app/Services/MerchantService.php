@@ -11,6 +11,7 @@ use App\DataTransferObjects\Admin\CreateOrganizationData;
 use App\DataTransferObjects\Admin\UpdateMerchantAccountData;
 use App\DataTransferObjects\Admin\UpdateOrganizationData;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
@@ -52,7 +53,7 @@ final readonly class MerchantService
     {
         $org = $this->merchantRepository->findOrganizationByKey($orgKey);
 
-        return $org->load('merchantAccounts')->merchantAccounts;
+        return $org->load('merchantAccounts.organization')->merchantAccounts;
     }
 
     public function createOrganization(CreateOrganizationData $dto): Organization
@@ -98,6 +99,11 @@ final readonly class MerchantService
         return $this->merchantRepository->listApiKeysByMerchant($merchantId);
     }
 
+    public function paginateApiKeys(int|string $merchantId, int $perPage = 20): LengthAwarePaginator
+    {
+        return $this->merchantRepository->paginateApiKeysByMerchant($merchantId, $perPage);
+    }
+
     /**
      * @return array{apiKey: ApiKey, rawKey: string}
      */
@@ -112,6 +118,7 @@ final readonly class MerchantService
             'key_hash' => hash('sha256', $rawKey),
             'key_prefix' => substr($rawKey, 0, 20),
             'name' => $dto->name,
+            'type' => $dto->type,
         ]);
 
         return ['apiKey' => $apiKey, 'rawKey' => $rawKey];

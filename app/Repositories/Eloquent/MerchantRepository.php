@@ -6,6 +6,7 @@ namespace App\Repositories\Eloquent;
 
 use App\Builders\MerchantConnectorQueryBuilder;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
@@ -62,7 +63,10 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function findProfileByKey(string $key): BusinessProfile
     {
-        return BusinessProfile::with('merchantAccount')->where('key', $key)->firstOrFail();
+        return BusinessProfile::with('merchantAccount')
+            ->withCount(['connectorAccounts', 'routingRules'])
+            ->where('key', $key)
+            ->firstOrFail();
     }
 
     public function findConnectorByKey(string $key): MerchantConnectorAccount
@@ -159,6 +163,13 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
             ->get();
     }
 
+    public function paginateApiKeysByMerchant(int|string $merchantAccountId, int $perPage = 20): LengthAwarePaginator
+    {
+        return ApiKey::where('merchant_account_id', $merchantAccountId)
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+    }
+
     public function revokeApiKey(int|string $merchantAccountId, string $apiKeyKey): void
     {
         $apiKey = ApiKey::where('merchant_account_id', $merchantAccountId)
@@ -171,7 +182,10 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function listProfilesByMerchant(int|string $merchantAccountId): Collection
     {
-        return BusinessProfile::with('merchantAccount')->where('merchant_account_id', $merchantAccountId)->get();
+        return BusinessProfile::with('merchantAccount')
+            ->withCount(['connectorAccounts', 'routingRules'])
+            ->where('merchant_account_id', $merchantAccountId)
+            ->get();
     }
 
     public function updateProfile(BusinessProfile $profile, array $attributes): BusinessProfile
@@ -185,7 +199,7 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
     {
         $org->update($attributes);
 
-        return $org->fresh();
+        return $org->fresh()->loadCount('merchantAccounts');
     }
 
     public function deleteOrganization(Organization $org): void
@@ -197,7 +211,7 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
     {
         $merchant->update($attributes);
 
-        return $merchant->fresh('organization');
+        return $merchant->fresh('organization')->loadCount(['businessProfiles', 'connectorAccounts']);
     }
 
     public function deleteMerchant(MerchantAccount $merchant): void

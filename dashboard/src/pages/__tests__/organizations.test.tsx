@@ -17,9 +17,13 @@ vi.mock('@/api/endpoints/dashboard-orgs', () => ({
     list: vi.fn().mockReturnValue(new Promise(() => {})),
     get: vi.fn().mockReturnValue(new Promise(() => {})),
     create: vi.fn(),
+    updateOrg: vi.fn(),
+    deleteOrg: vi.fn(),
     listMerchants: vi.fn().mockReturnValue(new Promise(() => {})),
     getMerchant: vi.fn().mockReturnValue(new Promise(() => {})),
     createMerchant: vi.fn(),
+    updateMerchant: vi.fn(),
+    deleteMerchant: vi.fn(),
   },
 }))
 
