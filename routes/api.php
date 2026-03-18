@@ -90,7 +90,10 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
 
     // Customers (Story 13-1)
     Route::get('/customers', [DashboardCustomerController::class, 'index']);
+    Route::post('/customers', [DashboardCustomerController::class, 'store']);
     Route::get('/customers/{customerKey}', [DashboardCustomerController::class, 'show']);
+    Route::patch('/customers/{customerKey}', [DashboardCustomerController::class, 'update']);
+    Route::delete('/customers/{customerKey}', [DashboardCustomerController::class, 'destroy']);
 
     // Connectors (Story 13-2)
     Route::get('/connectors', [DashboardConnectorController::class, 'index']);

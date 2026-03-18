@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\DataTransferObjects\Customer\CreateCustomerData;
+use App\DataTransferObjects\Customer\UpdateCustomerData;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CustomerResource;
 use App\Services\CustomerService;
@@ -35,6 +37,37 @@ final class DashboardCustomerController extends Controller
     }
 
     /**
+     * Create customer
+     *
+     * Create a new customer for the current merchant.
+     */
+    #[Response(201, description: 'Customer created')]
+    #[Response(422, description: 'Validation error')]
+    public function store(Request $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+
+        $validated = $request->validate([
+            'data.attributes.name' => 'sometimes|string|max:255',
+            'data.attributes.email' => 'sometimes|email|max:255',
+            'data.attributes.phone' => 'sometimes|string|max:20',
+            'data.attributes.phone_country_code' => 'sometimes|string|max:5',
+            'data.attributes.description' => 'sometimes|string|max:1000',
+            'data.attributes.metadata' => 'sometimes|array',
+        ]);
+
+        $customer = $this->customerService->create(
+            CreateCustomerData::from($validated['data']['attributes'] ?? []),
+            $merchantId,
+        );
+
+        return (new CustomerResource($customer))
+            ->withStatus(201)
+            ->withHeader('Location', "/api/v1/dashboard/customers/{$customer->key}")
+            ->toResponse($request);
+    }
+
+    /**
      * Get customer
      *
      * Retrieve a single customer with details.
@@ -48,5 +81,52 @@ final class DashboardCustomerController extends Controller
         $customer = $this->customerService->find($customerKey, $merchantId);
 
         return (new CustomerResource($customer))->toResponse($request);
+    }
+
+    /**
+     * Update customer
+     *
+     * Update customer fields. Only provided fields are changed.
+     */
+    #[PathParameter('customerKey', description: 'Customer public key', example: 'cus_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Customer updated')]
+    #[Response(404, description: 'Customer not found')]
+    #[Response(422, description: 'Validation error')]
+    public function update(string $customerKey, Request $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+
+        $validated = $request->validate([
+            'data.attributes.name' => 'sometimes|string|max:255',
+            'data.attributes.email' => 'sometimes|email|max:255',
+            'data.attributes.phone' => 'sometimes|string|max:20',
+            'data.attributes.phone_country_code' => 'sometimes|string|max:5',
+            'data.attributes.description' => 'sometimes|string|max:1000',
+            'data.attributes.metadata' => 'sometimes|array',
+        ]);
+
+        $customer = $this->customerService->update(
+            $customerKey,
+            UpdateCustomerData::from($validated['data']['attributes'] ?? []),
+            $merchantId,
+        );
+
+        return (new CustomerResource($customer))->toResponse($request);
+    }
+
+    /**
+     * Delete customer
+     *
+     * Remove a customer.
+     */
+    #[PathParameter('customerKey', description: 'Customer public key', example: 'cus_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(204, description: 'Customer deleted')]
+    #[Response(404, description: 'Customer not found')]
+    public function destroy(string $customerKey, Request $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+        $this->customerService->delete($customerKey, $merchantId);
+
+        return response()->json(null, 204);
     }
 }
