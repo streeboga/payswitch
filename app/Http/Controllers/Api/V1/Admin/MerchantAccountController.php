@@ -25,8 +25,7 @@ final class MerchantAccountController extends Controller
      */
     public function store(StoreMerchantAccountRequest $request): JsonResponse
     {
-        $attrs = $request->validatedAttributes();
-        $merchant = $this->merchantService->createMerchantAccount($attrs);
+        $merchant = $this->merchantService->createMerchantAccount($request->toDto());
 
         return (new MerchantAccountResource($merchant))
             ->withStatus(201)

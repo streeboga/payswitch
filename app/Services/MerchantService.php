@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DataTransferObjects\Admin\CreateApiKeyData;
+use App\DataTransferObjects\Admin\CreateBusinessProfileData;
+use App\DataTransferObjects\Admin\CreateMerchantAccountData;
+use App\DataTransferObjects\Admin\CreateOrganizationData;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
@@ -17,11 +21,9 @@ final class MerchantService
         private MerchantRepositoryInterface $merchantRepository,
     ) {}
 
-    public function createOrganization(array $data): Organization
+    public function createOrganization(CreateOrganizationData $dto): Organization
     {
-        return $this->merchantRepository->createOrganization([
-            'name' => $data['name'],
-        ]);
+        return $this->merchantRepository->createOrganization($dto->toArray());
     }
 
     public function findMerchant(string $merchantKey): MerchantAccount
@@ -29,13 +31,13 @@ final class MerchantService
         return $this->merchantRepository->findMerchantByKey($merchantKey);
     }
 
-    public function createMerchantAccount(array $data): MerchantAccount
+    public function createMerchantAccount(CreateMerchantAccountData $dto): MerchantAccount
     {
-        $organization = $this->merchantRepository->findOrganizationByKey($data['organization_id']);
+        $organization = $this->merchantRepository->findOrganizationByKey($dto->organization_id);
 
         return $this->merchantRepository->createMerchantAccount([
             'org_id' => $organization->id,
-            'name' => $data['name'],
+            'name' => $dto->name,
         ]);
     }
 
@@ -44,20 +46,20 @@ final class MerchantService
         return $this->merchantRepository->findProfileByKey($profileKey);
     }
 
-    public function createBusinessProfile(array $data): BusinessProfile
+    public function createBusinessProfile(CreateBusinessProfileData $dto): BusinessProfile
     {
-        $merchant = $this->merchantRepository->findMerchantByKey($data['merchant_id']);
+        $merchant = $this->merchantRepository->findMerchantByKey($dto->merchant_id);
 
         return $this->merchantRepository->createBusinessProfile([
             'merchant_account_id' => $merchant->id,
-            'webhook_url' => $data['webhook_url'] ?? null,
+            'webhook_url' => $dto->webhook_url,
         ]);
     }
 
     /**
      * @return array{apiKey: ApiKey, rawKey: string}
      */
-    public function createApiKey(string $merchantKey, ?string $name = null): array
+    public function createApiKey(string $merchantKey, CreateApiKeyData $dto): array
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
 
@@ -67,7 +69,7 @@ final class MerchantService
             'merchant_account_id' => $merchant->id,
             'key_hash' => bcrypt($rawKey),
             'key_prefix' => substr($rawKey, 0, 20),
-            'name' => $name,
+            'name' => $dto->name,
         ]);
 
         return ['apiKey' => $apiKey, 'rawKey' => $rawKey];

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DataTransferObjects\Customer\CreateCustomerData;
+use App\DataTransferObjects\Customer\UpdateCustomerData;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Exceptions\PaymentException;
@@ -15,16 +17,11 @@ final class CustomerService
         private CustomerRepositoryInterface $customerRepository,
     ) {}
 
-    public function create(array $data, int|string $merchantAccountId, ?string $customId = null): Customer
+    public function create(CreateCustomerData $dto, int|string $merchantAccountId, ?string $customId = null): Customer
     {
         $attributes = [
             'merchant_account_id' => $merchantAccountId,
-            'name' => $data['name'] ?? null,
-            'email' => $data['email'] ?? null,
-            'phone' => $data['phone'] ?? null,
-            'phone_country_code' => $data['phone_country_code'] ?? null,
-            'description' => $data['description'] ?? null,
-            'metadata' => $data['metadata'] ?? null,
+            ...$dto->toArray(),
         ];
 
         if ($customId !== null) {
@@ -50,18 +47,11 @@ final class CustomerService
         return $this->customerRepository->findByKey($customerKey, $merchantAccountId);
     }
 
-    public function update(string $customerKey, array $data, int|string $merchantAccountId): Customer
+    public function update(string $customerKey, UpdateCustomerData $dto, int|string $merchantAccountId): Customer
     {
         $customer = $this->customerRepository->findByKey($customerKey, $merchantAccountId);
+        $updateData = $dto->toUpdateArray();
 
-        // Only update keys that were explicitly provided (including null values)
-        $updateData = [];
-        $allowedFields = ['name', 'email', 'phone', 'phone_country_code', 'description', 'metadata'];
-        foreach ($allowedFields as $field) {
-            if (array_key_exists($field, $data)) {
-                $updateData[$field] = $data[$field];
-            }
-        }
         if (! empty($updateData)) {
             $this->customerRepository->update($customer, $updateData);
         }
@@ -72,7 +62,6 @@ final class CustomerService
     public function delete(string $customerKey, int|string $merchantAccountId): void
     {
         $customer = $this->customerRepository->findByKey($customerKey, $merchantAccountId);
-
         $this->customerRepository->delete($customer);
     }
 }

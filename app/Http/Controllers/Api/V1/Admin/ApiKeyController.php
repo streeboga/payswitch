@@ -26,8 +26,7 @@ final class ApiKeyController extends Controller
      */
     public function store(StoreApiKeyRequest $request, string $merchantKey): JsonResponse
     {
-        $attrs = $request->validatedAttributes();
-        $result = $this->merchantService->createApiKey($merchantKey, $attrs['name'] ?? null);
+        $result = $this->merchantService->createApiKey($merchantKey, $request->toDto());
 
         return (new ApiKeyResource($result['apiKey']))
             ->additional(['api_key' => $result['rawKey']])

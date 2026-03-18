@@ -25,8 +25,7 @@ final class BusinessProfileController extends Controller
      */
     public function store(StoreBusinessProfileRequest $request): JsonResponse
     {
-        $attrs = $request->validatedAttributes();
-        $profile = $this->merchantService->createBusinessProfile($attrs);
+        $profile = $this->merchantService->createBusinessProfile($request->toDto());
 
         return (new BusinessProfileResource($profile))
             ->withStatus(201)

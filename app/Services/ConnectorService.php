@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DataTransferObjects\Admin\CreateConnectorData;
+use App\DataTransferObjects\Admin\UpdateConnectorData;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
@@ -14,24 +16,18 @@ final class ConnectorService
         private MerchantRepositoryInterface $merchantRepository,
     ) {}
 
-    public function create(string $merchantKey, array $data): MerchantConnectorAccount
+    public function create(string $merchantKey, CreateConnectorData $dto): MerchantConnectorAccount
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
 
-        $profileId = null;
-        if (! empty($data['profile_id'])) {
-            $profile = $this->merchantRepository->findProfileByKey($data['profile_id']);
-            $profileId = $profile->id;
-        }
-
         return $this->merchantRepository->createConnector([
             'merchant_account_id' => $merchant->id,
-            'business_profile_id' => $profileId,
-            'connector_name' => $data['connector_name'],
-            'connector_type' => $data['connector_type'],
-            'connector_account_details' => $data['connector_account_details'],
-            'payment_methods_enabled' => $data['payment_methods_enabled'] ?? null,
-            'test_mode' => $data['test_mode'] ?? false,
+            'business_profile_id' => $this->resolveProfileId($dto->profile_id),
+            'connector_name' => $dto->connector_name,
+            'connector_type' => $dto->connector_type,
+            'connector_account_details' => $dto->connector_account_details,
+            'payment_methods_enabled' => $dto->payment_methods_enabled,
+            'test_mode' => $dto->test_mode,
         ]);
     }
 
@@ -49,23 +45,16 @@ final class ConnectorService
         return $this->merchantRepository->findConnectorByMerchantAndKey($merchant->id, $connectorKey);
     }
 
-    public function update(string $merchantKey, string $connectorKey, array $data): MerchantConnectorAccount
+    public function update(string $merchantKey, string $connectorKey, UpdateConnectorData $dto): MerchantConnectorAccount
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
         $connector = $this->merchantRepository->findConnectorByMerchantAndKey($merchant->id, $connectorKey);
 
-        $updateData = collect($data)->only([
-            'connector_name', 'connector_type', 'payment_methods_enabled',
-            'test_mode', 'disabled',
-        ])->toArray();
+        $updateData = $dto->toUpdateArray();
 
-        if (isset($data['connector_account_details'])) {
-            $updateData['connector_account_details'] = $data['connector_account_details'];
-        }
-
-        if (isset($data['profile_id'])) {
-            $profile = $this->merchantRepository->findProfileByKey($data['profile_id']);
-            $updateData['business_profile_id'] = $profile->id;
+        if (isset($updateData['profile_id'])) {
+            $updateData['business_profile_id'] = $this->resolveProfileId($updateData['profile_id']);
+            unset($updateData['profile_id']);
         }
 
         $this->merchantRepository->updateConnector($connector, $updateData);
@@ -78,5 +67,14 @@ final class ConnectorService
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
         $connector = $this->merchantRepository->findConnectorByMerchantAndKey($merchant->id, $connectorKey);
         $this->merchantRepository->deleteConnector($connector);
+    }
+
+    private function resolveProfileId(?string $profileKey): ?int
+    {
+        if (! $profileKey) {
+            return null;
+        }
+
+        return $this->merchantRepository->findProfileByKey($profileKey)->id;
     }
 }

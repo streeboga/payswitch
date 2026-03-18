@@ -40,11 +40,10 @@ final class CustomerController extends Controller
      */
     public function store(StoreCustomerRequest $request): JsonResponse
     {
-        $attributes = $request->validated('data.attributes') ?? [];
         $customId = $request->input('data.id');
         $merchantAccountId = $request->attributes->get('merchant_id');
 
-        $customer = $this->customerService->create($attributes, $merchantAccountId, $customId);
+        $customer = $this->customerService->create($request->toDto(), $merchantAccountId, $customId);
 
         return (new CustomerResource($customer))
             ->withStatus(201)
@@ -72,10 +71,9 @@ final class CustomerController extends Controller
      */
     public function update(string $customerKey, UpdateCustomerRequest $request): JsonResponse
     {
-        $attributes = $request->validated('data.attributes') ?? [];
         $merchantAccountId = $request->attributes->get('merchant_id');
 
-        $customer = $this->customerService->update($customerKey, $attributes, $merchantAccountId);
+        $customer = $this->customerService->update($customerKey, $request->toDto(), $merchantAccountId);
 
         return (new CustomerResource($customer))->toResponse($request);
     }

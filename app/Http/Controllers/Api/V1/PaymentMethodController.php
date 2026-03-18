@@ -27,9 +27,8 @@ final class PaymentMethodController extends Controller
     public function store(string $customerKey, StorePaymentMethodRequest $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
-        $attributes = $request->validatedAttributes();
 
-        $pm = $this->paymentMethodService->create($attributes, $customerKey, $merchantAccountId);
+        $pm = $this->paymentMethodService->create($request->toDto(), $customerKey, $merchantAccountId);
 
         return (new PaymentMethodResource($pm))
             ->withStatus(201)
