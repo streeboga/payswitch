@@ -1,0 +1,18 @@
+{
+    "id": "evt_2TEST",
+    "type": "payment_intent.payment_failed",
+    "data": {
+        "object": {
+            "id": "pi_2TEST",
+            "object": "payment_intent",
+            "amount": 5000,
+            "currency": "usd",
+            "status": "requires_payment_method",
+            "last_payment_error": {
+                "code": "card_declined",
+                "message": "Your card was declined."
+            },
+            "metadata": {"payment_id": "pay_06TESTWEBHOOK"}
+        }
+    }
+}

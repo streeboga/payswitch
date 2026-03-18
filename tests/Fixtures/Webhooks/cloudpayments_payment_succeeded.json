@@ -1,0 +1,16 @@
+{
+    "TransactionId": 504735239,
+    "Amount": 50.00,
+    "Currency": "RUB",
+    "DateTime": "2026-03-19T12:00:00",
+    "CardFirstSix": "424242",
+    "CardLastFour": "4242",
+    "CardType": "Visa",
+    "CardExpDate": "12/30",
+    "TestMode": true,
+    "Status": "Completed",
+    "OperationType": "Payment",
+    "InvoiceId": "pay_01TESTWEBHOOK",
+    "AccountId": "user@example.com",
+    "Name": "Test User"
+}
