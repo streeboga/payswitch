@@ -61,6 +61,6 @@ async function initI18n() {
   }
 }
 
-void initI18n()
+export const i18nReady = initI18n()
 
 export default i18n
