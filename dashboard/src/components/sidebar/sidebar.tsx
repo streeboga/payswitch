@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react'
-import { PanelLeftClose, PanelLeft, LogOut, Sun, Moon, Monitor } from 'lucide-react'
-import { useNavigate } from '@tanstack/react-router'
+import { PanelLeftClose, PanelLeft, LogOut, Sun, Moon, Monitor, Settings, Bell, User } from 'lucide-react'
+import { useNavigate, Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from 'next-themes'
 import { useAuthStore } from '@/stores/auth'
@@ -11,6 +11,7 @@ import { supportedLanguages } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { getNavGroups } from './nav-config'
 import { NavItem } from './nav-item'
 import { TestLiveToggle } from './test-live-toggle'
@@ -151,13 +152,11 @@ export function Sidebar() {
         sidebarCollapsed ? 'w-16' : 'w-60'
       }`}
     >
-      <div className="border-border flex items-center justify-between border-b px-2 py-1">
-        <TestLiveToggle />
-        <NotificationBell />
-      </div>
-
-      <div className="border-border border-b">
+      <div className="border-border flex items-center gap-1 border-b px-2 py-1.5">
         <ContextSwitcher />
+        <TestLiveToggle />
+        <div className="flex-1" />
+        <NotificationBell />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-4">
@@ -178,43 +177,69 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <div className="border-border border-t px-2 py-3">
-        {!sidebarCollapsed && userEmail ? (
-          <div className="mb-2 flex items-center gap-2 px-3">
-            <span className="text-muted-foreground truncate text-xs">{userEmail}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-auto size-7"
-              onClick={handleLogout}
-              aria-label={t('sidebar.logout')}
-            >
-              <LogOut className="size-3.5" />
-            </Button>
-          </div>
-        ) : sidebarCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="mx-auto flex size-8"
-                onClick={handleLogout}
-                aria-label={t('sidebar.logout')}
-              >
-                <LogOut className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={8}>
-              {t('sidebar.logout')}
-            </TooltipContent>
-          </Tooltip>
-        ) : null}
+      <div className="border-border border-t px-2 py-2">
+        <div className={`flex items-center ${sidebarCollapsed ? 'flex-col gap-1' : 'gap-1'}`}>
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  {sidebarCollapsed ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="mx-auto flex size-8"
+                      aria-label={userEmail ?? t('sidebar.account')}
+                    >
+                      <User className="size-4" />
+                    </Button>
+                  ) : (
+                    <button className="hover:bg-accent flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 transition-colors">
+                      <User className="text-muted-foreground size-3.5 shrink-0" />
+                      <span className="text-muted-foreground truncate text-xs">{userEmail}</span>
+                    </button>
+                  )}
+                </PopoverTrigger>
+              </TooltipTrigger>
+              {sidebarCollapsed && (
+                <TooltipContent side="right" sideOffset={8}>
+                  {userEmail ?? t('sidebar.account')}
+                </TooltipContent>
+              )}
+            </Tooltip>
 
-        <div className={`flex items-center ${sidebarCollapsed ? 'flex-col gap-1' : 'gap-1 px-1'}`}>
+            <PopoverContent
+              side={sidebarCollapsed ? 'right' : 'top'}
+              align="start"
+              sideOffset={8}
+              className="w-48 p-1"
+            >
+              <Link
+                to="/settings"
+                className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors"
+              >
+                <Settings className="size-3.5" />
+                {t('sidebar.settings')}
+              </Link>
+              <Link
+                to="/notifications"
+                className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors"
+              >
+                <Bell className="size-3.5" />
+                {t('sidebar.notifications')}
+              </Link>
+              <Separator className="my-1" />
+              <button
+                onClick={handleLogout}
+                className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors"
+              >
+                <LogOut className="size-3.5" />
+                {t('sidebar.logout')}
+              </button>
+            </PopoverContent>
+          </Popover>
+
           <ThemeToggle collapsed={sidebarCollapsed} />
           <LanguageToggle collapsed={sidebarCollapsed} />
-          {!sidebarCollapsed && <div className="flex-1" />}
           {sidebarCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -233,15 +258,20 @@ export function Sidebar() {
               </TooltipContent>
             </Tooltip>
           ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="justify-start gap-2"
-              onClick={toggleSidebar}
-            >
-              <PanelLeftClose className="size-4" />
-              <span>{t('sidebar.collapseSidebar')}</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  onClick={toggleSidebar}
+                  aria-label={t('sidebar.collapseSidebar')}
+                >
+                  <PanelLeftClose className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('sidebar.collapseSidebar')}</TooltipContent>
+            </Tooltip>
           )}
         </div>
       </div>

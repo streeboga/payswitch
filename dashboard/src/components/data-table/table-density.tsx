@@ -1,8 +1,10 @@
-import { AlignJustify, AlignCenter, AlignLeft } from 'lucide-react'
+import { AlignJustify, AlignCenter, AlignLeft, Rows3 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { usePreferencesStore, type Density } from '@/stores/preferences'
+import { cn } from '@/lib/utils'
 
 const DENSITY_OPTIONS: {
   value: Density
@@ -20,24 +22,43 @@ export function TableDensityToggle() {
   const setDensity = usePreferencesStore((s) => s.setDensity)
 
   return (
-    <ToggleGroup
-      type="single"
-      value={density}
-      onValueChange={(v) => {
-        if (v) setDensity(v as Density)
-      }}
-      size="sm"
-    >
-      {DENSITY_OPTIONS.map((opt) => (
-        <Tooltip key={opt.value}>
-          <TooltipTrigger asChild>
-            <ToggleGroupItem value={opt.value} aria-label={t(opt.labelKey)} className="h-8 w-8">
-              <opt.icon className="h-3.5 w-3.5" />
-            </ToggleGroupItem>
-          </TooltipTrigger>
-          <TooltipContent>{t(opt.labelKey)}</TooltipContent>
-        </Tooltip>
-      ))}
-    </ToggleGroup>
+    <Popover>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              aria-label={t('table.density')}
+            >
+              <Rows3 className="size-4" />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{t('table.density')}</TooltipContent>
+      </Tooltip>
+
+      <PopoverContent align="end" className="w-36 p-1">
+        {DENSITY_OPTIONS.map((opt) => {
+          const Icon = opt.icon
+          return (
+            <button
+              key={opt.value}
+              onClick={() => setDensity(opt.value)}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors',
+                density === opt.value
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+              )}
+            >
+              <Icon className="size-3.5" />
+              {t(opt.labelKey)}
+            </button>
+          )
+        })}
+      </PopoverContent>
+    </Popover>
   )
 }

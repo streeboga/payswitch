@@ -3,27 +3,15 @@ import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 
 let mockTestMode = true
 const mockSetTestMode = vi.fn()
-let mockSidebarCollapsed = false
 
 const mockContextStore = () => ({
   testMode: mockTestMode,
   setTestMode: mockSetTestMode,
 })
 
-const mockPrefsStore = () => ({
-  sidebarCollapsed: mockSidebarCollapsed,
-})
-
 vi.mock('@/stores/context', () => ({
   useContextStore: (selector?: (state: ReturnType<typeof mockContextStore>) => unknown) => {
     const state = mockContextStore()
-    return selector ? selector(state) : state
-  },
-}))
-
-vi.mock('@/stores/preferences', () => ({
-  usePreferencesStore: (selector?: (state: ReturnType<typeof mockPrefsStore>) => unknown) => {
-    const state = mockPrefsStore()
     return selector ? selector(state) : state
   },
 }))
@@ -51,7 +39,6 @@ describe('TestLiveToggle', () => {
 
   beforeEach(() => {
     mockTestMode = true
-    mockSidebarCollapsed = false
     mockSetTestMode.mockClear()
   })
 
@@ -60,35 +47,33 @@ describe('TestLiveToggle', () => {
     render(<TestLiveToggle />)
 
     expect(screen.getByTestId('test-live-toggle')).toBeDefined()
-    expect(screen.getByTestId('test-badge')).toBeDefined()
+    expect(screen.getByText('Test')).toBeDefined()
   })
 
-  it('shows "Test" badge in test mode', async () => {
+  it('shows "Test" text in test mode', async () => {
     const { TestLiveToggle } = await import('../test-live-toggle')
     render(<TestLiveToggle />)
 
-    expect(screen.getByTestId('test-badge')).toBeDefined()
     expect(screen.getByText('Test')).toBeDefined()
-    expect(screen.queryByTestId('live-badge')).toBeNull()
+    expect(screen.queryByText('Live')).toBeNull()
   })
 
-  it('shows "Live" badge when in live mode', async () => {
+  it('shows "Live" text when in live mode', async () => {
     mockTestMode = false
     const { TestLiveToggle } = await import('../test-live-toggle')
     render(<TestLiveToggle />)
 
-    expect(screen.getByTestId('live-badge')).toBeDefined()
     expect(screen.getByText('Live')).toBeDefined()
-    expect(screen.queryByTestId('test-badge')).toBeNull()
+    expect(screen.queryByText('Test')).toBeNull()
   })
 
   it('shows confirm dialog when switching to Live', async () => {
     const { TestLiveToggle } = await import('../test-live-toggle')
     render(<TestLiveToggle />)
 
-    // Click the switch to toggle to Live
-    const switchEl = screen.getByRole('switch')
-    fireEvent.click(switchEl)
+    // Click the toggle button
+    const toggle = screen.getByTestId('test-live-toggle')
+    fireEvent.click(toggle)
 
     // Confirm dialog should appear
     expect(screen.getByText('testLiveToggle.confirmTitle')).toBeDefined()
@@ -99,9 +84,9 @@ describe('TestLiveToggle', () => {
     const { TestLiveToggle } = await import('../test-live-toggle')
     render(<TestLiveToggle />)
 
-    // Click the switch to toggle to Live
-    const switchEl = screen.getByRole('switch')
-    fireEvent.click(switchEl)
+    // Click the toggle button
+    const toggle = screen.getByTestId('test-live-toggle')
+    fireEvent.click(toggle)
 
     // Confirm the dialog
     fireEvent.click(screen.getByRole('button', { name: /testLiveToggle\.confirmButton/i }))
@@ -112,8 +97,8 @@ describe('TestLiveToggle', () => {
     const { TestLiveToggle } = await import('../test-live-toggle')
     render(<TestLiveToggle />)
 
-    const switchEl = screen.getByRole('switch')
-    fireEvent.click(switchEl)
+    const toggle = screen.getByTestId('test-live-toggle')
+    fireEvent.click(toggle)
 
     // Cancel the dialog
     fireEvent.click(screen.getByRole('button', { name: /common\.cancel/i }))
@@ -125,20 +110,11 @@ describe('TestLiveToggle', () => {
     const { TestLiveToggle } = await import('../test-live-toggle')
     render(<TestLiveToggle />)
 
-    const switchEl = screen.getByRole('switch')
-    fireEvent.click(switchEl)
+    const toggle = screen.getByTestId('test-live-toggle')
+    fireEvent.click(toggle)
 
     // Should switch immediately without confirm dialog
     expect(mockSetTestMode).toHaveBeenCalledWith(true)
     expect(screen.queryByText('testLiveToggle.confirmTitle')).toBeNull()
-  })
-
-  it('shows colored dot indicator when sidebar is collapsed', async () => {
-    mockSidebarCollapsed = true
-    const { TestLiveToggle } = await import('../test-live-toggle')
-    render(<TestLiveToggle />)
-
-    expect(screen.getByTestId('test-live-indicator')).toBeDefined()
-    expect(screen.queryByTestId('test-live-toggle')).toBeNull()
   })
 })

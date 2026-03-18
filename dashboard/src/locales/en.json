@@ -179,6 +179,7 @@
     "maxPlaceholder": "Max",
     "exportButton": "Export",
     "exportTooltip": "Export as CSV",
+    "density": "Row density",
     "compact": "Compact",
     "comfortable": "Comfortable",
     "spacious": "Spacious",

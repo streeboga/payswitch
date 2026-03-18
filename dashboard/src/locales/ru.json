@@ -179,6 +179,7 @@
     "maxPlaceholder": "Макс",
     "exportButton": "Экспорт",
     "exportTooltip": "Экспортировать в CSV",
+    "density": "Плотность строк",
     "compact": "Компактная",
     "comfortable": "Удобная",
     "spacious": "Просторная",

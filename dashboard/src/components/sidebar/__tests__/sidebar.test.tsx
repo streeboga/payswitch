@@ -76,6 +76,10 @@ vi.mock('@/components/context-switcher/context-switcher', () => ({
   ContextSwitcher: () => <div data-testid="context-switcher" />,
 }))
 
+vi.mock('../test-live-toggle', () => ({
+  TestLiveToggle: () => <div data-testid="test-live-toggle" />,
+}))
+
 // Mock NotificationBell to avoid needing QueryClientProvider
 vi.mock('@/components/notifications/notification-bell', () => ({
   NotificationBell: () => <div data-testid="notification-bell" />,
@@ -137,7 +141,7 @@ describe('Sidebar', () => {
   })
 
   it('shows admin group for admin users', async () => {
-    mockAuthStore.user = { ...mockUser, role: 'admin' }
+    mockAuthStore.user = { ...mockUser, role: 'admin', roles: [{ organization_id: 'org1', role: 'admin' }] }
     const { Sidebar } = await import('../sidebar')
     render(<Sidebar />)
 
@@ -175,8 +179,8 @@ describe('Sidebar', () => {
 })
 
 describe('nav-config', () => {
-  it('has 5 navigation groups', () => {
-    expect(navGroups).toHaveLength(5)
+  it('has 4 navigation groups', () => {
+    expect(navGroups).toHaveLength(4)
   })
 
   it('marks admin group with adminOnly flag', () => {

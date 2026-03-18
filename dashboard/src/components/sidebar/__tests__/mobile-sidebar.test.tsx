@@ -54,6 +54,10 @@ vi.mock('@/components/context-switcher/context-switcher', () => ({
   ContextSwitcher: () => <div data-testid="context-switcher" />,
 }))
 
+vi.mock('../test-live-toggle', () => ({
+  TestLiveToggle: () => <div data-testid="test-live-toggle" />,
+}))
+
 vi.mock('@/components/notifications/notification-bell', () => ({
   NotificationBell: () => <div data-testid="notification-bell" />,
 }))
@@ -140,7 +144,7 @@ describe('MobileSidebar', () => {
   })
 
   it('shows admin group for admin users', async () => {
-    mockAuthStore.user = { ...mockUser, role: 'admin' }
+    mockAuthStore.user = { ...mockUser, role: 'admin', roles: [{ organization_id: 'org1', role: 'admin' }] }
     const { MobileSidebar } = await import('../mobile-sidebar')
     render(<MobileSidebar />)
 

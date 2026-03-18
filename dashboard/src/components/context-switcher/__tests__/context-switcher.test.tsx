@@ -12,18 +12,9 @@ const mockContextState = {
   setProfile: vi.fn(),
 }
 
-const mockPrefsState = {
-  sidebarCollapsed: false,
-}
-
 vi.mock('@/stores/context', () => ({
   useContextStore: (selector?: (state: typeof mockContextState) => unknown) =>
     selector ? selector(mockContextState) : mockContextState,
-}))
-
-vi.mock('@/stores/preferences', () => ({
-  usePreferencesStore: (selector?: (state: typeof mockPrefsState) => unknown) =>
-    selector ? selector(mockPrefsState) : mockPrefsState,
 }))
 
 // Mock hooks
@@ -57,6 +48,26 @@ vi.mock('@/components/ui/tooltip', () => ({
     asChild?: boolean
   }) => <div {...props}>{children}</div>,
   TooltipContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
+// Mock Popover — render trigger + content inline for testability
+vi.mock('@/components/ui/popover', () => ({
+  Popover: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  PopoverTrigger: ({
+    children,
+    asChild: _asChild,
+  }: {
+    children: React.ReactNode
+    asChild?: boolean
+  }) => <>{children}</>,
+  PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
+// Mock Avatar components
+vi.mock('@/components/ui/avatar', () => ({
+  Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AvatarFallback: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  AvatarGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
 // Mock Select to avoid Radix portal issues
@@ -113,20 +124,30 @@ describe('ContextSwitcher', () => {
     cleanup()
   })
 
-  it('renders 3 selects for org, merchant, and profile', async () => {
+  it('renders context-switcher test id', async () => {
+    const { ContextSwitcher } = await import('../context-switcher')
+    render(<ContextSwitcher />, { wrapper: createWrapper() })
+
+    expect(screen.getByTestId('context-switcher')).toBeDefined()
+  })
+
+  it('renders avatar initials for org, merchant, and profile', async () => {
+    const { ContextSwitcher } = await import('../context-switcher')
+    render(<ContextSwitcher />, { wrapper: createWrapper() })
+
+    // Org initial "O", Merchant initial "M", Profile "*" (all profiles)
+    expect(screen.getByText('O')).toBeDefined()
+    expect(screen.getByText('M')).toBeDefined()
+    expect(screen.getByText('*')).toBeDefined()
+  })
+
+  it('renders 3 selects in popover content', async () => {
     const { ContextSwitcher } = await import('../context-switcher')
     render(<ContextSwitcher />, { wrapper: createWrapper() })
 
     expect(screen.getByTestId('org-select')).toBeDefined()
     expect(screen.getByTestId('merchant-select')).toBeDefined()
     expect(screen.getByTestId('profile-select')).toBeDefined()
-  })
-
-  it('renders context-switcher test id', async () => {
-    const { ContextSwitcher } = await import('../context-switcher')
-    render(<ContextSwitcher />, { wrapper: createWrapper() })
-
-    expect(screen.getByTestId('context-switcher')).toBeDefined()
   })
 
   it('renders labels for organization, merchant, and profile', async () => {

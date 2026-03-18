@@ -24,6 +24,31 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
+// Mock Popover — render content inline for testability
+vi.mock('@/components/ui/popover', () => ({
+  Popover: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  PopoverTrigger: ({
+    children,
+    asChild: _asChild,
+  }: {
+    children: React.ReactNode
+    asChild?: boolean
+  }) => <>{children}</>,
+  PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+
+// Mock Button
+vi.mock('@/components/ui/button', () => ({
+  Button: ({
+    children,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: string
+    size?: string
+    asChild?: boolean
+  }) => <button {...props}>{children}</button>,
+}))
+
 describe('TableDensityToggle', () => {
   afterEach(cleanup)
 
@@ -36,16 +61,16 @@ describe('TableDensityToggle', () => {
     const { TableDensityToggle } = await import('../table-density')
     render(<TableDensityToggle />)
 
-    expect(screen.getByLabelText('table.compact')).toBeDefined()
-    expect(screen.getByLabelText('table.comfortable')).toBeDefined()
-    expect(screen.getByLabelText('table.spacious')).toBeDefined()
+    expect(screen.getByText('table.compact')).toBeDefined()
+    expect(screen.getByText('table.comfortable')).toBeDefined()
+    expect(screen.getByText('table.spacious')).toBeDefined()
   })
 
   it('calls setDensity when clicking compact option', async () => {
     const { TableDensityToggle } = await import('../table-density')
     render(<TableDensityToggle />)
 
-    fireEvent.click(screen.getByLabelText('table.compact'))
+    fireEvent.click(screen.getByText('table.compact'))
     expect(mockPreferencesStore.setDensity).toHaveBeenCalledWith('compact')
   })
 
@@ -53,7 +78,7 @@ describe('TableDensityToggle', () => {
     const { TableDensityToggle } = await import('../table-density')
     render(<TableDensityToggle />)
 
-    fireEvent.click(screen.getByLabelText('table.spacious'))
+    fireEvent.click(screen.getByText('table.spacious'))
     expect(mockPreferencesStore.setDensity).toHaveBeenCalledWith('spacious')
   })
 })

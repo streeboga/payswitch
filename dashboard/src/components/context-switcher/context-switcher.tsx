@@ -3,7 +3,6 @@ import { Building2, Store, Briefcase } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useContextStore } from '@/stores/context'
-import { usePreferencesStore } from '@/stores/preferences'
 import { useOrganizations, useMerchants, useProfiles } from '@/hooks/use-context-data'
 import {
   Select,
@@ -13,6 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Avatar, AvatarFallback, AvatarGroup } from '@/components/ui/avatar'
 
 const ALL_PROFILES_VALUE = '__all__'
 
@@ -22,7 +23,6 @@ const EMPTY_ARRAY: never[] = []
 export function ContextSwitcher() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const sidebarCollapsed = usePreferencesStore((s) => s.sidebarCollapsed)
   const currentOrgKey = useContextStore((s) => s.currentOrgKey)
   const currentMerchantKey = useContextStore((s) => s.currentMerchantKey)
   const currentProfileKey = useContextStore((s) => s.currentProfileKey)
@@ -53,7 +53,6 @@ export function ContextSwitcher() {
   }, [queryClient])
 
   // Auto-select first org if none selected
-  // Use primitive deps (length + first key) to avoid referential instability from EMPTY_ARRAY fallback
   const firstOrgKey = organizations[0]?.key
   useEffect(() => {
     if (!currentOrgKey && firstOrgKey) {
@@ -93,127 +92,142 @@ export function ContextSwitcher() {
     [setProfile, invalidateContextQueries],
   )
 
-  if (sidebarCollapsed) {
-    return (
-      <div className="space-y-1 px-2 py-2" data-testid="context-switcher">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center justify-center py-1">
-              <Building2 className="text-muted-foreground size-4" />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            {orgMap.get(currentOrgKey ?? '')?.name ?? t('contextSwitcher.orgDefault')}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center justify-center py-1">
-              <Store className="text-muted-foreground size-4" />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            {merchantMap.get(currentMerchantKey ?? '')?.name ?? t('contextSwitcher.merchantDefault')}
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center justify-center py-1">
-              <Briefcase className="text-muted-foreground size-4" />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            {currentProfileKey
-              ? (profileMap.get(currentProfileKey)?.name ?? t('contextSwitcher.profileDefault'))
-              : t('contextSwitcher.allProfiles')}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    )
-  }
+  const orgInitial = orgMap.get(currentOrgKey ?? '')?.name?.[0]?.toUpperCase() ?? 'O'
+  const merchantInitial = merchantMap.get(currentMerchantKey ?? '')?.name?.[0]?.toUpperCase() ?? 'M'
+  const profileInitial = currentProfileKey
+    ? (profileMap.get(currentProfileKey)?.name?.[0]?.toUpperCase() ?? 'P')
+    : '*'
+
+  const summaryText = [
+    orgMap.get(currentOrgKey ?? '')?.name,
+    merchantMap.get(currentMerchantKey ?? '')?.name,
+    currentProfileKey
+      ? profileMap.get(currentProfileKey)?.name
+      : t('contextSwitcher.allProfiles'),
+  ]
+    .filter(Boolean)
+    .join(' → ')
 
   return (
-    <div className="space-y-2 px-3 py-2" data-testid="context-switcher">
-      <div>
-        <label className="text-muted-foreground mb-1 block text-[10px] font-medium tracking-wider uppercase">
-          {t('contextSwitcher.orgLabel')}
-        </label>
-        <Select
-          value={currentOrgKey ?? undefined}
-          onValueChange={handleOrgChange}
-          disabled={orgsLoading || organizations.length === 0}
-        >
-          <SelectTrigger
-            className="h-8 text-xs"
-            data-testid="org-select"
-            aria-label={t('contextSwitcher.orgLabel')}
-          >
-            <SelectValue placeholder={t('contextSwitcher.placeholder')} />
-          </SelectTrigger>
-          <SelectContent>
-            {organizations.map((org) => (
-              <SelectItem key={org.key} value={org.key} className="text-xs">
-                {org.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <Popover>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              className="hover:bg-accent flex items-center rounded-md p-1 transition-colors"
+              data-testid="context-switcher"
+              aria-label={t('contextSwitcher.orgLabel')}
+            >
+              <AvatarGroup className="-space-x-1.5">
+                <Avatar size="sm" className="border-background border-2">
+                  <AvatarFallback className="bg-blue-100 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+                    {orgInitial}
+                  </AvatarFallback>
+                </Avatar>
+                <Avatar size="sm" className="border-background border-2">
+                  <AvatarFallback className="bg-amber-100 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                    {merchantInitial}
+                  </AvatarFallback>
+                </Avatar>
+                <Avatar size="sm" className="border-background z-10 border-2">
+                  <AvatarFallback className="bg-emerald-100 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                    {profileInitial}
+                  </AvatarFallback>
+                </Avatar>
+              </AvatarGroup>
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8}>
+          {summaryText || t('contextSwitcher.placeholder')}
+        </TooltipContent>
+      </Tooltip>
 
-      <div>
-        <label className="text-muted-foreground mb-1 block text-[10px] font-medium tracking-wider uppercase">
-          {t('contextSwitcher.merchantLabel')}
-        </label>
-        <Select
-          value={currentMerchantKey ?? undefined}
-          onValueChange={handleMerchantChange}
-          disabled={!currentOrgKey || merchantsLoading || merchants.length === 0}
-        >
-          <SelectTrigger
-            className="h-8 text-xs"
-            data-testid="merchant-select"
-            aria-label={t('contextSwitcher.merchantLabel')}
+      <PopoverContent side="right" align="start" sideOffset={8} className="w-64 space-y-3 p-3">
+        <div>
+          <label className="text-muted-foreground mb-1 flex items-center gap-1.5 text-[10px] font-medium tracking-wider uppercase">
+            <Building2 className="size-3" />
+            {t('contextSwitcher.orgLabel')}
+          </label>
+          <Select
+            value={currentOrgKey ?? undefined}
+            onValueChange={handleOrgChange}
+            disabled={orgsLoading || organizations.length === 0}
           >
-            <SelectValue placeholder={t('contextSwitcher.placeholder')} />
-          </SelectTrigger>
-          <SelectContent>
-            {merchants.map((merchant) => (
-              <SelectItem key={merchant.key} value={merchant.key} className="text-xs">
-                {merchant.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            <SelectTrigger
+              className="h-8 text-xs"
+              data-testid="org-select"
+              aria-label={t('contextSwitcher.orgLabel')}
+            >
+              <SelectValue placeholder={t('contextSwitcher.placeholder')} />
+            </SelectTrigger>
+            <SelectContent>
+              {organizations.map((org) => (
+                <SelectItem key={org.key} value={org.key} className="text-xs">
+                  {org.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div>
-        <label className="text-muted-foreground mb-1 block text-[10px] font-medium tracking-wider uppercase">
-          {t('contextSwitcher.profileLabel')}
-        </label>
-        <Select
-          value={currentProfileKey ?? ALL_PROFILES_VALUE}
-          onValueChange={handleProfileChange}
-          disabled={!currentMerchantKey || profilesLoading}
-        >
-          <SelectTrigger
-            className="h-8 text-xs"
-            data-testid="profile-select"
-            aria-label={t('contextSwitcher.profileLabel')}
+        <div>
+          <label className="text-muted-foreground mb-1 flex items-center gap-1.5 text-[10px] font-medium tracking-wider uppercase">
+            <Store className="size-3" />
+            {t('contextSwitcher.merchantLabel')}
+          </label>
+          <Select
+            value={currentMerchantKey ?? undefined}
+            onValueChange={handleMerchantChange}
+            disabled={!currentOrgKey || merchantsLoading || merchants.length === 0}
           >
-            <SelectValue placeholder={t('contextSwitcher.allProfiles')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_PROFILES_VALUE} className="text-xs">
-              {t('contextSwitcher.allProfiles')}
-            </SelectItem>
-            {profiles.map((profile) => (
-              <SelectItem key={profile.key} value={profile.key} className="text-xs">
-                {profile.name}
+            <SelectTrigger
+              className="h-8 text-xs"
+              data-testid="merchant-select"
+              aria-label={t('contextSwitcher.merchantLabel')}
+            >
+              <SelectValue placeholder={t('contextSwitcher.placeholder')} />
+            </SelectTrigger>
+            <SelectContent>
+              {merchants.map((merchant) => (
+                <SelectItem key={merchant.key} value={merchant.key} className="text-xs">
+                  {merchant.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="text-muted-foreground mb-1 flex items-center gap-1.5 text-[10px] font-medium tracking-wider uppercase">
+            <Briefcase className="size-3" />
+            {t('contextSwitcher.profileLabel')}
+          </label>
+          <Select
+            value={currentProfileKey ?? ALL_PROFILES_VALUE}
+            onValueChange={handleProfileChange}
+            disabled={!currentMerchantKey || profilesLoading}
+          >
+            <SelectTrigger
+              className="h-8 text-xs"
+              data-testid="profile-select"
+              aria-label={t('contextSwitcher.profileLabel')}
+            >
+              <SelectValue placeholder={t('contextSwitcher.allProfiles')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_PROFILES_VALUE} className="text-xs">
+                {t('contextSwitcher.allProfiles')}
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
+              {profiles.map((profile) => (
+                <SelectItem key={profile.key} value={profile.key} className="text-xs">
+                  {profile.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

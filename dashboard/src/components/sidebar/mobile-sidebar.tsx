@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Menu, LogOut } from 'lucide-react'
-import { useNavigate, useMatches } from '@tanstack/react-router'
-import { Link } from '@tanstack/react-router'
+import { Menu, LogOut, Settings, Bell } from 'lucide-react'
+import { useNavigate, useMatches, Link } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth'
 import { useContextStore } from '@/stores/context'
 import { auth } from '@/api/endpoints/auth'
@@ -63,11 +62,9 @@ export function MobileSidebar() {
           <SheetHeader className="border-border border-b p-4">
             <SheetTitle className="text-sm">{userEmail ?? t('sidebar.account')}</SheetTitle>
           </SheetHeader>
-          <div className="border-border border-b px-2 py-1">
-            <TestLiveToggle />
-          </div>
-          <div className="border-border border-b">
+          <div className="border-border flex items-center gap-1 border-b px-2 py-1.5">
             <ContextSwitcher />
+            <TestLiveToggle />
           </div>
           <nav className="flex-1 overflow-y-auto px-2 py-4">
             {visibleGroups.map((group, groupIndex) => (
@@ -106,7 +103,24 @@ export function MobileSidebar() {
               </div>
             ))}
           </nav>
-          <div className="border-border border-t p-3">
+          <div className="border-border space-y-0.5 border-t px-2 py-2">
+            <Link
+              to="/settings"
+              onClick={() => setOpen(false)}
+              className="text-muted-foreground hover:bg-accent/50 hover:text-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors"
+            >
+              <Settings className="size-4 shrink-0" />
+              <span>{t('sidebar.settings')}</span>
+            </Link>
+            <Link
+              to="/notifications"
+              onClick={() => setOpen(false)}
+              className="text-muted-foreground hover:bg-accent/50 hover:text-foreground flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors"
+            >
+              <Bell className="size-4 shrink-0" />
+              <span>{t('sidebar.notifications')}</span>
+            </Link>
+            <Separator className="my-1" />
             <Button
               variant="ghost"
               size="sm"

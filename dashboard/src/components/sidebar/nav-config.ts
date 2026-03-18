@@ -18,8 +18,6 @@ import {
   Briefcase,
   UserCog,
   FileSearch,
-  Settings,
-  Bell,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -91,12 +89,6 @@ export function getNavGroups(t: TFunction): NavGroup[] {
         },
       ],
     },
-    {
-      label: t('sidebar.account'),
-      items: [
-        { label: t('sidebar.settings'), path: '/settings', icon: Settings },
-        { label: t('sidebar.notifications'), path: '/notifications', icon: Bell },
-      ],
-    },
+    // Account items (Settings, Notifications) are rendered in the sidebar bottom bar
   ]
 }
