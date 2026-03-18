@@ -30,8 +30,12 @@ abstract class JsonApiResource extends JsonResource
 
     /**
      * Return the resource's attributes.
+     * Subclasses MUST override this method.
      */
-    abstract public function toAttributes(Request $request): array;
+    public function toAttributes(Request $request): array
+    {
+        return [];
+    }
 
     /**
      * Return the resource's relationships as lazy closures.

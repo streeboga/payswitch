@@ -13,6 +13,7 @@ final class StorePaymentMethodRequest extends FormRequest
         return [
             'data.attributes.type' => ['required', 'string', 'in:card,bank_account'],
             'data.attributes.connector_name' => ['required', 'string'],
+            'data.attributes.card_number' => ['sometimes', 'string', 'max:19'],
             'data.attributes.card_last4' => ['sometimes', 'string', 'size:4'],
             'data.attributes.card_brand' => ['sometimes', 'string'],
             'data.attributes.card_exp_month' => ['sometimes', 'integer', 'min:1', 'max:12'],

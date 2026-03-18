@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Http\Controllers\Api\V1\Concerns\JsonApiResponse;
 use App\Http\Requests\Api\Admin\StoreMerchantAccountRequest;
-use App\Repositories\Contracts\MerchantRepositoryInterface;
+use App\Http\Resources\MerchantAccountResource;
+use App\Services\MerchantService;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
@@ -14,65 +14,35 @@ use Illuminate\Routing\Controller;
 #[Group(name: 'Admin > Merchant Accounts', weight: 11)]
 final class MerchantAccountController extends Controller
 {
-    use JsonApiResponse;
-
     public function __construct(
-        private MerchantRepositoryInterface $merchantRepository,
+        private readonly MerchantService $merchantService,
     ) {}
 
     /**
      * Create a merchant account.
      *
-     * Creates a new merchant account under the specified organization. Each merchant account
-     * receives a unique publishable key and can have its own connectors, business profiles,
-     * and API keys.
+     * Creates a new merchant account under the specified organization.
      */
     public function store(StoreMerchantAccountRequest $request): JsonResponse
     {
         $attrs = $request->validatedAttributes();
+        $merchant = $this->merchantService->createMerchantAccount($attrs);
 
-        $organization = $this->merchantRepository->findOrganizationByKey($attrs['organization_id']);
-
-        $merchant = $this->merchantRepository->createMerchantAccount([
-            'org_id' => $organization->id,
-            'name' => $attrs['name'],
-        ]);
-
-        return $this->jsonApiResource(
-            model: $merchant,
-            type: 'merchants',
-            attributes: [
-                'name' => $merchant->name,
-                'publishable_key' => $merchant->publishable_key,
-                'organization_id' => $organization->key,
-                'created_at' => $merchant->created_at->toIso8601String(),
-            ],
-            status: 201,
-            headers: ['Location' => url("/api/v1/merchants/{$merchant->key}")],
-        );
+        return (new MerchantAccountResource($merchant))
+            ->withStatus(201)
+            ->withHeader('Location', url("/api/v1/merchants/{$merchant->key}"))
+            ->toResponse($request);
     }
 
     /**
      * Get a merchant account.
      *
-     * Retrieves the details of a merchant account including its name, publishable key,
-     * and parent organization reference.
-     *
-     * @pathParam merchantKey string required The unique key of the merchant account. Example: mer_1a2b3c4d5e
+     * Retrieves the details of a merchant account.
      */
     public function show(string $merchantKey): JsonResponse
     {
-        $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
+        $merchant = $this->merchantService->findMerchant($merchantKey);
 
-        return $this->jsonApiResource(
-            model: $merchant,
-            type: 'merchants',
-            attributes: [
-                'name' => $merchant->name,
-                'publishable_key' => $merchant->publishable_key,
-                'organization_id' => $merchant->organization->key,
-                'created_at' => $merchant->created_at->toIso8601String(),
-            ],
-        );
+        return (new MerchantAccountResource($merchant))->toResponse(request());
     }
 }

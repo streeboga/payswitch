@@ -25,6 +25,8 @@ class StorePaymentRequest extends FormRequest
             'data.attributes.confirm' => ['sometimes', 'boolean'],
             'data.attributes.payment_method' => ['required_if:data.attributes.confirm,true', 'string'],
             'data.attributes.payment_method_data' => ['required_if:data.attributes.confirm,true', 'array'],
+            'data.attributes.payment_method_data.*' => ['sometimes'],
+            'data.attributes.connector' => ['sometimes', 'string'],
         ];
     }
 

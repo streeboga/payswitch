@@ -14,6 +14,9 @@ class ConfirmPaymentRequest extends FormRequest
         return [
             'data.attributes.payment_method' => ['required', 'string'],
             'data.attributes.payment_method_data' => ['required', 'array'],
+            'data.attributes.payment_method_data.*' => ['sometimes'],
+            'data.attributes.connector' => ['sometimes', 'string'],
+            'data.attributes.payment_method_id' => ['sometimes', 'string'],
         ];
     }
 
