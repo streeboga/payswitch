@@ -8,8 +8,13 @@ use App\Http\Controllers\Api\V1\RefundController;
 use App\Http\Controllers\Api\V1\WebhookReceiverController;
 use App\Http\Controllers\Auth\UserController;
 use App\Http\Controllers\Dashboard\AnalyticsController;
+use App\Http\Controllers\Dashboard\DashboardApiKeyController;
+use App\Http\Controllers\Dashboard\DashboardConnectorController;
+use App\Http\Controllers\Dashboard\DashboardCustomerController;
 use App\Http\Controllers\Dashboard\DashboardPaymentController;
 use App\Http\Controllers\Dashboard\DashboardRefundController;
+use App\Http\Controllers\Dashboard\DashboardRoutingRuleController;
+use App\Http\Controllers\Dashboard\DashboardWebhookEventController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +38,36 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
 
     // Refunds list (Story 12-6)
     Route::get('/refunds', [DashboardRefundController::class, 'index']);
+
+    // Payment detail (Story 12-5)
+    Route::get('/payments/{paymentKey}', [DashboardPaymentController::class, 'show']);
+
+    // Customers (Story 13-1)
+    Route::get('/customers', [DashboardCustomerController::class, 'index']);
+    Route::get('/customers/{customerKey}', [DashboardCustomerController::class, 'show']);
+
+    // Connectors (Story 13-2)
+    Route::get('/connectors', [DashboardConnectorController::class, 'index']);
+    Route::post('/connectors', [DashboardConnectorController::class, 'store']);
+    Route::get('/connectors/{connectorKey}', [DashboardConnectorController::class, 'show']);
+    Route::patch('/connectors/{connectorKey}', [DashboardConnectorController::class, 'update']);
+    Route::delete('/connectors/{connectorKey}', [DashboardConnectorController::class, 'destroy']);
+
+    // Routing rules (Story 13-3)
+    Route::get('/routing-rules', [DashboardRoutingRuleController::class, 'index']);
+    Route::post('/routing-rules', [DashboardRoutingRuleController::class, 'store']);
+    Route::get('/routing-rules/{ruleKey}', [DashboardRoutingRuleController::class, 'show']);
+    Route::patch('/routing-rules/{ruleKey}', [DashboardRoutingRuleController::class, 'update']);
+    Route::delete('/routing-rules/{ruleKey}', [DashboardRoutingRuleController::class, 'destroy']);
+
+    // API keys (Story 13-4)
+    Route::get('/api-keys', [DashboardApiKeyController::class, 'index']);
+    Route::post('/api-keys', [DashboardApiKeyController::class, 'store']);
+    Route::delete('/api-keys/{keyId}', [DashboardApiKeyController::class, 'destroy']);
+
+    // Webhook events (Story 13-5)
+    Route::get('/webhook-events', [DashboardWebhookEventController::class, 'index']);
+    Route::post('/webhook-events/{eventKey}/retry', [DashboardWebhookEventController::class, 'retry']);
 });
 
 Route::prefix('v1')->middleware('json-api')->group(function () {

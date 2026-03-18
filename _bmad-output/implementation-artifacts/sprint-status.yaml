@@ -125,17 +125,17 @@ development_status:
   12-2-overview-page: ready-for-dev
   12-3-backend-payments-list-filters: done
   12-4-payments-list-page: ready-for-dev
-  12-5-payment-detail-page: ready-for-dev
+  12-5-payment-detail-page: done
   12-6-backend-refunds-list-refunds-page: done
   epic-12-retrospective: optional
 
   # Epic 13: Dashboard — конфигурация
-  epic-13: backlog
-  13-1-customers-list-detail-pages: ready-for-dev
-  13-2-connectors-cards-wizard: ready-for-dev
-  13-3-routing-rules-visual-editor: ready-for-dev
-  13-4-api-keys-page: ready-for-dev
-  13-5-webhooks-page: ready-for-dev
+  epic-13: done
+  13-1-customers-list-detail-pages: done
+  13-2-connectors-cards-wizard: done
+  13-3-routing-rules-visual-editor: done
+  13-4-api-keys-page: done
+  13-5-webhooks-page: done
   epic-13-retrospective: optional
 
   # Epic 14: Dashboard — разработка

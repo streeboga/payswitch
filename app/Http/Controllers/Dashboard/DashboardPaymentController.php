@@ -7,11 +7,13 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\PaymentListRequest;
 use App\Http\Resources\PaymentIntentResource;
+use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Services\DashboardPaymentService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Group('Dashboard Payments', description: 'Payment list and export for the dashboard', weight: 10)]
@@ -19,6 +21,7 @@ final class DashboardPaymentController extends Controller
 {
     public function __construct(
         private readonly DashboardPaymentService $paymentService,
+        private readonly PaymentIntentRepositoryInterface $paymentRepository,
     ) {}
 
     /**
@@ -51,6 +54,21 @@ final class DashboardPaymentController extends Controller
             $this->paymentService->list($merchantId, $filters, $request->perPage()),
             $request,
         );
+    }
+
+    /**
+     * Get payment detail
+     *
+     * Retrieve a single payment with full details.
+     */
+    #[Response(200, description: 'Payment details')]
+    #[Response(404, description: 'Payment not found')]
+    public function show(string $paymentKey, Request $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+        $payment = $this->paymentRepository->findByKey($paymentKey, $merchantId);
+
+        return (new PaymentIntentResource($payment))->toResponse($request);
     }
 
     /**

@@ -27,6 +27,7 @@ class ResolveMerchantContext
         }
 
         $request->attributes->set('merchant_id', $merchant->id);
+        $request->attributes->set('merchant_key', $merchant->key);
 
         return $next($request);
     }
