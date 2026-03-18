@@ -8,13 +8,18 @@ use App\Http\Controllers\Api\V1\RefundController;
 use App\Http\Controllers\Api\V1\WebhookReceiverController;
 use App\Http\Controllers\Auth\UserController;
 use App\Http\Controllers\Dashboard\AnalyticsController;
+use App\Http\Controllers\Dashboard\AuditLogController;
 use App\Http\Controllers\Dashboard\DashboardApiKeyController;
+use App\Http\Controllers\Dashboard\DashboardBusinessProfileController;
 use App\Http\Controllers\Dashboard\DashboardConnectorController;
 use App\Http\Controllers\Dashboard\DashboardCustomerController;
+use App\Http\Controllers\Dashboard\DashboardOrganizationController;
 use App\Http\Controllers\Dashboard\DashboardPaymentController;
 use App\Http\Controllers\Dashboard\DashboardRefundController;
 use App\Http\Controllers\Dashboard\DashboardRoutingRuleController;
 use App\Http\Controllers\Dashboard\DashboardWebhookEventController;
+use App\Http\Controllers\Dashboard\EventLogController;
+use App\Http\Controllers\Dashboard\TestPaymentController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -68,6 +73,27 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     // Webhook events (Story 13-5)
     Route::get('/webhook-events', [DashboardWebhookEventController::class, 'index']);
     Route::post('/webhook-events/{eventKey}/retry', [DashboardWebhookEventController::class, 'retry']);
+
+    // Test payments (Story 14-2)
+    Route::post('/test-payments', [TestPaymentController::class, 'store']);
+
+    // Event logs (Story 14-3)
+    Route::get('/event-logs', [EventLogController::class, 'index']);
+
+    // Organizations (Story 15-1)
+    Route::get('/organizations', [DashboardOrganizationController::class, 'index']);
+    Route::get('/organizations/{orgKey}', [DashboardOrganizationController::class, 'show']);
+    Route::get('/organizations/{orgKey}/merchants', [DashboardOrganizationController::class, 'merchants']);
+
+    // Business profiles (Story 15-2)
+    Route::get('/profiles', [DashboardBusinessProfileController::class, 'index']);
+    Route::post('/profiles', [DashboardBusinessProfileController::class, 'store']);
+    Route::get('/profiles/{profileKey}', [DashboardBusinessProfileController::class, 'show']);
+    Route::patch('/profiles/{profileKey}', [DashboardBusinessProfileController::class, 'update']);
+
+    // Audit log (Story 15-3)
+    Route::get('/audit-log', [AuditLogController::class, 'index']);
+    Route::get('/audit-log/export', [AuditLogController::class, 'export']);
 });
 
 Route::prefix('v1')->middleware('json-api')->group(function () {
