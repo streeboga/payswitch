@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\WebhookReceiverController;
 use App\Http\Controllers\Auth\UserController;
 use App\Http\Controllers\Dashboard\AnalyticsController;
 use App\Http\Controllers\Dashboard\AuditLogController;
+use App\Http\Controllers\Dashboard\ConnectorHealthController;
 use App\Http\Controllers\Dashboard\DashboardApiKeyController;
 use App\Http\Controllers\Dashboard\DashboardBusinessProfileController;
 use App\Http\Controllers\Dashboard\DashboardConnectorController;
@@ -18,8 +19,13 @@ use App\Http\Controllers\Dashboard\DashboardPaymentController;
 use App\Http\Controllers\Dashboard\DashboardRefundController;
 use App\Http\Controllers\Dashboard\DashboardRoutingRuleController;
 use App\Http\Controllers\Dashboard\DashboardWebhookEventController;
+use App\Http\Controllers\Dashboard\DisputeController;
 use App\Http\Controllers\Dashboard\EventLogController;
+use App\Http\Controllers\Dashboard\NotificationController;
+use App\Http\Controllers\Dashboard\SavedFilterController;
 use App\Http\Controllers\Dashboard\TestPaymentController;
+use App\Http\Controllers\Dashboard\UserRoleController;
+use App\Http\Controllers\Dashboard\UserSettingsController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -94,6 +100,36 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     // Audit log (Story 15-3)
     Route::get('/audit-log', [AuditLogController::class, 'index']);
     Route::get('/audit-log/export', [AuditLogController::class, 'export']);
+
+    // Notifications (Story 15-4)
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{notificationKey}/read', [NotificationController::class, 'markRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+    Route::delete('/notifications/{notificationKey}', [NotificationController::class, 'destroy']);
+
+    // Disputes (Story 16-1)
+    Route::get('/disputes', [DisputeController::class, 'index']);
+    Route::get('/disputes/{disputeKey}', [DisputeController::class, 'show']);
+    Route::post('/disputes/{disputeKey}/evidence', [DisputeController::class, 'submitEvidence']);
+
+    // Connector health (Story 16-2)
+    Route::get('/connectors/{connectorKey}/health', [ConnectorHealthController::class, 'health']);
+    Route::get('/connectors/{connectorKey}/health/errors', [ConnectorHealthController::class, 'errors']);
+
+    // Users & RBAC (Story 16-3)
+    Route::get('/users', [UserRoleController::class, 'index']);
+    Route::post('/users/roles', [UserRoleController::class, 'store']);
+    Route::patch('/users/roles/{roleId}', [UserRoleController::class, 'update']);
+    Route::delete('/users/roles/{roleId}', [UserRoleController::class, 'destroy']);
+
+    // User settings (Story 16-4)
+    Route::get('/settings', [UserSettingsController::class, 'show']);
+    Route::patch('/settings', [UserSettingsController::class, 'update']);
+
+    // Saved filters (Story 16-5)
+    Route::get('/saved-filters', [SavedFilterController::class, 'index']);
+    Route::post('/saved-filters', [SavedFilterController::class, 'store']);
+    Route::delete('/saved-filters/{filterId}', [SavedFilterController::class, 'destroy']);
 });
 
 Route::prefix('v1')->middleware('json-api')->group(function () {

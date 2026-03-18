@@ -139,26 +139,26 @@ development_status:
   epic-13-retrospective: optional
 
   # Epic 14: Dashboard — разработка
-  epic-14: backlog
-  14-1-onboarding-wizard: ready-for-dev
-  14-2-test-payment-ui: ready-for-dev
-  14-3-event-logs-page: ready-for-dev
+  epic-14: done
+  14-1-onboarding-wizard: done  # no backend needed, uses existing Admin API
+  14-2-test-payment-ui: done
+  14-3-event-logs-page: done
   epic-14-retrospective: optional
 
   # Epic 15: Dashboard — управление
-  epic-15: backlog
-  15-1-organizations-merchants-crud: ready-for-dev
-  15-2-business-profiles-page: ready-for-dev
-  15-3-audit-log-page: ready-for-dev
-  15-4-notifications-full-page: ready-for-dev
+  epic-15: done
+  15-1-organizations-merchants-crud: done
+  15-2-business-profiles-page: done
+  15-3-audit-log-page: done
+  15-4-notifications-full-page: done
   epic-15-retrospective: optional
 
   # Epic 16: Dashboard — enterprise
-  epic-16: backlog
-  16-1-disputes-pages: ready-for-dev
-  16-2-connector-health-dashboard: ready-for-dev
-  16-3-users-rbac: ready-for-dev
-  16-4-extended-settings: ready-for-dev
-  16-5-saved-filters: ready-for-dev
+  epic-16: done
+  16-1-disputes-pages: done
+  16-2-connector-health-dashboard: done
+  16-3-users-rbac: done
+  16-4-extended-settings: done
+  16-5-saved-filters: done
   16-6-frontend-tests: ready-for-dev
   epic-16-retrospective: optional
