@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Base JSON:API Resource.
@@ -82,7 +86,7 @@ abstract class JsonApiResource extends JsonResource
                             'id' => $related->toId($request),
                         ],
                     ];
-                } elseif ($related instanceof \Illuminate\Http\Resources\Json\AnonymousResourceCollection) {
+                } elseif ($related instanceof AnonymousResourceCollection) {
                     $resolved[$name] = [
                         'data' => $related->map(fn ($r) => [
                             'type' => $r->toType($request),
@@ -107,7 +111,7 @@ abstract class JsonApiResource extends JsonResource
     /**
      * Create a JSON response with proper JSON:API envelope for single resource.
      */
-    public function toResponse($request): \Illuminate\Http\JsonResponse|\Symfony\Component\HttpFoundation\Response
+    public function toResponse($request): JsonResponse|Response
     {
         return response()->json(
             ['data' => $this->toArray($request)],
@@ -122,9 +126,9 @@ abstract class JsonApiResource extends JsonResource
     /**
      * Create a paginated JSON:API collection response.
      *
-     * @param  \Illuminate\Contracts\Pagination\LengthAwarePaginator  $paginator
+     * @param  LengthAwarePaginator  $paginator
      */
-    public static function jsonApiCollection($paginator, Request $request): \Illuminate\Http\JsonResponse
+    public static function jsonApiCollection($paginator, Request $request): JsonResponse
     {
         $resourceClass = static::class;
         $data = collect($paginator->items())->map(
@@ -151,7 +155,7 @@ abstract class JsonApiResource extends JsonResource
     /**
      * Create a simple collection response (no pagination).
      */
-    public static function jsonApiList($items, Request $request): \Illuminate\Http\JsonResponse
+    public static function jsonApiList($items, Request $request): JsonResponse
     {
         $resourceClass = static::class;
         $data = collect($items)->map(

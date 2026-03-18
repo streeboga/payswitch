@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\RoutingRuleType;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\RoutingRuleRepositoryInterface;
-use App\Enums\RoutingRuleType;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\RoutingRule;
