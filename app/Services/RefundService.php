@@ -18,7 +18,7 @@ use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\Refund;
 
-final class RefundService
+final readonly class RefundService
 {
     public function __construct(
         private RefundRepositoryInterface $refundRepository,

@@ -10,7 +10,7 @@ use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 
-final class ConnectorService
+final readonly class ConnectorService
 {
     public function __construct(
         private MerchantRepositoryInterface $merchantRepository,

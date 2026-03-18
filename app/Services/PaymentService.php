@@ -19,7 +19,7 @@ use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
-final class PaymentService
+final readonly class PaymentService
 {
     public function __construct(
         private PaymentIntentRepositoryInterface $paymentRepository,

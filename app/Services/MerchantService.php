@@ -15,7 +15,7 @@ use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Support\IdGenerator;
 
-final class MerchantService
+final readonly class MerchantService
 {
     public function __construct(
         private MerchantRepositoryInterface $merchantRepository,

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentData\Models\PaymentMethod;
 
-final class PaymentMethodService
+final readonly class PaymentMethodService
 {
     public function __construct(
         private CustomerRepositoryInterface $customerRepository,

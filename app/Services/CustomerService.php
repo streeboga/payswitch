@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\Customer;
 
-final class CustomerService
+final readonly class CustomerService
 {
     public function __construct(
         private CustomerRepositoryInterface $customerRepository,
