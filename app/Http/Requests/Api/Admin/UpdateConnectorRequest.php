@@ -21,11 +21,6 @@ final class UpdateConnectorRequest extends FormRequest
         ];
     }
 
-    public function validatedAttributes(): array
-    {
-        return $this->validated('data.attributes') ?? [];
-    }
-
     public function toDto(): UpdateConnectorData
     {
         return UpdateConnectorData::from($this->validated('data.attributes') ?? []);

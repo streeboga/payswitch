@@ -9,6 +9,7 @@ use App\Http\Resources\BusinessProfileResource;
 use App\Services\MerchantService;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 #[Group(name: 'Admin > Business Profiles', weight: 12)]
@@ -38,10 +39,10 @@ final class BusinessProfileController extends Controller
      *
      * Retrieves the details of a business profile.
      */
-    public function show(string $profileKey): JsonResponse
+    public function show(string $profileKey, Request $request): JsonResponse
     {
         $profile = $this->merchantService->findProfile($profileKey);
 
-        return (new BusinessProfileResource($profile))->toResponse(request());
+        return (new BusinessProfileResource($profile))->toResponse($request);
     }
 }

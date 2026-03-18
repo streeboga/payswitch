@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DataTransferObjects\Payment\ConfirmPaymentData;
 use App\Http\Requests\Api\Payment\CapturePaymentRequest;
 use App\Http\Requests\Api\Payment\ConfirmPaymentRequest;
 use App\Http\Requests\Api\Payment\StorePaymentRequest;
@@ -35,8 +36,8 @@ final class PaymentController extends Controller
         $payment = $this->paymentService->create($dto, $merchantAccountId);
 
         if ($dto->confirm) {
-            $attributes = $request->validated('data.attributes') ?? [];
-            $payment = $this->paymentService->confirm($payment->key, $attributes, $merchantAccountId);
+            $confirmData = ConfirmPaymentData::from($request->validated('data.attributes') ?? []);
+            $payment = $this->paymentService->confirm($payment->key, $confirmData, $merchantAccountId);
         }
 
         return (new PaymentIntentResource($payment))
@@ -66,9 +67,8 @@ final class PaymentController extends Controller
     public function confirm(string $paymentKey, ConfirmPaymentRequest $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
-        $attributes = $request->validated('data.attributes') ?? [];
 
-        $payment = $this->paymentService->confirm($paymentKey, $attributes, $merchantAccountId);
+        $payment = $this->paymentService->confirm($paymentKey, $request->toDto(), $merchantAccountId);
 
         return (new PaymentIntentResource($payment))->toResponse($request);
     }

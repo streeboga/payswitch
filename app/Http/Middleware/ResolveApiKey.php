@@ -6,7 +6,6 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Streeboga\PaymentData\Exceptions\ApiAuthenticationException;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -47,7 +46,7 @@ class ResolveApiKey
                 throw new ApiAuthenticationException('API key has expired', 'api_key_expired', 'authentication_error');
             }
 
-            if (! Hash::check($apiKey, $apiKeyModel->key_hash)) {
+            if (! hash_equals($apiKeyModel->key_hash, hash('sha256', $apiKey))) {
                 throw new ApiAuthenticationException('Invalid API key', 'invalid_api_key', 'authentication_error');
             }
 

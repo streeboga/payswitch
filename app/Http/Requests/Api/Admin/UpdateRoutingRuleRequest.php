@@ -23,11 +23,6 @@ final class UpdateRoutingRuleRequest extends FormRequest
         ];
     }
 
-    public function validatedAttributes(): array
-    {
-        return $this->validated('data.attributes') ?? [];
-    }
-
     public function toDto(): UpdateRoutingRuleData
     {
         return UpdateRoutingRuleData::from($this->validated('data.attributes') ?? []);

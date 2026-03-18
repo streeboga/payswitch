@@ -16,15 +16,15 @@ final class PaymentIntentResource extends JsonApiResource
     public function toAttributes(Request $request): array
     {
         return [
-            'status' => $this->status instanceof \BackedEnum ? $this->status->value : $this->status,
+            'status' => $this->status->value,
             'amount' => $this->amount,
             'net_amount' => $this->net_amount,
             'amount_capturable' => $this->amount_capturable,
             'amount_received' => $this->amount_received,
             'currency' => $this->currency,
             'client_secret' => $this->client_secret,
-            'capture_method' => $this->capture_method instanceof \BackedEnum ? $this->capture_method->value : $this->capture_method,
-            'authentication_type' => $this->authentication_type instanceof \BackedEnum ? $this->authentication_type->value : $this->authentication_type,
+            'capture_method' => $this->capture_method->value,
+            'authentication_type' => $this->authentication_type->value,
             'customer_id' => $this->customer_id,
             'description' => $this->description,
             'return_url' => $this->return_url,

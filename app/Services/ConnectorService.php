@@ -52,7 +52,7 @@ final readonly class ConnectorService
 
         $updateData = $dto->toUpdateArray();
 
-        if (isset($updateData['profile_id'])) {
+        if (array_key_exists('profile_id', $updateData)) {
             $updateData['business_profile_id'] = $this->resolveProfileId($updateData['profile_id']);
             unset($updateData['profile_id']);
         }

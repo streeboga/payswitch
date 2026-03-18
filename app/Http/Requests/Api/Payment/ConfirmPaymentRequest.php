@@ -7,7 +7,7 @@ namespace App\Http\Requests\Api\Payment;
 use App\DataTransferObjects\Payment\ConfirmPaymentData;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ConfirmPaymentRequest extends FormRequest
+final class ConfirmPaymentRequest extends FormRequest
 {
     public function rules(): array
     {

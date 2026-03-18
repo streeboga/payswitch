@@ -67,7 +67,7 @@ final readonly class MerchantService
 
         $apiKey = $this->merchantRepository->createApiKey([
             'merchant_account_id' => $merchant->id,
-            'key_hash' => bcrypt($rawKey),
+            'key_hash' => hash('sha256', $rawKey),
             'key_prefix' => substr($rawKey, 0, 20),
             'name' => $dto->name,
         ]);

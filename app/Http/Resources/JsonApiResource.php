@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Base JSON:API Resource.
@@ -74,30 +73,27 @@ abstract class JsonApiResource extends JsonResource
             'attributes' => $this->toAttributes($request),
         ];
 
-        $relationships = $this->toRelationships($request);
-        if (! empty($relationships)) {
-            $resolved = [];
-            foreach ($relationships as $name => $resolver) {
-                $related = is_callable($resolver) ? $resolver() : $resolver;
-                if ($related instanceof JsonApiResource) {
-                    $resolved[$name] = [
-                        'data' => [
-                            'type' => $related->toType($request),
-                            'id' => $related->toId($request),
-                        ],
-                    ];
-                } elseif ($related instanceof AnonymousResourceCollection) {
-                    $resolved[$name] = [
-                        'data' => $related->map(fn ($r) => [
-                            'type' => $r->toType($request),
-                            'id' => $r->toId($request),
-                        ])->toArray(),
-                    ];
-                }
+        $resolved = [];
+        foreach ($this->toRelationships($request) as $name => $resolver) {
+            $related = is_callable($resolver) ? $resolver() : $resolver;
+            if ($related instanceof JsonApiResource) {
+                $resolved[$name] = [
+                    'data' => [
+                        'type' => $related->toType($request),
+                        'id' => $related->toId($request),
+                    ],
+                ];
+            } elseif ($related instanceof AnonymousResourceCollection) {
+                $resolved[$name] = [
+                    'data' => $related->map(fn ($r) => [
+                        'type' => $r->toType($request),
+                        'id' => $r->toId($request),
+                    ])->toArray(),
+                ];
             }
-            if (! empty($resolved)) {
-                $data['relationships'] = $resolved;
-            }
+        }
+        if (! empty($resolved)) {
+            $data['relationships'] = $resolved;
         }
 
         $links = $this->toLinks($request);
@@ -111,11 +107,11 @@ abstract class JsonApiResource extends JsonResource
     /**
      * Create a JSON response with proper JSON:API envelope for single resource.
      */
-    public function toResponse($request): JsonResponse|Response
+    public function toResponse($request): JsonResponse
     {
         return response()->json(
             ['data' => $this->toArray($request)],
-            $this->calculateStatusCode(),
+            $this->statusCode,
             array_merge(
                 ['Content-Type' => 'application/vnd.api+json'],
                 $this->additionalHeaders,
@@ -130,9 +126,8 @@ abstract class JsonApiResource extends JsonResource
      */
     public static function jsonApiCollection($paginator, Request $request): JsonResponse
     {
-        $resourceClass = static::class;
         $data = collect($paginator->items())->map(
-            fn ($item) => (new $resourceClass($item))->toArray($request)
+            fn ($item) => (new static($item))->toArray($request)
         )->toArray();
 
         return response()->json([
@@ -157,9 +152,8 @@ abstract class JsonApiResource extends JsonResource
      */
     public static function jsonApiList($items, Request $request): JsonResponse
     {
-        $resourceClass = static::class;
         $data = collect($items)->map(
-            fn ($item) => (new $resourceClass($item))->toArray($request)
+            fn ($item) => (new static($item))->toArray($request)
         )->values()->toArray();
 
         return response()->json(
@@ -187,10 +181,5 @@ abstract class JsonApiResource extends JsonResource
         $this->additionalHeaders[$key] = $value;
 
         return $this;
-    }
-
-    private function calculateStatusCode(): int
-    {
-        return $this->statusCode;
     }
 }

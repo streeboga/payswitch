@@ -100,9 +100,9 @@ final readonly class RoutingService
         }
 
         return match ($rule->type) {
-            RoutingRuleType::Priority->value => $this->evaluatePriorityRule($config, $merchantAccountId),
-            RoutingRuleType::RuleBased->value => $this->evaluateRuleBasedRule($config, $currency, $amount, $merchantAccountId),
-            RoutingRuleType::VolumeSplit->value => $this->evaluateVolumeSplitRule($config, $merchantAccountId),
+            RoutingRuleType::Priority => $this->evaluatePriorityRule($config, $merchantAccountId),
+            RoutingRuleType::RuleBased => $this->evaluateRuleBasedRule($config, $currency, $amount, $merchantAccountId),
+            RoutingRuleType::VolumeSplit => $this->evaluateVolumeSplitRule($config, $merchantAccountId),
             default => null,
         };
     }
@@ -173,10 +173,6 @@ final readonly class RoutingService
         }
 
         $totalWeight = array_sum(array_column($splits, 'weight'));
-        if ($totalWeight <= 0) {
-            return null;
-        }
-
         $random = mt_rand(1, $totalWeight);
         $cumulative = 0;
 

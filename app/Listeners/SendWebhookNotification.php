@@ -9,8 +9,9 @@ use App\Events\PaymentStatusChanged;
 use App\Jobs\DeliverWebhookJob;
 use App\Repositories\Contracts\WebhookEventRepositoryInterface;
 use Streeboga\PaymentData\Enums\CaptureMethod;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 
-class SendWebhookNotification
+final readonly class SendWebhookNotification
 {
     public function __construct(
         private WebhookEventRepositoryInterface $webhookRepository,
@@ -20,12 +21,12 @@ class SendWebhookNotification
     {
         $payment = $event->payment;
 
-        $eventType = match ($payment->status->value) {
-            'succeeded' => $payment->capture_method === CaptureMethod::Manual
+        $eventType = match ($payment->status) {
+            PaymentStatus::Succeeded => $payment->capture_method === CaptureMethod::Manual
                 ? WebhookEventType::PaymentCaptured->value
                 : WebhookEventType::PaymentSucceeded->value,
-            'cancelled' => WebhookEventType::PaymentCancelled->value,
-            'requires_capture' => WebhookEventType::PaymentAuthorized->value,
+            PaymentStatus::Cancelled => WebhookEventType::PaymentCancelled->value,
+            PaymentStatus::RequiresCapture => WebhookEventType::PaymentAuthorized->value,
             default => WebhookEventType::PaymentStatusChanged->value,
         };
 
