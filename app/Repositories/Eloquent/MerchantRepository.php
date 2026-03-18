@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Builders\MerchantConnectorQueryBuilder;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\ApiKey;
@@ -14,6 +15,11 @@ use Streeboga\PaymentData\Models\Organization;
 
 final class MerchantRepository implements MerchantRepositoryInterface
 {
+    private function connectorQuery(): MerchantConnectorQueryBuilder
+    {
+        return MerchantConnectorQueryBuilder::make();
+    }
+
     public function createOrganization(array $attributes): Organization
     {
         return Organization::create($attributes);
@@ -61,16 +67,12 @@ final class MerchantRepository implements MerchantRepositoryInterface
 
     public function findConnectorByMerchantAndKey(int|string $merchantAccountId, string $connectorKey): MerchantConnectorAccount
     {
-        return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-            ->where('key', $connectorKey)
-            ->firstOrFail();
+        return $this->connectorQuery()->forMerchant($merchantAccountId)->whereKey($connectorKey)->firstOrFail();
     }
 
     public function findConnectorByMerchantAndName(int|string $merchantAccountId, string $connectorName): ?MerchantConnectorAccount
     {
-        return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-            ->where('connector_name', $connectorName)
-            ->first();
+        return $this->connectorQuery()->forMerchant($merchantAccountId)->whereConnectorName($connectorName)->first();
     }
 
     public function findActiveConnectorByMerchantAndName(int|string $merchantAccountId, string $connectorName): ?MerchantConnectorAccount
@@ -90,7 +92,7 @@ final class MerchantRepository implements MerchantRepositoryInterface
 
     public function getConnectorsByMerchant(int|string $merchantAccountId): Collection
     {
-        return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)->get();
+        return $this->connectorQuery()->forMerchant($merchantAccountId)->getQuery()->get();
     }
 
     public function getFirstActiveConnector(int|string $merchantAccountId, array $excludeConnectors = []): ?MerchantConnectorAccount
@@ -120,5 +122,15 @@ final class MerchantRepository implements MerchantRepositoryInterface
     public function findProfileByMerchant(int|string $merchantAccountId): ?BusinessProfile
     {
         return BusinessProfile::where('merchant_account_id', $merchantAccountId)->first();
+    }
+
+    public function findMerchantByKeyOrNull(string $key): ?MerchantAccount
+    {
+        return MerchantAccount::where('key', $key)->first();
+    }
+
+    public function findConnectorByMerchantAndKeyOrNull(int|string $merchantAccountId, string $connectorKey): ?MerchantConnectorAccount
+    {
+        return $this->connectorQuery()->forMerchant($merchantAccountId)->whereKey($connectorKey)->first();
     }
 }

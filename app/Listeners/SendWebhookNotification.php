@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
+use App\Enums\WebhookEventType;
 use App\Events\PaymentStatusChanged;
 use App\Jobs\DeliverWebhookJob;
 use App\Repositories\Contracts\WebhookEventRepositoryInterface;
@@ -21,11 +22,11 @@ class SendWebhookNotification
 
         $eventType = match ($payment->status->value) {
             'succeeded' => $payment->capture_method === CaptureMethod::Manual
-                ? 'payment_captured'
-                : 'payment_succeeded',
-            'cancelled' => 'payment_cancelled',
-            'requires_capture' => 'payment_authorized',
-            default => 'payment_status_changed',
+                ? WebhookEventType::PaymentCaptured->value
+                : WebhookEventType::PaymentSucceeded->value,
+            'cancelled' => WebhookEventType::PaymentCancelled->value,
+            'requires_capture' => WebhookEventType::PaymentAuthorized->value,
+            default => WebhookEventType::PaymentStatusChanged->value,
         };
 
         $webhookEvent = $this->webhookRepository->create([

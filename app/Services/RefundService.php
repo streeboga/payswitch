@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\WebhookEventType;
 use App\Jobs\DeliverWebhookJob;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
@@ -71,7 +72,7 @@ final class RefundService
             }
 
             // Resolve connector from last successful attempt
-            $lastAttempt = $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
+            $lastAttempt = $this->paymentRepository->findLastSuccessfulAttempt($payment);
             $connectorName = $payment->connector;
 
             if (! $lastAttempt || ! $connectorName) {
@@ -108,7 +109,7 @@ final class RefundService
             ]);
 
             // Webhook event
-            $eventType = $refundResult['success'] ? 'refund_succeeded' : 'refund_failed';
+            $eventType = $refundResult['success'] ? WebhookEventType::RefundSucceeded->value : WebhookEventType::RefundFailed->value;
             $webhookEvent = $this->webhookRepository->create([
                 'event_type' => $eventType,
                 'merchant_account_id' => $merchantAccountId,
