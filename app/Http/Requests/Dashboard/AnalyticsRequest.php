@@ -15,6 +15,9 @@ final class AnalyticsRequest extends FormRequest
             'filter.period' => ['sometimes', 'string', 'in:7d,30d,90d'],
             'filter.from' => ['sometimes', 'date', 'required_with:filter.to'],
             'filter.to' => ['sometimes', 'date', 'required_with:filter.from', 'after_or_equal:filter.from'],
+            'period' => ['sometimes', 'string', 'in:7d,30d,90d'],
+            'from' => ['sometimes', 'date', 'required_with:to'],
+            'to' => ['sometimes', 'date', 'required_with:from', 'after_or_equal:from'],
         ];
     }
 
@@ -25,6 +28,18 @@ final class AnalyticsRequest extends FormRequest
 
     public function toPeriodFilter(): PeriodFilter
     {
-        return PeriodFilter::fromRequest($this->validated('filter') ?? []);
+        $filter = $this->validated('filter') ?? [];
+
+        if (empty($filter['period']) && $this->validated('period')) {
+            $filter['period'] = $this->validated('period');
+        }
+        if (empty($filter['from']) && $this->validated('from')) {
+            $filter['from'] = $this->validated('from');
+        }
+        if (empty($filter['to']) && $this->validated('to')) {
+            $filter['to'] = $this->validated('to');
+        }
+
+        return PeriodFilter::fromRequest($filter);
     }
 }
