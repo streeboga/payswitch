@@ -65,6 +65,31 @@ test('profile update works', function () {
         ->assertJsonPath('data.attributes.webhook_url', 'https://new.example.com/hook');
 });
 
+test('profiles by merchant key returns json:api response', function () {
+    BusinessProfile::create(['merchant_account_id' => $this->merchant->id, 'webhook_url' => 'https://a.com']);
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/api/v1/dashboard/merchants/{$this->merchant->key}/profiles");
+
+    $response->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.type', 'profiles');
+});
+
+test('profiles by merchant key scoped correctly', function () {
+    BusinessProfile::create(['merchant_account_id' => $this->merchant->id]);
+
+    $otherOrg = Organization::create(['name' => 'Other']);
+    $otherMerchant = MerchantAccount::create(['org_id' => $otherOrg->id, 'name' => 'Other']);
+    BusinessProfile::create(['merchant_account_id' => $otherMerchant->id]);
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/api/v1/dashboard/merchants/{$this->merchant->key}/profiles");
+
+    $response->assertOk()
+        ->assertJsonCount(1, 'data');
+});
+
 test('profiles require authentication', function () {
     $response = $this->getJson('/api/v1/dashboard/profiles', $this->headers);
     $response->assertUnauthorized();

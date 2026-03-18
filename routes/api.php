@@ -41,6 +41,9 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'throttle:300,1'])->g
     Route::get('/organizations/{orgKey}', [DashboardOrganizationController::class, 'show']);
     Route::get('/organizations/{orgKey}/merchants', [DashboardOrganizationController::class, 'merchants']);
 
+    // Profiles by merchant key (context switcher)
+    Route::get('/merchants/{merchantKey}/profiles', [DashboardBusinessProfileController::class, 'indexByMerchant']);
+
     // Notifications (Story 15-4) — unread-count BEFORE wildcard
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
     Route::get('/notifications', [NotificationController::class, 'index']);

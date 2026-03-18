@@ -36,6 +36,22 @@ final class DashboardBusinessProfileController extends Controller
     }
 
     /**
+     * List profiles by merchant key
+     *
+     * Retrieve all business profiles for a specific merchant (used by context switcher).
+     */
+    #[PathParameter('merchantKey', description: 'Merchant public key', example: 'merchant_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Profile list')]
+    #[Response(404, description: 'Merchant not found')]
+    public function indexByMerchant(string $merchantKey, Request $request): JsonResponse
+    {
+        $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
+        $profiles = BusinessProfile::where('merchant_account_id', $merchant->id)->get();
+
+        return BusinessProfileResource::jsonApiList($profiles, $request);
+    }
+
+    /**
      * Get business profile
      *
      * Retrieve a single business profile.

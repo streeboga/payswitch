@@ -15,5 +15,5 @@ test('payswitch:seed creates demo environment', function () {
     $this->assertDatabaseCount('merchant_accounts', 1);
     $this->assertDatabaseCount('business_profiles', 1);
     $this->assertDatabaseCount('api_keys', 1);
-    $this->assertDatabaseCount('merchant_connector_accounts', 1);
+    $this->assertDatabaseCount('merchant_connector_accounts', 2);
 });
