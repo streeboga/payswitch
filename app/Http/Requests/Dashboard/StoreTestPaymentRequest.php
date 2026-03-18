@@ -22,6 +22,8 @@ final class StoreTestPaymentRequest extends FormRequest
             'payment_method' => 'sometimes|string',
             'card_number' => 'sometimes|string',
             'payment_method_data' => 'sometimes|array',
+            'connector_name' => 'sometimes|string',
+            'description' => 'sometimes|string|max:500',
         ];
     }
 }
