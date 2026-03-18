@@ -1,4 +1,4 @@
-import { getCollection, getResource, createResource, updateResource } from '../client'
+import { getCollection, getResource, createResource, updateResource, deleteResource } from '../client'
 import type { BusinessProfileAttributes, PaginatedResult } from '../types'
 import { parseCollection, buildJsonApiParams, extractAttributes } from '../types'
 
@@ -45,5 +45,9 @@ export const dashboardProfiles = {
       data,
     )
     return extractAttributes(doc.data)
+  },
+
+  async delete(profileKey: string) {
+    await deleteResource(`dashboard/profiles/${profileKey}`)
   },
 } as const

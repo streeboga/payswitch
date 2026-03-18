@@ -56,3 +56,14 @@ export function useUpdateProfile() {
     },
   })
 }
+
+export function useDeleteProfile() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (profileKey: string) => dashboardProfiles.delete(profileKey),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['profiles'] })
+    },
+  })
+}

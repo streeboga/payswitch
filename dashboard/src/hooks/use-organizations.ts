@@ -64,3 +64,51 @@ export function useCreateMerchant() {
     },
   })
 }
+
+export function useUpdateOrganization() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ orgKey, data }: { orgKey: string; data: { name: string } }) =>
+      dashboardOrgs.updateOrg(orgKey, data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['organizations'] })
+    },
+  })
+}
+
+export function useDeleteOrganization() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (orgKey: string) => dashboardOrgs.deleteOrg(orgKey),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['organizations'] })
+    },
+  })
+}
+
+export function useUpdateMerchant() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ merchantKey, data }: { merchantKey: string; data: { name: string } }) =>
+      dashboardOrgs.updateMerchant(merchantKey, data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['merchants'] })
+      void queryClient.invalidateQueries({ queryKey: ['organizations'] })
+    },
+  })
+}
+
+export function useDeleteMerchant() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (merchantKey: string) => dashboardOrgs.deleteMerchant(merchantKey),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['merchants'] })
+      void queryClient.invalidateQueries({ queryKey: ['organizations'] })
+    },
+  })
+}
