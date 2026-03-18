@@ -1,0 +1,333 @@
+<?php
+
+/**
+ * ============================================================================
+ * Payswitch Connector Template
+ * ============================================================================
+ *
+ * Copy this file, rename to {YourPsp}Connector.php, and implement all methods.
+ *
+ * Two integration patterns available:
+ *   1. Direct HTTP (recommended) — implement ConnectorInterface directly
+ *   2. OmniPay-based — extend AbstractConnector (if OmniPay gateway exists)
+ *
+ * This template uses pattern 1 (Direct HTTP) as it's the most universal.
+ *
+ * After implementation:
+ *   1. Register in ConnectorFactory::$drivers
+ *   2. Write tests in tests/Unit/Connectors/{YourPsp}ConnectorTest.php
+ *   3. Test with real sandbox credentials end-to-end
+ *
+ * ============================================================================
+ */
+
+declare(strict_types=1);
+
+namespace Streeboga\PaymentConnectors\Drivers;
+
+use Illuminate\Support\Facades\Http;
+use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\PaymentStatus;
+
+final class ExamplePspConnector implements ConnectorInterface
+{
+    // ──────────────────────────────────────────────────
+    //  Credentials — extracted from connector_account_details JSON
+    //
+    //  Stored encrypted in MerchantConnectorAccount.
+    //  Format: { "auth_type": "HeaderKey", "api_key": "...", "secret_key": "...", "webhook_secret": "..." }
+    // ──────────────────────────────────────────────────
+
+    private string $apiKey;
+
+    private string $secretKey;
+
+    private string $webhookSecret;
+
+    private string $baseUrl = 'https://api.example-psp.com';
+
+    public function __construct(array $credentials)
+    {
+        $this->apiKey = $credentials['api_key'] ?? '';
+        $this->secretKey = $credentials['secret_key'] ?? '';
+        $this->webhookSecret = $credentials['webhook_secret'] ?? '';
+
+        // Sandbox vs production URL
+        if (! empty($credentials['test_mode'])) {
+            $this->baseUrl = 'https://sandbox.example-psp.com';
+        }
+    }
+
+    // ──────────────────────────────────────────────────
+    //  getName() — unique connector identifier
+    //
+    //  Must match the key in ConnectorFactory::$drivers
+    //  and MerchantConnectorAccount.connector_name
+    // ──────────────────────────────────────────────────
+
+    public function getName(): string
+    {
+        return 'example_psp';
+    }
+
+    // ══════════════════════════════════════════════════
+    //  PAYMENT OPERATIONS
+    // ══════════════════════════════════════════════════
+    //
+    //  All operations receive $params and MUST return:
+    //
+    //  [
+    //      'success'        => bool,              // true = operation succeeded
+    //      'transaction_id' => ?string,           // PSP's transaction/payment ID (store for capture/refund)
+    //      'message'        => string,            // Human-readable message
+    //      'code'           => string,            // 'ok' on success, error code on failure
+    //      'data'           => array (optional),  // PSP-specific response data
+    //  ]
+    //
+    //  Error codes used by the system:
+    //    'ok'                 — success
+    //    'card_declined'      — generic card decline
+    //    'insufficient_funds' — not enough balance
+    //    'requires_action'    — 3DS or other customer action required
+    //    'connector_error'    — unexpected error (timeout, 5xx, etc.)
+    //    'refund_failed'      — refund-specific error
+
+    // ──────────────────────────────────────────────────
+    //  purchase() — one-step payment (authorize + capture)
+    //
+    //  Called when capture_method = 'automatic'
+    //
+    //  $params:
+    //    'amount'              => int,    // Amount in smallest currency unit (cents)
+    //    'currency'            => string, // ISO 4217 (USD, EUR, RUB)
+    //    'payment_method'      => string, // 'card', 'bank_transfer', etc.
+    //    'payment_method_data' => array,  // Method-specific data:
+    //       For cards: ['card' => ['card_number', 'card_exp_month', 'card_exp_year', 'card_cvc']]
+    //       For tokens: use $params['token'] instead
+    //    'token'               => ?string, // Saved payment method token
+    //    'description'         => ?string,
+    //    'metadata'            => array,
+    //    'payment_id'          => string,  // Internal payment key (pay_xxx)
+    // ──────────────────────────────────────────────────
+
+    public function purchase(array $params): array
+    {
+        return $this->makeRequest('POST', '/payments', [
+            'amount' => $this->formatAmount($params['amount'] ?? 0, $params['currency'] ?? 'USD'),
+            'currency' => $params['currency'] ?? 'USD',
+            'capture' => true,
+            'payment_method' => $this->mapPaymentMethod($params),
+            'description' => $params['description'] ?? '',
+            'metadata' => ['payment_id' => $params['payment_id'] ?? ''],
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────
+    //  authorize() — authorize without capturing
+    //
+    //  Called when capture_method = 'manual'
+    //  Funds are held but not transferred.
+    //  Must be followed by capture() or will auto-expire.
+    //
+    //  Same $params as purchase()
+    // ──────────────────────────────────────────────────
+
+    public function authorize(array $params): array
+    {
+        return $this->makeRequest('POST', '/payments', [
+            'amount' => $this->formatAmount($params['amount'] ?? 0, $params['currency'] ?? 'USD'),
+            'currency' => $params['currency'] ?? 'USD',
+            'capture' => false,
+            'payment_method' => $this->mapPaymentMethod($params),
+            'description' => $params['description'] ?? '',
+            'metadata' => ['payment_id' => $params['payment_id'] ?? ''],
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────
+    //  capture() — capture a previously authorized payment
+    //
+    //  $params:
+    //    'amount'         => int,    // Amount to capture (may be less than authorized for partial capture)
+    //    'transaction_id' => string, // PSP transaction ID from authorize() response
+    // ──────────────────────────────────────────────────
+
+    public function capture(array $params): array
+    {
+        $txnId = $params['transaction_id'] ?? '';
+
+        return $this->makeRequest('POST', "/payments/{$txnId}/capture", [
+            'amount' => $this->formatAmount($params['amount'] ?? 0, 'USD'),
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────
+    //  refund() — refund a captured payment
+    //
+    //  $params:
+    //    'amount'         => int,    // Amount to refund (partial refunds supported)
+    //    'transaction_id' => string, // PSP transaction ID from purchase()/capture()
+    // ──────────────────────────────────────────────────
+
+    public function refund(array $params): array
+    {
+        $txnId = $params['transaction_id'] ?? '';
+
+        return $this->makeRequest('POST', "/payments/{$txnId}/refunds", [
+            'amount' => $this->formatAmount($params['amount'] ?? 0, 'USD'),
+        ]);
+    }
+
+    // ══════════════════════════════════════════════════
+    //  WEBHOOKS
+    // ══════════════════════════════════════════════════
+    //
+    //  Payswitch receives webhooks at:
+    //    POST /api/v1/webhooks/{merchantKey}/{connectorKey}
+    //
+    //  The system calls these 3 methods to process each webhook.
+
+    // ──────────────────────────────────────────────────
+    //  verifyWebhookSignature() — verify the webhook is authentic
+    //
+    //  $payload: raw request body (string)
+    //  $headers: all request headers (lowercased keys)
+    //
+    //  MUST return false if signature is invalid.
+    //  Common patterns: HMAC-SHA256 in header, or Stripe-style t=timestamp,v1=sig
+    // ──────────────────────────────────────────────────
+
+    public function verifyWebhookSignature(string $payload, array $headers): bool
+    {
+        $signature = $headers['x-webhook-signature'] ?? null;
+
+        if (! $signature || ! $this->webhookSecret) {
+            return false;
+        }
+
+        $expected = hash_hmac('sha256', $payload, $this->webhookSecret);
+
+        return hash_equals($expected, $signature);
+    }
+
+    // ──────────────────────────────────────────────────
+    //  mapWebhookEventToStatus() — map PSP event type to internal PaymentStatus
+    //
+    //  $eventType: the PSP-specific event type string from the webhook payload
+    //
+    //  Return null for events that don't map to a payment status change.
+    //
+    //  Available PaymentStatus values:
+    //    Succeeded, Failed, Cancelled, RequiresCapture,
+    //    RequiresCustomerAction, RequiresMerchantAction,
+    //    Processing, Expired, PartiallyCaptured
+    // ──────────────────────────────────────────────────
+
+    public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
+    {
+        return match ($eventType) {
+            'payment.succeeded', 'payment.captured' => PaymentStatus::Succeeded,
+            'payment.failed', 'payment.declined' => PaymentStatus::Failed,
+            'payment.canceled', 'payment.refunded' => PaymentStatus::Cancelled,
+            'payment.waiting_for_capture' => PaymentStatus::RequiresCapture,
+            'payment.pending' => PaymentStatus::Processing,
+            default => null,
+        };
+    }
+
+    // ──────────────────────────────────────────────────
+    //  extractPaymentIdFromWebhook() — extract our internal payment ID
+    //
+    //  The payment_id was passed in metadata during purchase()/authorize().
+    //  Extract it from the webhook payload structure.
+    //
+    //  Return null if the webhook doesn't contain a recognizable payment ID.
+    // ──────────────────────────────────────────────────
+
+    public function extractPaymentIdFromWebhook(array $payload): ?string
+    {
+        // Typical patterns:
+        // $payload['metadata']['payment_id']
+        // $payload['data']['object']['metadata']['payment_id']
+        // $payload['InvoiceId']
+        return $payload['metadata']['payment_id']
+            ?? ($payload['data']['object']['metadata']['payment_id'] ?? null);
+    }
+
+    // ══════════════════════════════════════════════════
+    //  PRIVATE HELPERS
+    // ══════════════════════════════════════════════════
+
+    /**
+     * Make an authenticated HTTP request to the PSP API.
+     *
+     * Adapt authentication to your PSP:
+     * - Bearer token: ->withToken($this->apiKey)
+     * - Basic auth: ->withBasicAuth($this->apiKey, $this->secretKey)
+     * - Header key: ->withHeaders(['X-Api-Key' => $this->apiKey])
+     */
+    private function makeRequest(string $method, string $endpoint, array $data): array
+    {
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(30)
+                ->$method($this->baseUrl.$endpoint, $data);
+
+            $body = $response->json() ?? [];
+
+            // Map PSP response to standard format
+            // Adapt field names to your PSP's response structure
+            $success = $response->successful() && ($body['status'] ?? '') === 'succeeded';
+
+            return [
+                'success' => $success,
+                'transaction_id' => $body['id'] ?? null,
+                'message' => $body['message'] ?? ($success ? 'ok' : 'Payment failed'),
+                'code' => $success ? 'ok' : ($body['error_code'] ?? 'payment_failed'),
+                'data' => $body,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'transaction_id' => null,
+                'message' => $e->getMessage(),
+                'code' => 'connector_error',
+            ];
+        }
+    }
+
+    /**
+     * Convert amount from minor units (cents) to PSP's expected format.
+     *
+     * Payswitch stores amounts in smallest currency unit (100 = $1.00).
+     * Some PSPs expect major units (1.00), others expect minor units (100).
+     */
+    private function formatAmount(int $amountInCents, string $currency): float|int
+    {
+        // If PSP expects major units (dollars/euros): return $amountInCents / 100
+        // If PSP expects minor units (cents): return $amountInCents
+        return $amountInCents / 100;
+    }
+
+    /**
+     * Map payment method data from Payswitch format to PSP format.
+     */
+    private function mapPaymentMethod(array $params): array
+    {
+        if (! empty($params['token'])) {
+            return ['type' => 'token', 'token' => $params['token']];
+        }
+
+        $card = $params['payment_method_data']['card'] ?? [];
+
+        return [
+            'type' => 'card',
+            'card' => [
+                'number' => $card['card_number'] ?? '',
+                'exp_month' => $card['card_exp_month'] ?? '',
+                'exp_year' => $card['card_exp_year'] ?? '',
+                'cvv' => $card['card_cvc'] ?? '',
+            ],
+        ];
+    }
+}
