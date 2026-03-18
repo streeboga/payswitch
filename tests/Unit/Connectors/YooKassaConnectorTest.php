@@ -195,6 +195,26 @@ test('verifyWebhookSignature returns true', function () {
     expect(yooKassaConnector()->verifyWebhookSignature('payload', []))->toBeTrue();
 });
 
+test('purchase uses payment_id as Idempotence-Key', function () {
+    Http::fake([
+        'api.yookassa.ru/v3/payments' => Http::response([
+            'id' => 'yk_txn_idem', 'status' => 'succeeded',
+        ]),
+    ]);
+
+    yooKassaConnector()->purchase([
+        'amount' => 5000,
+        'currency' => 'RUB',
+        'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
+        'payment_id' => 'pay_IDEM_TEST',
+    ]);
+
+    Http::assertSent(function ($request) {
+        return $request->hasHeader('Idempotence-Key')
+            && $request->header('Idempotence-Key')[0] === 'pay_IDEM_TEST';
+    });
+});
+
 test('purchase with token uses payment_method_id', function () {
     Http::fake([
         'api.yookassa.ru/v3/payments' => Http::response([
