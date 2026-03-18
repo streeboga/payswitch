@@ -8,11 +8,11 @@ use App\Listeners\LogPaymentAudit;
 use App\Listeners\SendWebhookNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Spatie\Activitylog\Models\Activity;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
-use Streeboga\PaymentData\Models\PaymentAuditLog;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\WebhookEvent;
 
@@ -31,17 +31,17 @@ beforeEach(function () {
     ]);
 });
 
-test('LogPaymentAudit creates audit log entry', function () {
+test('LogPaymentAudit creates activity log entry', function () {
     $event = new PaymentStatusChanged($this->payment, 'processing');
     $listener = new LogPaymentAudit;
     $listener->handle($event);
 
-    $this->assertDatabaseHas('payment_audit_log', [
-        'payment_intent_id' => $this->payment->id,
-        'action' => 'status_changed',
-        'previous_status' => 'processing',
-        'new_status' => 'succeeded',
-    ]);
+    $activity = Activity::where('log_name', 'payment')->first();
+    expect($activity)->not->toBeNull();
+    expect($activity->event)->toBe('status_changed');
+    expect($activity->properties['previous_status'])->toBe('processing');
+    expect($activity->properties['new_status'])->toBe('succeeded');
+    expect($activity->properties['merchant_account_id'])->toBe($this->merchant->id);
 });
 
 test('LogPaymentAudit handles null previous status', function () {
@@ -49,10 +49,9 @@ test('LogPaymentAudit handles null previous status', function () {
     $listener = new LogPaymentAudit;
     $listener->handle($event);
 
-    $log = PaymentAuditLog::first();
-    // When previousStatus is null, the listener falls back to current status
-    expect($log->previous_status)->toBe('succeeded');
-    expect($log->new_status)->toBe('succeeded');
+    $activity = Activity::where('log_name', 'payment')->first();
+    expect($activity->properties['previous_status'])->toBe('succeeded');
+    expect($activity->properties['new_status'])->toBe('succeeded');
 });
 
 test('SendWebhookNotification creates webhook event with correct type', function () {

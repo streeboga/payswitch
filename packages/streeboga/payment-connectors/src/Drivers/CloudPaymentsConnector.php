@@ -6,6 +6,7 @@ namespace Streeboga\PaymentConnectors\Drivers;
 
 use Illuminate\Support\Facades\Http;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 
 final class CloudPaymentsConnector implements ConnectorInterface
 {
@@ -13,10 +14,13 @@ final class CloudPaymentsConnector implements ConnectorInterface
 
     private string $apiSecret;
 
+    private array $credentials;
+
     private string $baseUrl = 'https://api.cloudpayments.ru';
 
     public function __construct(array $credentials)
     {
+        $this->credentials = $credentials;
         $this->publicId = $credentials['public_id'] ?? '';
         $this->apiSecret = $credentials['api_secret'] ?? $credentials['api_key'] ?? '';
     }
@@ -67,6 +71,34 @@ final class CloudPaymentsConnector implements ConnectorInterface
             'TransactionId' => $params['transaction_id'] ?? '',
             'Amount' => ($params['amount'] ?? 0) / 100,
         ]);
+    }
+
+    public function verifyWebhookSignature(string $payload, array $headers): bool
+    {
+        $hmac = $headers['content-hmac'] ?? null;
+        if (! $hmac) {
+            return ! app()->environment('production');
+        }
+
+        $apiSecret = $this->credentials['api_secret'] ?? $this->credentials['api_key'] ?? '';
+        $expected = base64_encode(hash_hmac('sha256', $payload, $apiSecret, true));
+
+        return hash_equals($expected, $hmac);
+    }
+
+    public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
+    {
+        return match ($eventType) {
+            'payment.succeeded' => PaymentStatus::Succeeded,
+            'payment.canceled' => PaymentStatus::Cancelled,
+            'payment.waiting_for_capture' => PaymentStatus::RequiresCapture,
+            default => null,
+        };
+    }
+
+    public function extractPaymentIdFromWebhook(array $payload): ?string
+    {
+        return $payload['InvoiceId'] ?? ($payload['data']['InvoiceId'] ?? null);
     }
 
     private function makeRequest(string $endpoint, array $data): array

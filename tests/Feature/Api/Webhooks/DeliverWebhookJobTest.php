@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Jobs\DeliverWebhookJob;
+use App\Support\UrlSafetyValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Streeboga\PaymentData\Models\BusinessProfile;
@@ -94,10 +95,7 @@ test('sends x-webhook-signature-512 header', function () {
 });
 
 test('blocks SSRF to private IPs', function () {
-    $job = new DeliverWebhookJob($this->event->id);
-    $reflection = new ReflectionMethod($job, 'isUrlSafe');
-
-    expect($reflection->invoke($job, 'https://example.com/webhook'))->toBeTrue();
-    expect($reflection->invoke($job, 'http://localhost/webhook'))->toBeFalse();
-    expect($reflection->invoke($job, 'http://127.0.0.1/webhook'))->toBeFalse();
+    expect(UrlSafetyValidator::isSafe('https://example.com/webhook'))->toBeTrue();
+    expect(UrlSafetyValidator::isSafe('http://localhost/webhook'))->toBeFalse();
+    expect(UrlSafetyValidator::isSafe('http://127.0.0.1/webhook'))->toBeFalse();
 });

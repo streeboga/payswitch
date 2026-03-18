@@ -12,8 +12,11 @@ abstract class AbstractConnector implements ConnectorInterface
 {
     protected GatewayInterface $gateway;
 
+    protected array $credentials;
+
     public function __construct(array $credentials)
     {
+        $this->credentials = $credentials;
         $this->gateway = Omnipay::create($this->getGatewayName());
         $this->configureGateway($credentials);
     }

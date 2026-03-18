@@ -73,7 +73,7 @@ test('processes payment status update from webhook', function () {
 
     $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [
         'type' => 'payment.succeeded',
-        'data' => ['object' => ['metadata' => ['payment_id' => $payment->key]]],
+        'InvoiceId' => $payment->key,
     ])->assertOk();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);

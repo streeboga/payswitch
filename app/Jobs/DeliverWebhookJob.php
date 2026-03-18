@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\WebhookEventRepositoryInterface;
+use App\Support\UrlSafetyValidator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -46,7 +47,7 @@ final class DeliverWebhookJob implements ShouldQueue
             return;
         }
 
-        if (! $this->isUrlSafe($profile->webhook_url)) {
+        if (! UrlSafetyValidator::isSafe($profile->webhook_url)) {
             Log::warning("Blocked webhook delivery to unsafe URL for event {$this->webhookEventId}");
             $webhookRepository->markFailed($event, $event->delivery_attempts, 'Webhook URL blocked: internal/private address');
 
@@ -111,39 +112,5 @@ final class DeliverWebhookJob implements ShouldQueue
         Log::error("Webhook delivery permanently failed for event {$this->webhookEventId}", [
             'error' => $e->getMessage(),
         ]);
-    }
-
-    private function isUrlSafe(string $url): bool
-    {
-        $parsed = parse_url($url);
-
-        // Only allow http/https
-        $scheme = $parsed['scheme'] ?? '';
-        if (! in_array($scheme, ['http', 'https'], true)) {
-            return false;
-        }
-
-        // Block URLs with userinfo
-        if (isset($parsed['user']) || isset($parsed['pass'])) {
-            return false;
-        }
-
-        $host = $parsed['host'] ?? '';
-        if (empty($host) || $host === 'localhost') {
-            return false;
-        }
-
-        // Check if host is an IP address
-        if (filter_var($host, FILTER_VALIDATE_IP)) {
-            return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
-        }
-
-        // Resolve hostname
-        $ip = gethostbyname($host);
-        if ($ip !== $host && filter_var($ip, FILTER_VALIDATE_IP)) {
-            return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
-        }
-
-        return true;
     }
 }
