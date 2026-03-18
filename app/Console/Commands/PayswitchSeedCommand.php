@@ -216,15 +216,17 @@ final class PayswitchSeedCommand extends Command
                 'created_at' => $createdAt,
             ]);
 
-            PaymentAuditLog::create([
-                'payment_intent_id' => $payment->id,
-                'merchant_account_id' => $merchant->id,
-                'action' => 'payment.status_changed',
-                'previous_status' => PaymentStatus::Processing->value,
-                'new_status' => $status->value,
-                'actor' => 'connector:'.$connector,
-                'created_at' => $createdAt->copy()->addSeconds(random_int(1, 30)),
-            ]);
+            if ($status !== PaymentStatus::Processing) {
+                PaymentAuditLog::create([
+                    'payment_intent_id' => $payment->id,
+                    'merchant_account_id' => $merchant->id,
+                    'action' => 'payment.status_changed',
+                    'previous_status' => PaymentStatus::Processing->value,
+                    'new_status' => $status->value,
+                    'actor' => 'connector:'.$connector,
+                    'created_at' => $createdAt->copy()->addSeconds(random_int(1, 30)),
+                ]);
+            }
 
             return $payment;
         });
