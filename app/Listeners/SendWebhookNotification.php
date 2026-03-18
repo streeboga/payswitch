@@ -37,6 +37,6 @@ class SendWebhookNotification
             'delivery_attempts' => 0,
         ]);
 
-        DeliverWebhookJob::dispatch($webhookEvent);
+        DeliverWebhookJob::dispatch($webhookEvent->id);
     }
 }

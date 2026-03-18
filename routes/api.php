@@ -4,10 +4,15 @@ use App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\RefundController;
+use App\Http\Controllers\Api\V1\WebhookReceiverController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware('json-api')->group(function () {
+    // Incoming PSP webhooks (no auth)
+    Route::post('/webhooks/{merchantKey}/{mcaKey}', [WebhookReceiverController::class, 'handle'])
+        ->withoutMiddleware(['auth.api_key']);
+
     Route::get('/health', function () {
         try {
             DB::connection()->getPdo();
