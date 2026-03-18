@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PaymentMethodController;
 use App\Http\Controllers\Api\V1\RefundController;
 use App\Http\Controllers\Api\V1\WebhookReceiverController;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
     });
 
     // Admin API
-    Route::middleware(['auth.api_key', 'auth.admin_api_key'])->group(function () {
+    Route::middleware(['auth.api_key', 'auth.admin_api_key', 'throttle:payswitch-api'])->group(function () {
         Route::post('/organizations', [Admin\OrganizationController::class, 'store']);
         Route::post('/merchants', [Admin\MerchantAccountController::class, 'store']);
         Route::get('/merchants/{merchantKey}', [Admin\MerchantAccountController::class, 'show']);
@@ -42,10 +43,16 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('/merchants/{merchantKey}/connectors/{connectorKey}', [Admin\ConnectorController::class, 'show']);
         Route::patch('/merchants/{merchantKey}/connectors/{connectorKey}', [Admin\ConnectorController::class, 'update']);
         Route::delete('/merchants/{merchantKey}/connectors/{connectorKey}', [Admin\ConnectorController::class, 'destroy']);
+
+        Route::post('/merchants/{merchantKey}/routing-rules', [Admin\RoutingRuleController::class, 'store']);
+        Route::get('/merchants/{merchantKey}/routing-rules', [Admin\RoutingRuleController::class, 'index']);
+        Route::get('/merchants/{merchantKey}/routing-rules/{ruleKey}', [Admin\RoutingRuleController::class, 'show']);
+        Route::patch('/merchants/{merchantKey}/routing-rules/{ruleKey}', [Admin\RoutingRuleController::class, 'update']);
+        Route::delete('/merchants/{merchantKey}/routing-rules/{ruleKey}', [Admin\RoutingRuleController::class, 'destroy']);
     });
 
     // Merchant API
-    Route::middleware(['auth.api_key', 'auth.secret_api_key'])->group(function () {
+    Route::middleware(['auth.api_key', 'auth.secret_api_key', 'throttle:payswitch-api'])->group(function () {
         Route::post('/payments', [PaymentController::class, 'store'])->name('api.v1.payments.store');
         Route::get('/payments/{paymentKey}', [PaymentController::class, 'show'])->name('api.v1.payments.show');
         Route::post('/payments/{paymentKey}/confirm', [PaymentController::class, 'confirm']);
@@ -60,5 +67,11 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('/customers/{customerKey}', [CustomerController::class, 'show']);
         Route::patch('/customers/{customerKey}', [CustomerController::class, 'update']);
         Route::delete('/customers/{customerKey}', [CustomerController::class, 'destroy']);
+
+        Route::post('/customers/{customerKey}/payment-methods', [PaymentMethodController::class, 'store']);
+        Route::get('/customers/{customerKey}/payment-methods', [PaymentMethodController::class, 'index']);
+        Route::get('/payment-methods/{pmKey}', [PaymentMethodController::class, 'show']);
+        Route::delete('/payment-methods/{pmKey}', [PaymentMethodController::class, 'destroy']);
+        Route::post('/payment-methods/{pmKey}/default', [PaymentMethodController::class, 'setDefault']);
     });
 });

@@ -28,7 +28,7 @@ beforeEach(function () {
     MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $profile->id,
-        'connector_name' => 'stripe',
+        'connector_name' => 'test',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => encrypt(json_encode(['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'])),
         'payment_methods_enabled' => [['payment_method' => 'card']],
@@ -147,5 +147,5 @@ test('refund uses same connector as original payment', function () {
     ], ['api-key' => $this->rawKey]);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.attributes.connector', 'stripe');
+        ->assertJsonPath('data.attributes.connector', 'test');
 });

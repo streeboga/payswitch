@@ -11,6 +11,8 @@ final class ConnectorFactory
 {
     private static array $drivers = [
         'stripe' => Drivers\StripeConnector::class,
+        'cloudpayments' => Drivers\CloudPaymentsConnector::class,
+        'test' => Drivers\TestConnector::class,
         // 'yookassa' => Drivers\YooKassaConnector::class,
     ];
 

@@ -48,6 +48,16 @@ class IdGenerator
         return config('payswitch.id_prefixes.event').Str::ulid();
     }
 
+    public static function paymentMethodId(): string
+    {
+        return config('payswitch.id_prefixes.payment_method').Str::ulid();
+    }
+
+    public static function routingRuleId(): string
+    {
+        return config('payswitch.id_prefixes.routing_rule').Str::ulid();
+    }
+
     public static function clientSecret(string $paymentId): string
     {
         return $paymentId.'_secret_'.Str::ulid();

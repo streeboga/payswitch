@@ -120,13 +120,14 @@ test('expired key returns 401 with api_key_expired code', function () {
 
 test('api requests are rate limited', function () {
     [$merchant, $rawKey] = createMerchantWithApiKey();
-    $limit = config('payswitch.rate_limit.api', 60);
+    $limit = config('payswitch.rate_limit.secret', 120);
 
-    for ($i = 0; $i < $limit + 1; $i++) {
+    // Send limit+1 requests
+    for ($i = 0; $i <= $limit; $i++) {
         $response = $this->getJson('/api/v1/payments/pay_test', [
             'api-key' => $rawKey,
         ]);
     }
 
     $response->assertStatus(429);
-})->skip('Rate limiter not configured');
+});

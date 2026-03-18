@@ -45,6 +45,8 @@ return [
         'product' => 'prod_',
         'api_key' => 'pk_',
         'event' => 'evt_',
+        'payment_method' => 'pm_',
+        'routing_rule' => 'rule_',
     ],
 
     /*
@@ -77,14 +79,9 @@ return [
     */
 
     'rate_limit' => [
-        'api' => [
-            'max_attempts' => 60,
-            'decay_seconds' => 60,
-        ],
-        'webhooks' => [
-            'max_attempts' => 100,
-            'decay_seconds' => 60,
-        ],
+        'admin' => 30,      // requests per minute for Admin API Key
+        'secret' => 120,    // requests per minute for Secret API Key
+        'publishable' => 60, // requests per minute for Publishable Key
     ],
 
 ];

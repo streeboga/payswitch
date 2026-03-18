@@ -6,27 +6,31 @@ namespace Streeboga\PaymentData\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Streeboga\PaymentData\Support\IdGenerator;
 
-class Customer extends Model
+class PaymentMethod extends Model
 {
     protected $fillable = [
         'key',
+        'customer_id',
         'merchant_account_id',
-        'name',
-        'email',
-        'phone',
-        'phone_country_code',
-        'description',
+        'type',
+        'card_last4',
+        'card_brand',
+        'card_exp_month',
+        'card_exp_year',
+        'card_holder_name',
+        'connector_name',
+        'connector_token',
+        'is_default',
         'metadata',
-        'default_payment_method_id',
     ];
 
     protected function casts(): array
     {
         return [
             'metadata' => 'array',
+            'is_default' => 'boolean',
         ];
     }
 
@@ -37,9 +41,14 @@ class Customer extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (Customer $model) {
-            $model->key ??= IdGenerator::customerId();
+        static::creating(function (PaymentMethod $model) {
+            $model->key ??= IdGenerator::paymentMethodId();
         });
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function merchantAccount(): BelongsTo
@@ -47,8 +56,8 @@ class Customer extends Model
         return $this->belongsTo(MerchantAccount::class);
     }
 
-    public function paymentMethods(): HasMany
+    public function maskCardNumber(): string
     {
-        return $this->hasMany(PaymentMethod::class);
+        return '**** **** **** '.$this->card_last4;
     }
 }

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
+use Streeboga\PaymentData\Models\RoutingRule;
 
 final class RoutingService
 {
@@ -14,20 +15,23 @@ final class RoutingService
      *
      * Priority:
      * 1. Explicit connector name from request
-     * 2. Auto-select by payment_method + currency
-     * 3. First active connector
+     * 2. Routing rules (priority, rule_based, volume_split)
+     * 3. Auto-select by payment_method + currency
+     * 4. First active connector
      */
-    public function resolve(int|string $merchantAccountId, ?string $explicitConnector = null, ?string $paymentMethod = null, ?string $currency = null): MerchantConnectorAccount
+    public function resolve(int|string $merchantAccountId, ?string $explicitConnector = null, ?string $paymentMethod = null, ?string $currency = null, ?int $amount = null): MerchantConnectorAccount
     {
-        $query = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
-            ->where('disabled', false);
-
-        // 1. Explicit connector
+        // 1. Explicit connector (highest priority)
         if ($explicitConnector) {
-            $mca = $query->where('connector_name', $explicitConnector)->first();
+            $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+                ->where('disabled', false)
+                ->where('connector_name', $explicitConnector)
+                ->first();
+
             if ($mca) {
                 return $mca;
             }
+
             throw new PaymentException(
                 "Connector '{$explicitConnector}' not found or disabled for this merchant",
                 'connector_not_found',
@@ -36,9 +40,25 @@ final class RoutingService
             );
         }
 
-        // 2. Auto-select by payment method (check payment_methods_enabled JSON)
+        // 2. Check routing rules
+        $rules = RoutingRule::where('merchant_account_id', $merchantAccountId)
+            ->where('active', true)
+            ->orderByDesc('priority')
+            ->get();
+
+        foreach ($rules as $rule) {
+            $connector = $this->evaluateRule($rule, $paymentMethod, $currency, $amount, $merchantAccountId);
+            if ($connector) {
+                return $connector;
+            }
+        }
+
+        // 3. Auto-select by payment method (check payment_methods_enabled JSON)
         if ($paymentMethod) {
-            $connectors = $query->get();
+            $connectors = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+                ->where('disabled', false)
+                ->get();
+
             foreach ($connectors as $mca) {
                 $methods = $mca->payment_methods_enabled ?? [];
                 foreach ($methods as $method) {
@@ -49,8 +69,11 @@ final class RoutingService
             }
         }
 
-        // 3. First active connector
-        $mca = $query->first();
+        // 4. First active connector
+        $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+            ->where('disabled', false)
+            ->first();
+
         if ($mca) {
             return $mca;
         }
@@ -72,5 +95,105 @@ final class RoutingService
             ->where('disabled', false)
             ->whereNotIn('connector_name', $excludeConnectors)
             ->first();
+    }
+
+    private function evaluateRule(RoutingRule $rule, ?string $paymentMethod, ?string $currency, ?int $amount, int|string $merchantAccountId): ?MerchantConnectorAccount
+    {
+        $config = $rule->rules;
+
+        return match ($rule->type) {
+            'priority' => $this->evaluatePriorityRule($config, $merchantAccountId),
+            'rule_based' => $this->evaluateRuleBasedRule($config, $currency, $amount, $merchantAccountId),
+            'volume_split' => $this->evaluateVolumeSplitRule($config, $merchantAccountId),
+            default => null,
+        };
+    }
+
+    private function evaluatePriorityRule(array $config, int|string $merchantAccountId): ?MerchantConnectorAccount
+    {
+        $connectorNames = $config['connectors'] ?? [];
+
+        foreach ($connectorNames as $name) {
+            $mca = MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+                ->where('connector_name', $name)
+                ->where('disabled', false)
+                ->first();
+
+            if ($mca) {
+                return $mca;
+            }
+        }
+
+        return null;
+    }
+
+    private function evaluateRuleBasedRule(array $config, ?string $currency, ?int $amount, int|string $merchantAccountId): ?MerchantConnectorAccount
+    {
+        $conditions = $config['conditions'] ?? [];
+
+        foreach ($conditions as $condition) {
+            $value = match ($condition['field']) {
+                'currency' => $currency,
+                'amount' => $amount,
+                default => null,
+            };
+
+            if ($value === null) {
+                continue;
+            }
+
+            $matches = match ($condition['operator']) {
+                '==' => $value == $condition['value'],
+                '!=' => $value != $condition['value'],
+                '>' => $value > $condition['value'],
+                '<' => $value < $condition['value'],
+                '>=' => $value >= $condition['value'],
+                '<=' => $value <= $condition['value'],
+                'in' => in_array($value, (array) $condition['value']),
+                default => false,
+            };
+
+            if ($matches) {
+                return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+                    ->where('connector_name', $condition['connector'])
+                    ->where('disabled', false)
+                    ->first();
+            }
+        }
+
+        // Default connector
+        if (isset($config['default_connector'])) {
+            return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+                ->where('connector_name', $config['default_connector'])
+                ->where('disabled', false)
+                ->first();
+        }
+
+        return null;
+    }
+
+    private function evaluateVolumeSplitRule(array $config, int|string $merchantAccountId): ?MerchantConnectorAccount
+    {
+        $splits = $config['split'] ?? [];
+        $totalWeight = array_sum(array_column($splits, 'weight'));
+
+        if ($totalWeight <= 0) {
+            return null;
+        }
+
+        $random = mt_rand(1, $totalWeight);
+        $cumulative = 0;
+
+        foreach ($splits as $split) {
+            $cumulative += $split['weight'];
+            if ($random <= $cumulative) {
+                return MerchantConnectorAccount::where('merchant_account_id', $merchantAccountId)
+                    ->where('connector_name', $split['connector'])
+                    ->where('disabled', false)
+                    ->first();
+            }
+        }
+
+        return null;
     }
 }

@@ -36,7 +36,7 @@ beforeEach(function () {
     MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->profile->id,
-        'connector_name' => 'stripe',
+        'connector_name' => 'test',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => encrypt(json_encode(['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'])),
         'payment_methods_enabled' => [['payment_method' => 'card']],

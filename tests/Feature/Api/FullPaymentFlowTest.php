@@ -43,10 +43,10 @@ test('full payment flow: org → merchant → profile → key → connector → 
     $rawApiKey = $keyResponse->json('data.attributes.api_key');
     expect($rawApiKey)->toStartWith('snd_');
 
-    // 5. Add Stripe Connector
+    // 5. Add Test Connector
     $connectorResponse = $this->postJson("/api/v1/merchants/{$merchantKey}/connectors", [
         'data' => ['type' => 'connectors', 'attributes' => [
-            'connector_name' => 'stripe',
+            'connector_name' => 'test',
             'connector_type' => 'fiz_operations',
             'profile_id' => $profileKey,
             'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test_flow'],
@@ -104,7 +104,7 @@ test('full payment flow: org → merchant → profile → key → connector → 
     $refundResponse->assertStatus(201)
         ->assertJsonPath('data.attributes.status', 'succeeded')
         ->assertJsonPath('data.attributes.amount', 3000)
-        ->assertJsonPath('data.attributes.connector', 'stripe');
+        ->assertJsonPath('data.attributes.connector', 'test');
 
     // 10. Verify webhook events were created
     $this->assertDatabaseHas('webhook_events', ['event_type' => 'payment_authorized']);
@@ -117,7 +117,7 @@ test('full payment flow: org → merchant → profile → key → connector → 
 
     // 12. Verify payment attempt was created
     $this->assertDatabaseHas('payment_attempts', [
-        'connector' => 'stripe',
+        'connector' => 'test',
         'status' => 'succeeded',
     ]);
 });
@@ -145,7 +145,7 @@ test('full flow with automatic capture (create + confirm in one call)', function
 
     $this->postJson("/api/v1/merchants/{$merchant->json('data.id')}/connectors", [
         'data' => ['type' => 'connectors', 'attributes' => [
-            'connector_name' => 'stripe', 'connector_type' => 'fiz_operations',
+            'connector_name' => 'test', 'connector_type' => 'fiz_operations',
             'profile_id' => $profile->json('data.id'),
             'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
             'test_mode' => true,

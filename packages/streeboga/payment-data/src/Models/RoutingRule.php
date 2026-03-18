@@ -6,27 +6,26 @@ namespace Streeboga\PaymentData\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Streeboga\PaymentData\Support\IdGenerator;
 
-class Customer extends Model
+class RoutingRule extends Model
 {
     protected $fillable = [
-        'key',
         'merchant_account_id',
+        'business_profile_id',
+        'type',
         'name',
-        'email',
-        'phone',
-        'phone_country_code',
-        'description',
-        'metadata',
-        'default_payment_method_id',
+        'rules',
+        'active',
+        'priority',
     ];
 
     protected function casts(): array
     {
         return [
-            'metadata' => 'array',
+            'rules' => 'array',
+            'active' => 'boolean',
+            'priority' => 'integer',
         ];
     }
 
@@ -37,8 +36,8 @@ class Customer extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (Customer $model) {
-            $model->key ??= IdGenerator::customerId();
+        static::creating(function (RoutingRule $model) {
+            $model->key ??= IdGenerator::routingRuleId();
         });
     }
 
@@ -47,8 +46,8 @@ class Customer extends Model
         return $this->belongsTo(MerchantAccount::class);
     }
 
-    public function paymentMethods(): HasMany
+    public function businessProfile(): BelongsTo
     {
-        return $this->hasMany(PaymentMethod::class);
+        return $this->belongsTo(BusinessProfile::class);
     }
 }
