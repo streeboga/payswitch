@@ -6,6 +6,7 @@ namespace Streeboga\PaymentConnectors\Drivers;
 
 use Illuminate\Support\Str;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 
 /**
  * Test/mock connector that simulates PSP responses.
@@ -19,10 +20,7 @@ use Streeboga\PaymentData\Contracts\ConnectorInterface;
  */
 final class TestConnector implements ConnectorInterface
 {
-    public function __construct(?array $credentials = [])
-    {
-        // No real credentials needed for test connector
-    }
+    public function __construct(?array $credentials = []) {}
 
     public function getName(): string
     {
@@ -53,7 +51,6 @@ final class TestConnector implements ConnectorInterface
     {
         $amount = $params['amount'] ?? 0;
 
-        // Simulate refund failure for amounts over 999999 (for testing)
         if ($amount > 99999900) {
             return [
                 'success' => false,
@@ -69,6 +66,26 @@ final class TestConnector implements ConnectorInterface
             'message' => 'Refund successful',
             'code' => 'ok',
         ];
+    }
+
+    public function verifyWebhookSignature(string $payload, array $headers): bool
+    {
+        return true;
+    }
+
+    public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
+    {
+        return match ($eventType) {
+            'payment.succeeded' => PaymentStatus::Succeeded,
+            'payment.failed' => PaymentStatus::Failed,
+            'payment.canceled' => PaymentStatus::Cancelled,
+            default => null,
+        };
+    }
+
+    public function extractPaymentIdFromWebhook(array $payload): ?string
+    {
+        return $payload['payment_id'] ?? ($payload['data']['object']['metadata']['payment_id'] ?? null);
     }
 
     private function simulatePayment(array $params, bool $authorize = false): array

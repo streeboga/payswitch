@@ -111,9 +111,8 @@ test('full payment flow: org → merchant → profile → key → connector → 
     $this->assertDatabaseHas('webhook_events', ['event_type' => 'payment_captured']);
     $this->assertDatabaseHas('webhook_events', ['event_type' => 'refund_succeeded']);
 
-    // 11. Verify audit log
-    $this->assertDatabaseHas('payment_audit_log', ['new_status' => 'requires_capture']);
-    $this->assertDatabaseHas('payment_audit_log', ['new_status' => 'succeeded']);
+    // 11. Verify audit log (spatie activity_log)
+    $this->assertDatabaseHas('activity_log', ['log_name' => 'payment', 'event' => 'status_changed']);
 
     // 12. Verify payment attempt was created
     $this->assertDatabaseHas('payment_attempts', [

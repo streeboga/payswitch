@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Jobs\DeliverWebhookJob;
 use App\Services\RoutingService;
+use App\Support\UrlSafetyValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
@@ -41,45 +41,25 @@ beforeEach(function () {
 // --- SSRF Protection ---
 
 test('SSRF blocks file:// scheme', function () {
-    $job = new DeliverWebhookJob(1);
-    $reflection = new ReflectionMethod($job, 'isUrlSafe');
-    $reflection->setAccessible(true);
-
-    expect($reflection->invoke($job, 'file:///etc/passwd'))->toBeFalse();
+    expect(UrlSafetyValidator::isSafe('file:///etc/passwd'))->toBeFalse();
 });
 
 test('SSRF blocks ftp:// scheme', function () {
-    $job = new DeliverWebhookJob(1);
-    $reflection = new ReflectionMethod($job, 'isUrlSafe');
-    $reflection->setAccessible(true);
-
-    expect($reflection->invoke($job, 'ftp://evil.com/payload'))->toBeFalse();
+    expect(UrlSafetyValidator::isSafe('ftp://evil.com/payload'))->toBeFalse();
 });
 
 test('SSRF blocks URLs with userinfo', function () {
-    $job = new DeliverWebhookJob(1);
-    $reflection = new ReflectionMethod($job, 'isUrlSafe');
-    $reflection->setAccessible(true);
-
-    expect($reflection->invoke($job, 'https://user:pass@example.com/webhook'))->toBeFalse();
+    expect(UrlSafetyValidator::isSafe('https://user:pass@example.com/webhook'))->toBeFalse();
 });
 
 test('SSRF blocks private IP addresses', function () {
-    $job = new DeliverWebhookJob(1);
-    $reflection = new ReflectionMethod($job, 'isUrlSafe');
-    $reflection->setAccessible(true);
-
-    expect($reflection->invoke($job, 'http://192.168.1.1/webhook'))->toBeFalse();
-    expect($reflection->invoke($job, 'http://10.0.0.1/webhook'))->toBeFalse();
-    expect($reflection->invoke($job, 'http://127.0.0.1/webhook'))->toBeFalse();
+    expect(UrlSafetyValidator::isSafe('http://192.168.1.1/webhook'))->toBeFalse();
+    expect(UrlSafetyValidator::isSafe('http://10.0.0.1/webhook'))->toBeFalse();
+    expect(UrlSafetyValidator::isSafe('http://127.0.0.1/webhook'))->toBeFalse();
 });
 
 test('SSRF blocks localhost', function () {
-    $job = new DeliverWebhookJob(1);
-    $reflection = new ReflectionMethod($job, 'isUrlSafe');
-    $reflection->setAccessible(true);
-
-    expect($reflection->invoke($job, 'http://localhost/webhook'))->toBeFalse();
+    expect(UrlSafetyValidator::isSafe('http://localhost/webhook'))->toBeFalse();
 });
 
 // --- API Key Validation ---

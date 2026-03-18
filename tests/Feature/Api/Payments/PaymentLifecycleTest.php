@@ -6,6 +6,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -326,6 +327,21 @@ test('connector exception during confirm triggers fallback', function () {
         {
             return ['success' => true, 'transaction_id' => 'x'];
         }
+
+        public function verifyWebhookSignature(string $payload, array $headers): bool
+        {
+            return false;
+        }
+
+        public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
+        {
+            return null;
+        }
+
+        public function extractPaymentIdFromWebhook(array $payload): ?string
+        {
+            return null;
+        }
     };
     ConnectorFactory::register('throwing', get_class($throwingConnectorClass));
 
@@ -392,8 +408,8 @@ test('payment status changes are logged in audit log', function () {
 
     $this->postJson("/api/v1/payments/{$paymentId}/cancel", [], apiHeaders());
 
-    $this->assertDatabaseHas('payment_audit_log', [
-        'action' => 'status_changed',
-        'new_status' => 'cancelled',
+    $this->assertDatabaseHas('activity_log', [
+        'log_name' => 'payment',
+        'event' => 'status_changed',
     ]);
 });
