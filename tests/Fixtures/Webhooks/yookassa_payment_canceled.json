@@ -1,0 +1,11 @@
+{
+    "type": "notification",
+    "event": "payment.canceled",
+    "object": {
+        "id": "2b5b3f8e-0002-5000-a000-1234567890ab",
+        "status": "canceled",
+        "amount": {"value": "100.00", "currency": "RUB"},
+        "cancellation_details": {"party": "issuer", "reason": "insufficient_funds"},
+        "metadata": {"payment_id": "pay_04TESTWEBHOOK"}
+    }
+}

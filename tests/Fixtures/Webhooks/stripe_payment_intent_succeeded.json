@@ -1,0 +1,14 @@
+{
+    "id": "evt_1TEST",
+    "type": "payment_intent.succeeded",
+    "data": {
+        "object": {
+            "id": "pi_1TEST",
+            "object": "payment_intent",
+            "amount": 5000,
+            "currency": "usd",
+            "status": "succeeded",
+            "metadata": {"payment_id": "pay_05TESTWEBHOOK"}
+        }
+    }
+}

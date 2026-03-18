@@ -1,0 +1,11 @@
+{
+    "type": "notification",
+    "event": "refund.succeeded",
+    "object": {
+        "id": "2b5b3f8e-0003-5000-a000-1234567890ab",
+        "status": "succeeded",
+        "amount": {"value": "30.00", "currency": "RUB"},
+        "payment_id": "2b5b3f8e-0001-5000-a000-1234567890ab",
+        "metadata": {"payment_id": "pay_03TESTWEBHOOK"}
+    }
+}

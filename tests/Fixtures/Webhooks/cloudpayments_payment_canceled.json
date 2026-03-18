@@ -1,0 +1,8 @@
+{
+    "TransactionId": 504735240,
+    "Amount": 50.00,
+    "Currency": "RUB",
+    "InvoiceId": "pay_02TESTWEBHOOK",
+    "Reason": "CardDeclined",
+    "ReasonCode": 5051
+}
