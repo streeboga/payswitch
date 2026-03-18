@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -21,7 +22,7 @@ beforeEach(function () {
     ApiKey::create([
         'merchant_account_id' => $this->merchant->id,
         'key_hash' => bcrypt($this->rawKey),
-        'key_prefix' => substr($this->rawKey, 0, 10),
+        'key_prefix' => substr($this->rawKey, 0, 20),
         'name' => 'Test',
     ]);
 
@@ -42,7 +43,7 @@ function apiHeaders(): array
     return ['api-key' => test()->rawKey];
 }
 
-function createPayment(array $attrs = []): \Illuminate\Testing\TestResponse
+function createPayment(array $attrs = []): TestResponse
 {
     return test()->postJson('/api/v1/payments', [
         'data' => [
@@ -86,7 +87,7 @@ test('cannot access another merchants payment', function () {
     ApiKey::create([
         'merchant_account_id' => $merchant2->id,
         'key_hash' => bcrypt($rawKey2),
-        'key_prefix' => substr($rawKey2, 0, 10),
+        'key_prefix' => substr($rawKey2, 0, 20),
         'name' => 'Other',
     ]);
 

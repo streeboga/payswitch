@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin;
+use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\RefundController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -8,7 +12,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         try {
             DB::connection()->getPdo();
             $dbStatus = 'connected';
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $dbStatus = 'disconnected';
         }
 
@@ -17,5 +21,39 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             'timestamp' => now()->toIso8601String(),
             'database' => $dbStatus,
         ], $dbStatus === 'connected' ? 200 : 503);
+    });
+
+    // Admin API
+    Route::middleware(['auth.api_key', 'auth.admin_api_key'])->group(function () {
+        Route::post('/organizations', [Admin\OrganizationController::class, 'store']);
+        Route::post('/merchants', [Admin\MerchantAccountController::class, 'store']);
+        Route::get('/merchants/{merchantKey}', [Admin\MerchantAccountController::class, 'show']);
+        Route::post('/profiles', [Admin\BusinessProfileController::class, 'store']);
+        Route::get('/profiles/{profileKey}', [Admin\BusinessProfileController::class, 'show']);
+        Route::post('/merchants/{merchantKey}/api-keys', [Admin\ApiKeyController::class, 'store']);
+        Route::delete('/merchants/{merchantKey}/api-keys/{keyId}', [Admin\ApiKeyController::class, 'destroy']);
+        Route::post('/merchants/{merchantKey}/connectors', [Admin\ConnectorController::class, 'store']);
+        Route::get('/merchants/{merchantKey}/connectors', [Admin\ConnectorController::class, 'index']);
+        Route::get('/merchants/{merchantKey}/connectors/{connectorKey}', [Admin\ConnectorController::class, 'show']);
+        Route::patch('/merchants/{merchantKey}/connectors/{connectorKey}', [Admin\ConnectorController::class, 'update']);
+        Route::delete('/merchants/{merchantKey}/connectors/{connectorKey}', [Admin\ConnectorController::class, 'destroy']);
+    });
+
+    // Merchant API
+    Route::middleware(['auth.api_key', 'auth.secret_api_key'])->group(function () {
+        Route::post('/payments', [PaymentController::class, 'store'])->name('api.v1.payments.store');
+        Route::get('/payments/{paymentKey}', [PaymentController::class, 'show'])->name('api.v1.payments.show');
+        Route::post('/payments/{paymentKey}/confirm', [PaymentController::class, 'confirm']);
+        Route::post('/payments/{paymentKey}/capture', [PaymentController::class, 'capture']);
+        Route::post('/payments/{paymentKey}/cancel', [PaymentController::class, 'cancel']);
+
+        Route::post('/refunds', [RefundController::class, 'store']);
+        Route::get('/refunds/{refundKey}', [RefundController::class, 'show']);
+
+        Route::post('/customers', [CustomerController::class, 'store']);
+        Route::get('/customers', [CustomerController::class, 'index']);
+        Route::get('/customers/{customerKey}', [CustomerController::class, 'show']);
+        Route::patch('/customers/{customerKey}', [CustomerController::class, 'update']);
+        Route::delete('/customers/{customerKey}', [CustomerController::class, 'destroy']);
     });
 });

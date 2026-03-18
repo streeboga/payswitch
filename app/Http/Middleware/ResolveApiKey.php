@@ -28,7 +28,7 @@ class ResolveApiKey
             return $next($request);
         }
 
-        $keyPrefix = substr($apiKey, 0, 10);
+        $keyPrefix = substr($apiKey, 0, 20);
 
         $apiKeyModel = ApiKey::where('key_prefix', $keyPrefix)->first();
 
@@ -46,7 +46,7 @@ class ResolveApiKey
             }
 
             $request->attributes->set('api_key_type', 'secret');
-            $request->attributes->set('merchant_id', $apiKeyModel->merchant_id);
+            $request->attributes->set('merchant_id', $apiKeyModel->merchant_account_id);
             $request->attributes->set('api_key', $apiKeyModel);
 
             return $next($request);
@@ -56,7 +56,7 @@ class ResolveApiKey
 
         if ($merchantAccount) {
             $request->attributes->set('api_key_type', 'publishable');
-            $request->attributes->set('merchant_id', $merchantAccount->merchant_id);
+            $request->attributes->set('merchant_id', $merchantAccount->id);
 
             return $next($request);
         }

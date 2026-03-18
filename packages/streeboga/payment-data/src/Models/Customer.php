@@ -11,6 +11,7 @@ use Streeboga\PaymentData\Support\IdGenerator;
 class Customer extends Model
 {
     protected $fillable = [
+        'key',
         'merchant_account_id',
         'name',
         'email',

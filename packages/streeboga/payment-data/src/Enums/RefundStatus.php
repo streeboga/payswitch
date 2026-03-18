@@ -7,7 +7,7 @@ namespace Streeboga\PaymentData\Enums;
 use App\Contracts\Enums\HasColor;
 use App\Contracts\Enums\HasLabel;
 
-enum RefundStatus: string implements HasLabel, HasColor
+enum RefundStatus: string implements HasColor, HasLabel
 {
     case Succeeded = 'succeeded';
     case Failed = 'failed';

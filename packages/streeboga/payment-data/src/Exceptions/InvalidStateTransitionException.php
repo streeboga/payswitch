@@ -14,7 +14,7 @@ class InvalidStateTransitionException extends PaymentException
     ) {
         parent::__construct(
             message: "Invalid state transition from '{$from}' to '{$to}'.",
-            errorCode: 'INVALID_STATE_TRANSITION',
+            errorCode: 'invalid_state_transition',
             errorType: 'state_error',
             httpStatus: 400,
             code: $code,

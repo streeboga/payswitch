@@ -47,7 +47,7 @@ test('payment intent has many attempts', function () {
         'amount' => $payment->amount,
     ]);
 
-    expect($payment->attempts)->toHaveCount(1);
+    expect($payment->paymentAttempts)->toHaveCount(1);
 });
 
 test('payment intent has many refunds', function () {

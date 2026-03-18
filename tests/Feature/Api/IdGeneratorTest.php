@@ -47,7 +47,7 @@ test('client secret contains payment id and _secret_ separator', function () {
     $secret = IdGenerator::clientSecret($paymentId);
 
     expect($secret)
-        ->toStartWith($paymentId . '_secret_')
+        ->toStartWith($paymentId.'_secret_')
         ->not->toBe($paymentId);
 });
 

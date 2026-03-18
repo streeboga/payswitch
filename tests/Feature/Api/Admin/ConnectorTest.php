@@ -63,7 +63,7 @@ test('connector credentials are stored encrypted', function () {
     ], ['api-key' => 'admin_test_key']);
 
     // Raw DB value should NOT contain the plaintext secret
-    $raw = \DB::table('merchant_connector_accounts')->first();
+    $raw = DB::table('merchant_connector_accounts')->first();
     expect($raw->connector_account_details)->not->toContain('sk_test_secret');
 });
 

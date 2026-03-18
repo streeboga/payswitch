@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
+use App\Events\PaymentStatusChanged;
+use App\Listeners\LogPaymentAudit;
+use App\Listeners\SendWebhookNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -24,6 +28,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Event::listen(PaymentStatusChanged::class, LogPaymentAudit::class);
+        Event::listen(PaymentStatusChanged::class, SendWebhookNotification::class);
     }
 
     /**

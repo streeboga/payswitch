@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Streeboga\PaymentData\Models\Organization;
-use Streeboga\PaymentData\Models\MerchantAccount;
-use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\ApiKey;
+use Streeboga\PaymentData\Models\BusinessProfile;
+use Streeboga\PaymentData\Models\MerchantAccount;
+use Streeboga\PaymentData\Models\Organization;
 
 uses(RefreshDatabase::class);
 

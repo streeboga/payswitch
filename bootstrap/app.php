@@ -60,7 +60,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'errors' => [[
                         'status' => (string) $e->httpStatus,
-                        'code' => 'payment_error',
+                        'code' => $e->errorCode,
                         'title' => 'Payment Error',
                         'detail' => $e->getMessage(),
                     ]],
@@ -98,6 +98,11 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->is('api/*')) {
                 $errors = [];
                 foreach ($e->errors() as $field => $messages) {
+                    // Convert dot-notation field to JSON pointer
+                    $pointer = str_starts_with($field, 'data.attributes.')
+                        ? '/'.str_replace('.', '/', $field)
+                        : "/data/attributes/{$field}";
+
                     foreach ($messages as $message) {
                         $errors[] = [
                             'status' => '422',
@@ -105,7 +110,7 @@ return Application::configure(basePath: dirname(__DIR__))
                             'title' => 'Validation Error',
                             'detail' => $message,
                             'source' => [
-                                'pointer' => "/data/attributes/{$field}",
+                                'pointer' => $pointer,
                             ],
                         ];
                     }

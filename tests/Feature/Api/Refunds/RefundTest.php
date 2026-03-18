@@ -21,7 +21,7 @@ beforeEach(function () {
     ApiKey::create([
         'merchant_account_id' => $this->merchant->id,
         'key_hash' => bcrypt($this->rawKey),
-        'key_prefix' => substr($this->rawKey, 0, 10),
+        'key_prefix' => substr($this->rawKey, 0, 20),
         'name' => 'Test',
     ]);
 

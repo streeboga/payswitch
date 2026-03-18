@@ -8,7 +8,7 @@ use App\Contracts\Enums\HasColor;
 use App\Contracts\Enums\HasLabel;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
-enum PaymentStatus: string implements HasLabel, HasColor
+enum PaymentStatus: string implements HasColor, HasLabel
 {
     case RequiresPaymentMethod = 'requires_payment_method';
     case RequiresConfirmation = 'requires_confirmation';

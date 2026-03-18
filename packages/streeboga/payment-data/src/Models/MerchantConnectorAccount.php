@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Streeboga\PaymentData\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Crypt;
@@ -43,9 +44,9 @@ class MerchantConnectorAccount extends Model
         });
     }
 
-    public function connectorAccountDetails(): \Illuminate\Database\Eloquent\Casts\Attribute
+    public function connectorAccountDetails(): Attribute
     {
-        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+        return Attribute::make(
             get: fn (string $value) => Crypt::decryptString($value),
             set: fn (string $value) => Crypt::encryptString($value),
         );

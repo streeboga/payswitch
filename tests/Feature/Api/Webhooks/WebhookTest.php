@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Jobs\DeliverWebhookJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use App\Jobs\DeliverWebhookJob;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -29,7 +29,7 @@ beforeEach(function () {
     ApiKey::create([
         'merchant_account_id' => $this->merchant->id,
         'key_hash' => bcrypt($this->rawKey),
-        'key_prefix' => substr($this->rawKey, 0, 10),
+        'key_prefix' => substr($this->rawKey, 0, 20),
         'name' => 'Test',
     ]);
 
