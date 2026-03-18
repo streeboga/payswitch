@@ -23,7 +23,7 @@ beforeEach(function () {
             'business_profile_id' => $profile->id,
             'connector_name' => $name,
             'connector_type' => 'fiz_operations',
-            'connector_account_details' => encrypt(json_encode(['api_key' => 'test'])),
+            'connector_account_details' => ['api_key' => 'test'],
             'payment_methods_enabled' => [['payment_method' => 'card']],
             'test_mode' => true,
         ]);

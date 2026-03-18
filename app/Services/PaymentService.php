@@ -21,6 +21,15 @@ final class PaymentService
 {
     public function create(array $data, int|string $merchantAccountId): PaymentIntent
     {
+        if (isset($data['payment_id'])) {
+            $existing = PaymentIntent::where('key', $data['payment_id'])
+                ->where('merchant_account_id', $merchantAccountId)
+                ->first();
+            if ($existing) {
+                return $existing; // idempotent — return existing payment
+            }
+        }
+
         if (! isset($data['amount']) || ! is_int($data['amount']) || $data['amount'] <= 0) {
             throw new PaymentException('Amount must be a positive integer', 'invalid_amount', 'invalid_request_error', 400);
         }
@@ -322,7 +331,7 @@ final class PaymentService
                 PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Succeeded);
                 $payment->update([
                     'status' => PaymentStatus::Succeeded,
-                    'amount_received' => $amount,
+                    'amount_received' => ($payment->amount_received ?? 0) + $amount,
                     'amount_capturable' => 0,
                 ]);
             }

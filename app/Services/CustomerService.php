@@ -53,7 +53,17 @@ final class CustomerService
             ->where('merchant_account_id', $merchantAccountId)
             ->firstOrFail();
 
-        $customer->update(array_filter($data, fn ($value) => $value !== null));
+        // Only update keys that were explicitly provided (including null values)
+        $updateData = [];
+        $allowedFields = ['name', 'email', 'phone', 'phone_country_code', 'description', 'metadata'];
+        foreach ($allowedFields as $field) {
+            if (array_key_exists($field, $data)) {
+                $updateData[$field] = $data[$field];
+            }
+        }
+        if (! empty($updateData)) {
+            $customer->update($updateData);
+        }
 
         return $customer->fresh();
     }

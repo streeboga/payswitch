@@ -35,7 +35,7 @@ beforeEach(function () {
         'business_profile_id' => $this->profile->id,
         'connector_name' => 'test',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => encrypt(json_encode(['auth_type' => 'HeaderKey', 'api_key' => 'sk_test_xxx'])),
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test_xxx'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);
@@ -336,7 +336,7 @@ test('connector exception during confirm triggers fallback', function () {
         'business_profile_id' => $profile->id,
         'connector_name' => 'throwing',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => encrypt(json_encode(['auth_type' => 'HeaderKey', 'api_key' => 'sk_throw'])),
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_throw'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);

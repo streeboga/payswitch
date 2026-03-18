@@ -33,7 +33,7 @@ final class ConnectorController extends Controller
             'business_profile_id' => $profileId,
             'connector_name' => $attrs['connector_name'],
             'connector_type' => $attrs['connector_type'],
-            'connector_account_details' => json_encode($attrs['connector_account_details']),
+            'connector_account_details' => $attrs['connector_account_details'],
             'payment_methods_enabled' => $attrs['payment_methods_enabled'] ?? null,
             'test_mode' => $attrs['test_mode'] ?? false,
         ]);
@@ -102,7 +102,7 @@ final class ConnectorController extends Controller
         ])->toArray();
 
         if (isset($attrs['connector_account_details'])) {
-            $updateData['connector_account_details'] = json_encode($attrs['connector_account_details']);
+            $updateData['connector_account_details'] = $attrs['connector_account_details'];
         }
 
         if (isset($attrs['profile_id'])) {

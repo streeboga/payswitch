@@ -31,6 +31,7 @@ final class PaymentController extends Controller
             'data.attributes.return_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
             'data.attributes.metadata' => ['sometimes', 'nullable', 'array', 'max:50'],
             'data.attributes.session_expiry' => ['sometimes', 'integer', 'min:60', 'max:86400'],
+            'data.attributes.payment_id' => ['sometimes', 'string', 'max:40'],
             'data.attributes.confirm' => ['sometimes', 'boolean'],
             'data.attributes.payment_method' => ['required_if:data.attributes.confirm,true', 'string'],
             'data.attributes.payment_method_data' => ['required_if:data.attributes.confirm,true', 'array'],

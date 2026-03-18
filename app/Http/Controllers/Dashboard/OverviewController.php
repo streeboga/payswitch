@@ -14,6 +14,8 @@ use Streeboga\PaymentData\Models\Refund;
 
 final class OverviewController
 {
+    // TODO: Scope queries to current user's merchant when user-merchant association is implemented
+    // Currently shows all data (acceptable for admin dashboard, not for merchant-specific views)
     public function __invoke(): Response
     {
         return Inertia::render('dashboard/overview', [

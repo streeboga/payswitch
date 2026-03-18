@@ -22,7 +22,7 @@ beforeEach(function () {
         'business_profile_id' => $profile->id,
         'connector_name' => 'stripe',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => encrypt(json_encode(['api_key' => 'sk_test'])),
+        'connector_account_details' => ['api_key' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);
@@ -32,7 +32,7 @@ beforeEach(function () {
         'business_profile_id' => $profile->id,
         'connector_name' => 'yookassa',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => encrypt(json_encode(['shop_id' => '123'])),
+        'connector_account_details' => ['shop_id' => '123'],
         'payment_methods_enabled' => [['payment_method' => 'bank_transfer']],
         'test_mode' => true,
     ]);

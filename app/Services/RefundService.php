@@ -32,9 +32,9 @@ final class RefundService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($payment->status !== PaymentStatus::Succeeded) {
+            if (! in_array($payment->status, [PaymentStatus::Succeeded, PaymentStatus::PartiallyCaptured, PaymentStatus::PartiallyCapturedAndCapturable])) {
                 throw new PaymentException(
-                    'Payment must be in succeeded status to refund',
+                    'Payment must be in succeeded or partially captured status to refund',
                     'payment_not_succeeded',
                     'invalid_request_error',
                     400,

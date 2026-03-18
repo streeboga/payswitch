@@ -30,7 +30,7 @@ beforeEach(function () {
         'business_profile_id' => $this->profile->id,
         'connector_name' => 'stripe',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => encrypt(json_encode(['api_key' => 'sk_test'])),
+        'connector_account_details' => ['api_key' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);

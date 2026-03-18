@@ -89,9 +89,6 @@ final class WebhookReceiverController
 
             // For production: use Stripe's webhook secret from connector_account_details
             $credentials = $mca->connector_account_details;
-            if (is_string($credentials)) {
-                $credentials = json_decode($credentials, true);
-            }
 
             $webhookSecret = $credentials['webhook_secret'] ?? null;
             if (! $webhookSecret) {
@@ -105,9 +102,10 @@ final class WebhookReceiverController
 
         // CloudPayments — verify by checking request IP or HMAC
         if ($connector === 'cloudpayments') {
-            // CloudPayments sends webhooks from specific IPs
-            // For production: validate against their IP whitelist
-            return true;
+            Log::warning("CloudPayments webhook signature verification not implemented for MCA {$mca->key} — accepting for development only");
+
+            // TODO: Implement CloudPayments webhook verification (IP whitelist or HMAC)
+            return app()->environment('production') ? false : true;
         }
 
         // Unknown connector — reject by default

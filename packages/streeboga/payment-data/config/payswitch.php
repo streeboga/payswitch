@@ -67,8 +67,8 @@ return [
     */
 
     'webhook' => [
-        'retry_schedule' => [60, 300, 1800, 7200, 21600, 43200, 86400], // seconds
-        'max_retries' => 7,
+        'retry_schedule' => [1, 5, 5, 10, 10, 10, 10, 10, 60, 60, 60, 60, 60, 360, 360, 360], // minutes (job converts to seconds)
+        'max_attempts' => 16,
         'timeout' => 30, // seconds
     ],
 

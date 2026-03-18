@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Streeboga\PaymentData\Enums;
 
-use App\Contracts\Enums\HasColor;
-use App\Contracts\Enums\HasLabel;
+use Streeboga\PaymentData\Contracts\HasColor;
+use Streeboga\PaymentData\Contracts\HasLabel;
 
 enum RefundStatus: string implements HasColor, HasLabel
 {

@@ -25,8 +25,9 @@ final class ConnectorFactory
         }
 
         $credentials = $mca->connector_account_details;
-        if (is_string($credentials)) {
-            $credentials = json_decode($credentials, true);
+        // Already an array from encrypted:array cast
+        if (! is_array($credentials)) {
+            $credentials = [];
         }
 
         return new $driverClass($credentials);
