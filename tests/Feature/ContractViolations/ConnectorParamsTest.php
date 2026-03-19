@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Testing\TestResponse;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -51,7 +52,7 @@ function yooApiHeaders(): array
     return ['api-key' => test()->rawKey];
 }
 
-function createYooPayment(array $attrs = []): \Illuminate\Testing\TestResponse
+function createYooPayment(array $attrs = []): TestResponse
 {
     return test()->postJson('/api/v1/payments', array_merge([
         'amount' => 6540,

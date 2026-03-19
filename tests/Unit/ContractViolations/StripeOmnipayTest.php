@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use Streeboga\PaymentConnectors\Drivers\StripeConnector;
-
 test('stripe purchase creates PaymentIntent not legacy charge', function () {
     // Omnipay uses deprecated Charges API, not PaymentIntents
     expect(true)->toBeTrue();
