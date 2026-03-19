@@ -7,8 +7,9 @@ import type {
 } from './types/json-api'
 import { useContextStore } from '@/stores/context'
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? '/api/v1'
-const SANCTUM_CSRF_URL = '/sanctum/csrf-cookie'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? ''
+export const API_BASE_URL = import.meta.env.VITE_API_URL ?? `${BACKEND_URL}/api/v1`
+const SANCTUM_CSRF_URL = `${BACKEND_URL}/sanctum/csrf-cookie`
 
 function getCsrfToken(): string | undefined {
   const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/)

@@ -3,6 +3,7 @@ import type { User } from '@/stores/auth'
 
 /** Auth endpoints use Sanctum (not the JSON:API prefix) */
 const sanctumClient = ky.create({
+  prefixUrl: import.meta.env.VITE_BACKEND_URL ?? '',
   credentials: 'include',
   headers: { Accept: 'application/json' },
 })
