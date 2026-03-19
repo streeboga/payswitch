@@ -106,6 +106,10 @@
             "@lint:check",
             "@php artisan test"
         ],
+        "mutate": [
+            "Composer\\Config::disableProcessTimeout",
+            "./vendor/bin/pest --mutate --parallel --everything --covered-only --path=app/Services --path=app/Repositories/Eloquent --path=app/Builders"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
