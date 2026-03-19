@@ -113,6 +113,20 @@ final class CloudPaymentsConnector implements ConnectorInterface
             $success = ($body['Success'] ?? false) === true;
             $model = $body['Model'] ?? [];
 
+            if ($model['AcsUrl'] ?? null) {
+                return [
+                    'success' => false,
+                    'transaction_id' => $model['TransactionId'] ?? null,
+                    'message' => '3-D Secure authentication required',
+                    'code' => 'requires_action',
+                    'data' => [
+                        'redirect_url' => $model['AcsUrl'],
+                        'transaction_id' => $model['TransactionId'] ?? null,
+                        'pa_req' => $model['PaReq'] ?? null,
+                    ],
+                ];
+            }
+
             return [
                 'success' => $success,
                 'transaction_id' => $model['TransactionId'] ?? null,

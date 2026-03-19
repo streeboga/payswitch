@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Http;
+use Streeboga\PaymentConnectors\ConnectorFactory;
+use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
+use Streeboga\PaymentData\Models\Customer;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
@@ -26,38 +29,158 @@ beforeEach(function () {
         'name' => 'Test',
     ]);
 
-    Http::fake(['*' => Http::response([
-        'id' => 'test_txn_123',
-        'status' => 'succeeded',
-        'amount' => ['value' => '100.00', 'currency' => 'USD'],
-        'metadata' => [],
-    ], 200)]);
-
     MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->profile->id,
-        'connector_name' => 'yookassa',
+        'connector_name' => 'spy',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => ['shop_id' => 'shop_1', 'secret_key' => 'sk_test'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test_xxx'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);
 });
 
-test('create payment rejects invalid customer_id that does not belong to merchant', function () {
+function diApiHeaders(): array
+{
+    return ['api-key' => test()->rawKey];
+}
+
+function createAndAuthorizePayment(int $amount = 10000, string $currency = 'USD'): string
+{
+    $create = test()->postJson('/api/v1/payments', [
+        'amount' => $amount,
+        'currency' => $currency,
+        'capture_method' => 'manual',
+    ], diApiHeaders());
+
+    $create->assertStatus(201);
+    $paymentId = $create->json('data.id');
+
+    $confirm = test()->postJson("/api/v1/payments/{$paymentId}/confirm", [
+        'payment_method' => 'card',
+        'payment_method_data' => [
+            'card' => [
+                'card_number' => '4242424242424242',
+                'card_exp_month' => '12',
+                'card_exp_year' => '2030',
+                'card_cvc' => '123',
+            ],
+        ],
+    ], diApiHeaders());
+
+    $confirm->assertOk()
+        ->assertJsonPath('data.attributes.status', 'requires_capture');
+
+    return $paymentId;
+}
+
+// BUG #10: capture must pass currency to connector
+test('capture passes currency to connector', function () {
+    // Register a spy connector that records capture params
+    SpyConnector::$lastCaptureParams = null;
+    ConnectorFactory::register('spy', SpyConnector::class);
+
+    $paymentId = createAndAuthorizePayment(10000, 'EUR');
+
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/capture", [
+        'amount_to_capture' => 5000,
+    ], diApiHeaders());
+
+    $response->assertOk();
+    expect(SpyConnector::$lastCaptureParams)->toBeArray();
+    expect(SpyConnector::$lastCaptureParams)->toHaveKey('currency', 'EUR');
+});
+
+// BUG #13: create must reject customer_id that does not belong to merchant
+test('create rejects customer_id not belonging to merchant', function () {
+    // Create a different merchant with its own customer
+    $otherOrg = Organization::create(['name' => 'Other Org']);
+    $otherMerchant = MerchantAccount::create(['org_id' => $otherOrg->id, 'name' => 'Other']);
+
+    $otherCustomer = Customer::create([
+        'merchant_account_id' => $otherMerchant->id,
+        'name' => 'Other Customer',
+    ]);
+
     $response = $this->postJson('/api/v1/payments', [
-        'amount' => 10000,
+        'amount' => 5000,
         'currency' => 'USD',
-        'customer_id' => 'cus_does_not_exist',
-    ], ['api-key' => $this->rawKey]);
+        'customer_id' => $otherCustomer->key,
+    ], diApiHeaders());
 
-    // Should be 400 (invalid customer) but currently returns 201 — customer_id is stored without validation
-    $response->assertStatus(400);
-})->skip('BUG #13: PaymentService.create() accepts any customer_id string without validating it belongs to the merchant');
+    $response->assertStatus(400)
+        ->assertJsonPath('errors.0.code', 'customer_not_found');
+});
 
-test('capture passes currency to connector for multi-currency support', function () {
-    // PaymentService.capture() (line 106-109) only passes 'amount' and 'transaction_id' to connector.
-    // Currency is never forwarded, breaking multi-currency capture scenarios where the connector
-    // needs to know which currency to capture in (e.g. Stripe, Adyen).
-    expect(true)->toBeTrue();
-})->skip('BUG #10: PaymentService.capture() does not pass currency to connector — multi-currency capture broken');
+/**
+ * A test connector that records capture params for assertion.
+ */
+class SpyConnector implements ConnectorInterface
+{
+    public static ?array $lastCaptureParams = null;
+
+    public function __construct(?array $credentials = []) {}
+
+    public function getName(): string
+    {
+        return 'spy';
+    }
+
+    public function purchase(array $params): array
+    {
+        return $this->success($params);
+    }
+
+    public function authorize(array $params): array
+    {
+        return $this->success($params);
+    }
+
+    public function capture(array $params): array
+    {
+        self::$lastCaptureParams = $params;
+
+        return [
+            'success' => true,
+            'transaction_id' => 'spy_cap_123',
+            'message' => 'Capture successful',
+            'code' => 'ok',
+        ];
+    }
+
+    public function refund(array $params): array
+    {
+        return [
+            'success' => true,
+            'transaction_id' => 'spy_ref_123',
+            'message' => 'Refund successful',
+            'code' => 'ok',
+        ];
+    }
+
+    public function verifyWebhookSignature(string $payload, array $headers): bool
+    {
+        return true;
+    }
+
+    public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
+    {
+        return null;
+    }
+
+    public function extractPaymentIdFromWebhook(array $payload): ?string
+    {
+        return $payload['payment_id'] ?? null;
+    }
+
+    private function success(array $params): array
+    {
+        return [
+            'success' => true,
+            'transaction_id' => 'spy_txn_'.uniqid(),
+            'message' => 'Success',
+            'code' => 'ok',
+            'data' => [],
+        ];
+    }
+}

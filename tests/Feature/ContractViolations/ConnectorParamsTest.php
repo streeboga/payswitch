@@ -88,7 +88,7 @@ test('confirm passes payment_id to connector for idempotency', function () {
         return ($body['metadata']['payment_id'] ?? '') === $paymentId
             && $request->header('Idempotence-Key')[0] === $paymentId;
     });
-})->skip('BUG #1: PaymentConfirmationService builds connectorParams without payment_id — YooKassa needs it for idempotency');
+});
 
 test('refund passes payment_id to connector for idempotency', function () {
     $create = createYooPayment();
@@ -133,4 +133,4 @@ test('refund passes payment_id to connector for idempotency', function () {
 
         return str_contains($idempotenceKey, $paymentId);
     });
-})->skip('BUG #5: RefundService calls connector->refund() without payment_id — YooKassa needs it for Idempotence-Key');
+});

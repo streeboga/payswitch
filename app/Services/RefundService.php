@@ -81,6 +81,7 @@ final readonly class RefundService
 
             $connector = ConnectorFactory::resolve($mca);
             $refundResult = $connector->refund([
+                'payment_id' => $payment->key,
                 'amount' => $dto->amount,
                 'currency' => $payment->currency,
                 'transaction_id' => $lastAttempt->connector_transaction_id,

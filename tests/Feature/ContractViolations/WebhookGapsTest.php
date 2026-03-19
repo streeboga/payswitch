@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\WebhookReceiverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -13,6 +14,8 @@ use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\Refund;
 
+covers(WebhookReceiverService::class);
+
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
@@ -22,9 +25,9 @@ beforeEach(function () {
     $this->mca = MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $profile->id,
-        'connector_name' => 'yookassa',
+        'connector_name' => 'test',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => ['shop_id' => 'test', 'secret_key' => 'test'],
+        'connector_account_details' => ['api_key' => 'test'],
         'test_mode' => true,
     ]);
 });
@@ -33,39 +36,41 @@ test('refund.succeeded webhook updates refund status', function () {
     $payment = PaymentIntent::create([
         'merchant_account_id' => $this->merchant->id,
         'amount' => 5000,
-        'currency' => 'RUB',
+        'currency' => 'USD',
         'status' => PaymentStatus::Succeeded,
         'capture_method' => CaptureMethod::Automatic,
         'attempt_count' => 1,
-        'amount_received' => 5000,
     ]);
 
     $refund = Refund::create([
         'payment_intent_id' => $payment->id,
         'merchant_account_id' => $this->merchant->id,
         'amount' => 5000,
-        'currency' => 'RUB',
+        'currency' => 'USD',
         'status' => RefundStatus::Pending,
-        'connector_refund_id' => 'yk_ref_pending',
+        'connector' => 'test',
+        'connector_refund_id' => 'test_ref_abc123',
     ]);
 
     $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [
         'type' => 'refund.succeeded',
         'object' => [
-            'id' => 'yk_ref_pending',
-            'payment_id' => $payment->key,
-            'metadata' => ['payment_id' => $payment->key],
+            'id' => 'test_ref_abc123',
         ],
-    ])->assertOk();
+    ])->assertOk()
+        ->assertJson(['status' => 'ok']);
 
-    expect($refund->fresh()->status)->toBe(RefundStatus::Succeeded);
-})->skip('BUG #6: WebhookReceiverService ignores refund.succeeded — YooKassaConnector.mapWebhookEventToStatus returns null');
+    $fresh = $refund->fresh();
+    expect($fresh->status)->toBe(RefundStatus::Succeeded);
+});
 
-test('payment webhook updates connector metadata', function () {
+test('payment webhook sets connector name on payment', function () {
+    $this->mca->update(['connector_name' => 'cloudpayments']);
+
     $payment = PaymentIntent::create([
         'merchant_account_id' => $this->merchant->id,
         'amount' => 5000,
-        'currency' => 'RUB',
+        'currency' => 'USD',
         'status' => PaymentStatus::Processing,
         'capture_method' => CaptureMethod::Automatic,
         'attempt_count' => 1,
@@ -73,12 +78,11 @@ test('payment webhook updates connector metadata', function () {
 
     $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [
         'type' => 'payment.succeeded',
-        'object' => [
-            'id' => 'yk_txn_from_webhook',
-            'metadata' => ['payment_id' => $payment->key],
-        ],
-    ])->assertOk();
+        'InvoiceId' => $payment->key,
+    ])->assertOk()
+        ->assertJson(['status' => 'ok']);
 
     $fresh = $payment->fresh();
-    expect($fresh->connector)->not->toBeNull();
-})->skip('BUG #9: WebhookReceiverService only updates status and amount_received, not connector metadata');
+    expect($fresh->status)->toBe(PaymentStatus::Succeeded)
+        ->and($fresh->connector)->toBe('cloudpayments');
+});

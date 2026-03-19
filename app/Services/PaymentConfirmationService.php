@@ -67,6 +67,7 @@ final readonly class PaymentConfirmationService
             $mca = $this->routingService->resolve($merchantAccountId, $explicitConnector, $dto->payment_method, $payment->currency, $payment->amount);
 
             $connectorParams = [
+                'payment_id' => $payment->key,
                 'payment_method' => $dto->payment_method,
                 'payment_method_data' => $dto->payment_method_data,
                 'token' => $token,
