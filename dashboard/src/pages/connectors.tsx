@@ -137,7 +137,7 @@ function ConnectorCard({
       <CardContent className="space-y-3">
         {/* Payment methods */}
         <div className="flex flex-wrap gap-1">
-          {connector.payment_methods_enabled.map((method, i) => (
+          {(connector.payment_methods_enabled ?? []).map((method, i) => (
             <Badge
               key={typeof method === 'string' ? method : (method.payment_method ?? i)}
               variant="secondary"
@@ -146,7 +146,7 @@ function ConnectorCard({
               {typeof method === 'string' ? method : method.payment_method}
             </Badge>
           ))}
-          {connector.payment_methods_enabled.length === 0 && (
+          {(connector.payment_methods_enabled ?? []).length === 0 && (
             <span className="text-muted-foreground text-xs">{t('connectors.noPaymentMethods')}</span>
           )}
         </div>

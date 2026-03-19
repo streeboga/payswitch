@@ -118,7 +118,7 @@ function ConnectorDetailForm({
 
   const [credentials, setCredentials] = useState<Record<string, string>>({})
   const [paymentMethods, setPaymentMethods] = useState<string[]>(
-    connector.payment_methods_enabled.map((m) =>
+    (connector.payment_methods_enabled ?? []).map((m) =>
       typeof m === 'string' ? m : m.payment_method,
     ),
   )
