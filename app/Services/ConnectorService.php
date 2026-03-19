@@ -8,6 +8,7 @@ use App\DataTransferObjects\Admin\CreateConnectorData;
 use App\DataTransferObjects\Admin\UpdateConnectorData;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 
 final readonly class ConnectorService
@@ -23,7 +24,7 @@ final readonly class ConnectorService
         $profileId = $this->resolveProfileId($dto->profile_id)
             ?? $this->merchantRepository->findProfileByMerchant($merchant->id)?->id;
 
-        return $this->merchantRepository->createConnector([
+        $connector = $this->merchantRepository->createConnector([
             'merchant_account_id' => $merchant->id,
             'business_profile_id' => $profileId,
             'connector_name' => $dto->connector_name,
@@ -32,6 +33,10 @@ final readonly class ConnectorService
             'payment_methods_enabled' => $dto->payment_methods_enabled,
             'test_mode' => $dto->test_mode,
         ]);
+
+        $connector->load('merchantAccount');
+
+        return $connector;
     }
 
     /**
@@ -41,14 +46,17 @@ final readonly class ConnectorService
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
 
-        return $this->merchantRepository->getConnectorsByMerchant($merchant->id);
+        return $this->merchantRepository->getConnectorsByMerchant($merchant->id)
+            ->load('merchantAccount');
     }
 
     public function find(string $merchantKey, string $connectorKey): MerchantConnectorAccount
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
+        $connector = $this->merchantRepository->findConnectorByMerchantAndKey($merchant->id, $connectorKey);
+        $connector->load('merchantAccount');
 
-        return $this->merchantRepository->findConnectorByMerchantAndKey($merchant->id, $connectorKey);
+        return $connector;
     }
 
     public function update(string $merchantKey, string $connectorKey, UpdateConnectorData $dto): MerchantConnectorAccount
@@ -68,6 +76,18 @@ final readonly class ConnectorService
         $connector->refresh();
 
         return $connector;
+    }
+
+    /**
+     * @return array{success: bool, message: string}
+     */
+    public function testConnection(string $merchantKey, string $connectorKey): array
+    {
+        $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
+        $connector = $this->merchantRepository->findConnectorByMerchantAndKey($merchant->id, $connectorKey);
+        $driver = ConnectorFactory::resolve($connector);
+
+        return $driver->testConnection();
     }
 
     public function delete(string $merchantKey, string $connectorKey): void

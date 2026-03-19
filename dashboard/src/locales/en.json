@@ -394,7 +394,14 @@
     "cardStatus": "Status",
     "cardStatusDesc": "Enable or disable the connector.",
     "statusLabel": "Connector active",
-    "statusDesc": "A disabled connector will not be used for payment processing."
+    "statusDesc": "A disabled connector will not be used for payment processing.",
+    "webhookUrlTitle": "Webhook URL",
+    "webhookUrlDesc": "Set this URL in your payment provider's webhook/notification settings.",
+    "setupTitle": "Setup Instructions",
+    "setupStripe": "1. Open Dashboard → Developers → Webhooks in Stripe\n2. Click «Add endpoint»\n3. Paste the Webhook URL above\n4. Select events: payment_intent.succeeded, payment_intent.payment_failed, payment_intent.canceled\n5. Copy the Signing Secret and paste into the API Secret field",
+    "setupCloudpayments": "1. Open CloudPayments Dashboard → Site Settings\n2. In «Notifications» (Pay, Fail, Confirm) set the Webhook URL\n3. Format: CloudPayments\n4. HTTP method: POST\n5. Encoding: UTF-8",
+    "setupTest": "Test connector requires no additional setup.",
+    "credentialsSaved": "Credentials saved. Leave fields empty to keep current values."
   },
   "connectorHealth": {
     "uptime": "Uptime",
@@ -712,6 +719,8 @@
     "labelConnectors": "Connectors",
     "labelRoutingRules": "Routing rules",
     "labelCreated": "Created",
+    "hashKeyTitle": "Response Hash Key",
+    "hashKeyDesc": "Use this key to verify webhook notification signatures.",
     "cardWebhook": "Webhook URL",
     "urlLabel": "URL",
     "urlPlaceholder": "https://example.com/webhooks",
@@ -900,7 +909,12 @@
     "profileDefault": "Default",
     "profileHint": "You can configure the binding later in settings.",
     "connectButton": "Connect",
-    "connecting": "Creating..."
+    "connecting": "Creating...",
+    "step5": "Done!",
+    "successTitle": "Connector connected",
+    "successDesc": "Configure notifications in your payment provider to receive payment status updates.",
+    "webhookUrlLabel": "Webhook URL",
+    "goToConnector": "Go to settings"
   },
   "onboardingChecklist": {
     "title": "Getting started",

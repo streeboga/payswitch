@@ -107,6 +107,7 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     Route::get('/connectors/{connectorKey}', [DashboardConnectorController::class, 'show']);
     Route::patch('/connectors/{connectorKey}', [DashboardConnectorController::class, 'update']);
     Route::delete('/connectors/{connectorKey}', [DashboardConnectorController::class, 'destroy']);
+    Route::post('/connectors/{connectorKey}/test', [DashboardConnectorController::class, 'testConnection']);
 
     // Connector health (Story 16-2)
     Route::get('/connectors/{connectorKey}/health', [ConnectorHealthController::class, 'health']);

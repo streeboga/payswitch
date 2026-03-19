@@ -14,6 +14,7 @@ import type {
 
 export interface OrganizationAttributes {
   name: string
+  merchants_count: number
   created_at: string
 }
 
@@ -21,6 +22,8 @@ export interface MerchantAccountAttributes {
   name: string
   publishable_key: string
   organization_id: string
+  profiles_count: number
+  connectors_count: number
   created_at: string
 }
 
@@ -28,6 +31,8 @@ export interface BusinessProfileAttributes {
   merchant_id: string
   webhook_url: string | null
   payment_response_hash_key: string
+  connectors_count: number
+  routing_rules_count: number
   created_at: string
 }
 
@@ -45,12 +50,14 @@ export interface ApiKeyAttributes {
 export interface ConnectorAttributes {
   connector_name: ConnectorName
   connector_type: ConnectorType
+  connector_account_details: Record<string, string> | null
   payment_methods_enabled: (
     | string
     | { payment_method: string; payment_method_types?: unknown[] }
   )[]
   test_mode: boolean
   disabled: boolean
+  webhook_url: string
   created_at: string
 }
 
@@ -60,6 +67,7 @@ export interface RoutingRuleAttributes {
   rules: unknown[]
   active: boolean
   priority: number
+  business_profile_id: string | null
   created_at: string
 }
 

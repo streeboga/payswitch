@@ -10,7 +10,7 @@ import {
   Cloud,
   TestTube,
 } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 
 import type { ConnectorAttributes, ConnectorName } from '@/api/types'
 import {
@@ -89,7 +89,9 @@ function ConnectorCard({
               </h3>
               <span
                 className={`inline-block h-2 w-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-red-500'}`}
-                title={isActive ? t('connectors.activeStatus') : t('connectors.disabledStatus')}
+                title={
+                  isActive ? t('connectors.activeStatus') : t('connectors.disabledStatus')
+                }
               />
             </div>
             <div className="flex items-center gap-1">
@@ -147,7 +149,9 @@ function ConnectorCard({
             </Badge>
           ))}
           {(connector.payment_methods_enabled ?? []).length === 0 && (
-            <span className="text-muted-foreground text-xs">{t('connectors.noPaymentMethods')}</span>
+            <span className="text-muted-foreground text-xs">
+              {t('connectors.noPaymentMethods')}
+            </span>
           )}
         </div>
 
@@ -193,6 +197,7 @@ function ConnectorsSkeleton() {
 
 export function ConnectorsPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [wizardOpen, setWizardOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<ConnectorRow | null>(null)
 
@@ -262,7 +267,16 @@ export function ConnectorsPage() {
       )}
 
       <Suspense fallback={null}>
-        <ConnectWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+        <ConnectWizard
+          open={wizardOpen}
+          onOpenChange={setWizardOpen}
+          onNavigateToConnector={(key) =>
+            void navigate({
+              to: '/connectors/$connectorKey',
+              params: { connectorKey: key },
+            })
+          }
+        />
       </Suspense>
 
       <ConfirmDialog

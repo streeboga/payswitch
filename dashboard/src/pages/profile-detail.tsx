@@ -3,13 +3,19 @@ import { useParams, Link } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, FolderOpen } from 'lucide-react'
+import { ArrowLeft, FolderOpen, KeyRound } from 'lucide-react'
 
 import { useProfileDetail, useUpdateProfile } from '@/hooks/use-profiles'
 import { DateFormat } from '@/components/shared/date-format'
 import { CopyButton } from '@/components/shared/copy-button'
 import { ErrorState } from '@/components/shared/error-state'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import {
@@ -46,7 +52,11 @@ export function ProfileDetailPage() {
   const updateMutation = useUpdateProfile()
 
   const editProfileSchema = z.object({
-    webhook_url: z.string().url(t('profiles.webhookUrlInvalid')).or(z.literal('')).optional(),
+    webhook_url: z
+      .string()
+      .url(t('profiles.webhookUrlInvalid'))
+      .or(z.literal(''))
+      .optional(),
   })
 
   type EditProfileForm = z.infer<typeof editProfileSchema>
@@ -132,11 +142,33 @@ export function ProfileDetailPage() {
             <InfoRow label={t('profileDetail.labelMerchant')}>
               <span className="font-mono text-xs">{profile.merchant_id}</span>
             </InfoRow>
-            <InfoRow label={t('profileDetail.labelConnectors')}>{profile.connectors_count}</InfoRow>
-            <InfoRow label={t('profileDetail.labelRoutingRules')}>{profile.routing_rules_count}</InfoRow>
+            <InfoRow label={t('profileDetail.labelConnectors')}>
+              {profile.connectors_count}
+            </InfoRow>
+            <InfoRow label={t('profileDetail.labelRoutingRules')}>
+              {profile.routing_rules_count}
+            </InfoRow>
             <InfoRow label={t('profileDetail.labelCreated')}>
               <DateFormat date={profile.created_at} />
             </InfoRow>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              {t('profileDetail.hashKeyTitle')}
+            </CardTitle>
+            <CardDescription>{t('profileDetail.hashKeyDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <code className="bg-muted flex-1 rounded px-3 py-2 font-mono text-sm">
+                {profile.payment_response_hash_key}
+              </code>
+              <CopyButton value={profile.payment_response_hash_key} />
+            </div>
           </CardContent>
         </Card>
 
@@ -154,7 +186,10 @@ export function ProfileDetailPage() {
                     <FormItem>
                       <FormLabel>{t('profileDetail.urlLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder={t('profileDetail.urlPlaceholder')} {...field} />
+                        <Input
+                          placeholder={t('profileDetail.urlPlaceholder')}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

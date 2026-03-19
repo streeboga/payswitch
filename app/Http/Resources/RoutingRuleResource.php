@@ -26,6 +26,7 @@ final class RoutingRuleResource extends JsonApiResource
             'rules' => $this->rules,
             'active' => $this->active,
             'priority' => $this->priority,
+            'business_profile_id' => $this->relationLoaded('businessProfile') ? $this->businessProfile?->key : null,
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

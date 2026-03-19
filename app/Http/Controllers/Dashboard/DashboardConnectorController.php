@@ -111,6 +111,24 @@ final class DashboardConnectorController extends Controller
     }
 
     /**
+     * Test connector connection
+     *
+     * Verify that the connector credentials are valid by testing the connection to the PSP.
+     */
+    #[PathParameter('connectorKey', description: 'Connector public key', example: 'mca_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Connection test result')]
+    #[Response(404, description: 'Connector not found')]
+    public function testConnection(string $connectorKey, Request $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('connector.view', [$merchantId]);
+        $merchantKey = $request->attributes->get('merchant_key');
+        $result = $this->connectorService->testConnection($merchantKey, $connectorKey);
+
+        return response()->json(['data' => $result]);
+    }
+
+    /**
      * Delete connector
      *
      * Remove a connector from the current merchant.

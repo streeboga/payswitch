@@ -394,7 +394,14 @@
     "cardStatus": "Статус",
     "cardStatusDesc": "Включите или отключите коннектор.",
     "statusLabel": "Коннектор активен",
-    "statusDesc": "Отключённый коннектор не будет использоваться для обработки платежей."
+    "statusDesc": "Отключённый коннектор не будет использоваться для обработки платежей.",
+    "webhookUrlTitle": "Webhook URL",
+    "webhookUrlDesc": "Укажите этот URL в настройках уведомлений вашей платёжной системы.",
+    "setupTitle": "Инструкция по настройке",
+    "setupStripe": "1. Откройте Dashboard → Developers → Webhooks в Stripe\n2. Нажмите «Add endpoint»\n3. Вставьте Webhook URL выше\n4. Выберите события: payment_intent.succeeded, payment_intent.payment_failed, payment_intent.canceled\n5. Скопируйте Signing Secret и вставьте в поле API Secret",
+    "setupCloudpayments": "1. Откройте Личный кабинет CloudPayments → Настройки сайта\n2. В разделе «Уведомления» (Pay, Fail, Confirm) укажите Webhook URL\n3. Формат: CloudPayments\n4. HTTP-метод: POST\n5. Кодировка: UTF-8",
+    "setupTest": "Тестовый коннектор не требует дополнительной настройки.",
+    "credentialsSaved": "Учётные данные сохранены. Оставьте поля пустыми, чтобы не менять."
   },
   "connectorHealth": {
     "uptime": "Uptime",
@@ -712,6 +719,8 @@
     "labelConnectors": "Коннекторов",
     "labelRoutingRules": "Правил маршрутизации",
     "labelCreated": "Создан",
+    "hashKeyTitle": "Ключ подписи ответов",
+    "hashKeyDesc": "Используйте этот ключ для верификации подписей webhook-уведомлений.",
     "cardWebhook": "Webhook URL",
     "urlLabel": "URL",
     "urlPlaceholder": "https://example.com/webhooks",
@@ -900,7 +909,12 @@
     "profileDefault": "По умолчанию",
     "profileHint": "Вы можете настроить привязку позже в настройках.",
     "connectButton": "Подключить",
-    "connecting": "Создание..."
+    "connecting": "Создание...",
+    "step5": "Готово!",
+    "successTitle": "Коннектор подключён",
+    "successDesc": "Настройте уведомления в платёжной системе, чтобы получать обновления о статусе платежей.",
+    "webhookUrlLabel": "Webhook URL",
+    "goToConnector": "Перейти к настройкам"
   },
   "onboardingChecklist": {
     "title": "Начало работы",

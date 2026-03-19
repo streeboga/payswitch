@@ -63,6 +63,7 @@ final class DashboardApiKeyController extends Controller
         );
 
         return (new ApiKeyResource($result['apiKey']))
+            ->additional(['api_key' => $result['rawKey']])
             ->withStatus(201)
             ->withHeader('X-Api-Key', $result['rawKey'])
             ->toResponse($request);

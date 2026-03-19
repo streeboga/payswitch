@@ -8,6 +8,8 @@ import {
   Loader2,
   ArrowLeft,
   ArrowRight,
+  Copy,
+  CheckCheck,
 } from 'lucide-react'
 
 import type { ConnectorName } from '@/api/types'
@@ -198,7 +200,9 @@ function Step1SelectType({
                   )}
                 />
                 <span className="font-medium">{ct.label}</span>
-                <span className="text-muted-foreground text-xs">{t(ct.descriptionKey)}</span>
+                <span className="text-muted-foreground text-xs">
+                  {t(ct.descriptionKey)}
+                </span>
               </CardContent>
             </Card>
           )
@@ -315,9 +319,7 @@ function Step4Profile({
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">
-        {t('connectWizard.profileIntro')}
-      </p>
+      <p className="text-muted-foreground text-sm">{t('connectWizard.profileIntro')}</p>
       <div className="space-y-2">
         <Label>{t('connectWizard.profileLabel')}</Label>
         <Select value={profileId} onValueChange={onProfileChange}>
@@ -333,32 +335,87 @@ function Step4Profile({
             ))}
           </SelectContent>
         </Select>
-        <p className="text-muted-foreground text-xs">
-          {t('connectWizard.profileHint')}
-        </p>
+        <p className="text-muted-foreground text-xs">{t('connectWizard.profileHint')}</p>
       </div>
+    </div>
+  )
+}
+
+// ─── Step 5: Success ─────────────────────────────────────────
+
+function Step5Success({
+  webhookUrl,
+  onGoToConnector,
+}: {
+  webhookUrl: string
+  onGoToConnector: () => void
+}) {
+  const { t } = useTranslation()
+  const [copied, setCopied] = useState(false)
+
+  return (
+    <div className="space-y-4 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950">
+        <Check className="h-6 w-6 text-emerald-600" />
+      </div>
+      <div>
+        <h3 className="font-semibold">{t('connectWizard.successTitle')}</h3>
+        <p className="text-muted-foreground text-sm">{t('connectWizard.successDesc')}</p>
+      </div>
+      <div className="space-y-2 text-left">
+        <Label>{t('connectWizard.webhookUrlLabel')}</Label>
+        <div className="flex items-center gap-2">
+          <Input readOnly value={webhookUrl} className="font-mono text-xs" />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              void navigator.clipboard.writeText(webhookUrl)
+              setCopied(true)
+              setTimeout(() => setCopied(false), 2000)
+            }}
+          >
+            {copied ? (
+              <CheckCheck className="h-4 w-4 text-emerald-600" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+      <Button type="button" className="w-full" onClick={onGoToConnector}>
+        {t('connectWizard.goToConnector')}
+      </Button>
     </div>
   )
 }
 
 // ─── Wizard Component ───────────────────────────────────────
 
-const TOTAL_STEPS = 4
+const TOTAL_STEPS = 5
 
 const STEP_TITLE_KEYS: Record<number, string> = {
   1: 'connectWizard.step1',
   2: 'connectWizard.step2',
   3: 'connectWizard.step3',
   4: 'connectWizard.step4',
+  5: 'connectWizard.step5',
 }
 
 interface ConnectWizardProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
+  onNavigateToConnector?: (connectorKey: string) => void
 }
 
-export function ConnectWizard({ open, onOpenChange, onSuccess }: ConnectWizardProps) {
+export function ConnectWizard({
+  open,
+  onOpenChange,
+  onSuccess,
+  onNavigateToConnector,
+}: ConnectWizardProps) {
   const { t } = useTranslation()
   const [step, setStep] = useState(1)
   const createMutation = useCreateConnector()
@@ -377,6 +434,12 @@ export function ConnectWizard({ open, onOpenChange, onSuccess }: ConnectWizardPr
   // Step 4
   const [profileId, setProfileId] = useState('')
 
+  // Step 5
+  const [createdConnector, setCreatedConnector] = useState<{
+    id: string
+    webhook_url: string
+  } | null>(null)
+
   function reset() {
     setStep(1)
     setConnectorName(null)
@@ -385,6 +448,7 @@ export function ConnectWizard({ open, onOpenChange, onSuccess }: ConnectWizardPr
     setPaymentMethods(['card'])
     setTestMode(true)
     setProfileId('')
+    setCreatedConnector(null)
   }
 
   function handleClose(value: boolean) {
@@ -412,7 +476,7 @@ export function ConnectWizard({ open, onOpenChange, onSuccess }: ConnectWizardPr
     if (step === 2 && !validateStep2()) return
     if (step === 3 && paymentMethods.length === 0) return
 
-    if (step < TOTAL_STEPS) {
+    if (step < TOTAL_STEPS - 1) {
       setStep(step + 1)
     }
   }
@@ -433,13 +497,12 @@ export function ConnectWizard({ open, onOpenChange, onSuccess }: ConnectWizardPr
         connector_account_details: credentials,
         payment_methods_enabled: paymentMethods,
         test_mode: testMode,
-        ...(profileId && profileId !== 'default'
-          ? { profile_id: profileId }
-          : {}),
+        ...(profileId && profileId !== 'default' ? { profile_id: profileId } : {}),
       },
       {
-        onSuccess: () => {
-          handleClose(false)
+        onSuccess: (data) => {
+          setCreatedConnector({ id: data.id, webhook_url: data.webhook_url })
+          setStep(5)
           onSuccess?.()
         },
       },
@@ -493,44 +556,62 @@ export function ConnectWizard({ open, onOpenChange, onSuccess }: ConnectWizardPr
           {step === 4 && (
             <Step4Profile profileId={profileId} onProfileChange={setProfileId} />
           )}
+          {step === 5 && createdConnector && (
+            <Step5Success
+              webhookUrl={createdConnector.webhook_url}
+              onGoToConnector={() => {
+                handleClose(false)
+                onNavigateToConnector?.(createdConnector.id)
+              }}
+            />
+          )}
         </div>
 
-        <DialogFooter className="flex justify-between gap-2 sm:justify-between">
-          <div>
-            {step > 1 && (
-              <Button type="button" variant="outline" onClick={handleBack}>
-                <ArrowLeft className="mr-1 h-4 w-4" />
-                {t('common.back')}
+        {step < 5 && (
+          <DialogFooter className="flex justify-between gap-2 sm:justify-between">
+            <div>
+              {step > 1 && (
+                <Button type="button" variant="outline" onClick={handleBack}>
+                  <ArrowLeft className="mr-1 h-4 w-4" />
+                  {t('common.back')}
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={() => handleClose(false)}>
+                {t('common.cancel')}
               </Button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button type="button" variant="ghost" onClick={() => handleClose(false)}>
-              {t('common.cancel')}
+              {step < TOTAL_STEPS - 1 ? (
+                <Button type="button" onClick={handleNext} disabled={!canProceed}>
+                  {t('common.next')}
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleFinish}
+                  disabled={createMutation.isPending}
+                >
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      {t('connectWizard.connecting')}
+                    </>
+                  ) : (
+                    t('connectWizard.connectButton')
+                  )}
+                </Button>
+              )}
+            </div>
+          </DialogFooter>
+        )}
+        {step === 5 && (
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleClose(false)}>
+              {t('common.close')}
             </Button>
-            {step < TOTAL_STEPS ? (
-              <Button type="button" onClick={handleNext} disabled={!canProceed}>
-                {t('common.next')}
-                <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleFinish}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    {t('connectWizard.connecting')}
-                  </>
-                ) : (
-                  t('connectWizard.connectButton')
-                )}
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   )

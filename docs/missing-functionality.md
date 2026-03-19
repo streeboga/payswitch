@@ -27,6 +27,20 @@
 | ~~14~~ | ~~Webhook idempotency~~ | **DONE** | Terminal-state guard для refund webhooks |
 | ~~15~~ | ~~Connector redirect params~~ | **DONE** | `redirect_method` (GET/POST) + `redirect_params` в ответах коннекторов |
 
+## HIGH — Dashboard CRUD gaps (аудит 2026-03-20)
+
+| # | Раздел | Баг | Что нужно |
+|---|--------|-----|-----------|
+| 29 | **Connectors** | `connector_account_details` не возвращается в `ConnectorResource` | Маскированные credentials + `webhook_url` в ресурсе |
+| 30 | **Connectors** | `POST /connectors/{key}/test` — роут не существует, 404 | `testConnection()` в ConnectorInterface + роут + контроллер |
+| 31 | **Connectors** | Нет webhook URL и инструкций по настройке PSP | Карточки на странице коннектора + шаг в визарде |
+| 32 | **API Keys** | `DashboardApiKeyController::store()` не вызывает `.additional()` | Ключ отдаётся в хедере, а не в теле — диалог "покажем один раз" пустой |
+| 33 | **Profiles** | `payment_response_hash_key` не показывается в UI | Добавить на profile-detail с кнопкой копирования |
+| 34 | **Routing Rules** | Нет UI для редактирования правил | Edit dialog + десериализация `rules[]` в формы |
+| 35 | **Routing Rules** | `business_profile_id` orphaned | Вернуть в ресурсе, добавить в формы |
+| 36 | **Merchant Detail** | Табы загружают все данные без фильтрации по мерчанту | Фильтрация child-ресурсов по merchant_id |
+| 37 | **TypeScript types** | Не хватает `merchants_count`, `profiles_count`, `connectors_count` в типах | Обновить интерфейсы |
+
 ## MEDIUM — улучшения
 
 | # | Функционал | Что нужно |

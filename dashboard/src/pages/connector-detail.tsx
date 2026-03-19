@@ -1,7 +1,19 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, Save, Loader2, CreditCard, Cloud, TestTube, Wifi } from 'lucide-react'
+import {
+  ArrowLeft,
+  Save,
+  Loader2,
+  CreditCard,
+  Cloud,
+  TestTube,
+  Wifi,
+  Copy,
+  CheckCheck,
+  BookOpen,
+  Link2,
+} from 'lucide-react'
 
 import type { ConnectorName, ConnectorAttributes } from '@/api/types'
 import {
@@ -25,6 +37,12 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+
+// ─── Helpers ─────────────────────────────────────────────────
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
 
 // ─── Constants ───────────────────────────────────────────────
 
@@ -117,6 +135,7 @@ function ConnectorDetailForm({
   const testMutation = useTestConnection()
 
   const [credentials, setCredentials] = useState<Record<string, string>>({})
+  const [copied, setCopied] = useState(false)
   const [paymentMethods, setPaymentMethods] = useState<string[]>(
     (connector.payment_methods_enabled ?? []).map((m) =>
       typeof m === 'string' ? m : m.payment_method,
@@ -193,7 +212,9 @@ function ConnectorDetailForm({
                 : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
             }
           >
-            {!connector.disabled ? t('connectors.activeStatus') : t('connectors.disabledStatus')}
+            {!connector.disabled
+              ? t('connectors.activeStatus')
+              : t('connectors.disabledStatus')}
           </Badge>
         </div>
       </div>
@@ -202,18 +223,23 @@ function ConnectorDetailForm({
       <Card>
         <CardHeader>
           <CardTitle>{t('connectorDetail.cardCredentials')}</CardTitle>
-          <CardDescription>
-            {t('connectorDetail.cardCredentialsDesc')}
-          </CardDescription>
+          <CardDescription>{t('connectorDetail.cardCredentialsDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <p className="text-muted-foreground text-sm">
+            {t('connectorDetail.credentialsSaved')}
+          </p>
           {fields.map((field) => (
             <div key={field.key} className="space-y-2">
               <Label htmlFor={`cred-${field.key}`}>{field.label}</Label>
               <Input
                 id={`cred-${field.key}`}
                 type={field.type ?? 'text'}
-                placeholder={field.placeholder}
+                placeholder={
+                  connector.connector_account_details?.[field.key]
+                    ? connector.connector_account_details[field.key]
+                    : field.placeholder
+                }
                 value={credentials[field.key] ?? ''}
                 onChange={(e) =>
                   setCredentials((prev) => ({ ...prev, [field.key]: e.target.value }))
@@ -238,11 +264,62 @@ function ConnectorDetailForm({
               {t('connectorDetail.testConnection')}
             </Button>
             {testMutation.isSuccess && (
-              <span className="text-sm text-emerald-600">{t('connectorDetail.testSuccess')}</span>
+              <span className="text-sm text-emerald-600">
+                {t('connectorDetail.testSuccess')}
+              </span>
             )}
             {testMutation.isError && (
-              <span className="text-destructive text-sm">{t('connectorDetail.testError')}</span>
+              <span className="text-destructive text-sm">
+                {t('connectorDetail.testError')}
+              </span>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Webhook URL */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link2 className="h-4 w-4" />
+            {t('connectorDetail.webhookUrlTitle')}
+          </CardTitle>
+          <CardDescription>{t('connectorDetail.webhookUrlDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <Input readOnly value={connector.webhook_url} className="font-mono text-sm" />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                void navigator.clipboard.writeText(connector.webhook_url)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }}
+            >
+              {copied ? (
+                <CheckCheck className="h-4 w-4 text-emerald-600" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Setup Instructions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            {t('connectorDetail.setupTitle')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-muted-foreground text-sm whitespace-pre-line">
+            {t(`connectorDetail.setup${capitalize(connectorName)}`)}
           </div>
         </CardContent>
       </Card>
@@ -251,9 +328,7 @@ function ConnectorDetailForm({
       <Card>
         <CardHeader>
           <CardTitle>{t('connectorDetail.cardPaymentMethods')}</CardTitle>
-          <CardDescription>
-            {t('connectorDetail.cardPaymentMethodsDesc')}
-          </CardDescription>
+          <CardDescription>{t('connectorDetail.cardPaymentMethodsDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
