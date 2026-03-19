@@ -35,4 +35,6 @@ jobs:
             php artisan view:cache
             php artisan event:cache
 
+            chown -R www-data:www-data /var/www/psapi.gnzs.pro
+
             supervisorctl restart payswitch-worker:*
