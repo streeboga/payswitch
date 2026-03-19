@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Payswitch — Laravel 13 backend API + React 19 SPA dashboard (separate Vite app in `/dashboard/`). Authentication powered by Laravel Sanctum (SPA cookie auth) with custom 2FA via google2fa. No Inertia.js, no Fortify.
+Payswitch — Laravel 13 backend API + React 19 SPA dashboard (separate Vite app in `/dashboard/`). Payment processing platform with multi-tenancy (Organization → Merchant → Business Profile), smart routing, and multiple PSP connectors. Authentication powered by Laravel Sanctum (SPA cookie auth) with custom 2FA via google2fa. No Inertia.js, no Fortify.
 
 ## Common Commands
 
@@ -33,6 +33,7 @@ npm run format            # Prettier fix
 npm run format:check      # Prettier check
 npm run types:check       # TypeScript type checking
 npm run test              # Vitest
+npm run e2e               # Playwright E2E tests
 
 # Full CI check
 composer ci:check         # lint + format + types + tests
@@ -45,20 +46,41 @@ cd dashboard && npm run build
 
 ### Backend (PHP)
 
-- **Concerns** (`app/Concerns/`) — `HasTwoFactorAuthentication` trait (custom 2FA via google2fa)
-- **Auth Controllers** (`app/Http/Controllers/Auth/`) — LoginController, TwoFactorChallengeController, UserController
-- **API Controllers** (`app/Http/Controllers/Api/V1/`) — JSON:API v1.1 compliant payment processing API
-- **Form Requests** (`app/Http/Requests/Auth/`) — LoginRequest (with rate limiting), TwoFactorChallengeRequest
-- **Middleware** — `HandleAppearance` (theme cookie), `EnsureFrontendRequestsAreStateful` (Sanctum SPA)
-- **Routes**: `routes/web.php` (auth: login, logout, 2FA), `routes/api.php` (v1 API + user endpoint)
+#### Internal Packages (`packages/`)
+
+- **streeboga/payment-data** — Core domain: models, enums, state machine, migrations, contracts (see `packages/streeboga/payment-data/CLAUDE.md`)
+- **streeboga/payment-connectors** — PSP integrations: Stripe, CloudPayments, YooKassa, Test (see `packages/streeboga/payment-connectors/CLAUDE.md`)
+- **scramble** — Custom API documentation generator with JSON:API v1.1 support
+
+#### Application Layer (`app/`)
+
+- **Controllers** — Auth (3), API/V1 Admin (6), API/V1 Public (5), Dashboard (22)
+- **Services** (`app/Services/`) — 27 service classes: PaymentService, RoutingService, WebhookService, AnalyticsService, etc.
+- **Repositories** (`app/Repositories/`) — 16 repository interfaces + Eloquent implementations
+- **Query Builders** (`app/Builders/`) — 10 custom Eloquent query builders with Spatie filtering
+- **DTOs** (`app/DataTransferObjects/`) — Spatie data objects grouped by domain (Admin, Payment, Customer, Refund)
+- **Policies** (`app/Policies/`) — 20 authorization policies for RBAC (Admin, Operator, Viewer)
+- **Models** (`app/Models/`) — User, UserRole, UserPreference, AppNotification, Dispute, DisputeEvidence, SavedFilter
+- **Middleware** — AuthenticateAdminApiKey, AuthenticateSecretApiKey, ForceJsonApiContentType, ResolveApiKey, ResolveMerchantContext, HandleAppearance
+- **Events** — PaymentStatusChanged → LogPaymentAudit, SendWebhookNotification
+- **Jobs** — CleanExpiredPaymentsJob, DeliverWebhookJob
+- **Enums** (`app/Enums/`) — ConnectorName, UserRole, PaymentAttemptStatus, DisputeStatus, etc.
+
+#### Routes
+
+- `routes/web.php` — Auth: login, logout, 2FA challenge
+- `routes/api.php` — `/api/v1/`: user endpoint, dashboard API (Sanctum), admin API (API key), merchant API (secret key), webhook receiver, health check
 
 ### Frontend (TypeScript/React) — `/dashboard/`
 
-- **Pages** (`dashboard/src/pages/`) — login, two-factor-challenge, overview
-- **Stores** (`dashboard/src/stores/`) — Zustand: auth (user + 2FA state), context (multi-tenancy), preferences
-- **API** (`dashboard/src/api/`) — ky HTTP client with Sanctum CSRF, JSON:API helpers, domain endpoints
-- **Router** (`dashboard/src/app/router.tsx`) — TanStack Router with auth guards
-- **Entry point**: `dashboard/src/main.tsx`
+See `dashboard/CLAUDE.md` for detailed frontend architecture.
+
+- **Pages** (`src/pages/`) — ~30 pages: overview, payments, refunds, customers, connectors, routing, webhooks, disputes, audit, etc.
+- **Components** (`src/components/`) — ~80 components: ui (shadcn/Radix), shared, data-table, analytics, sidebar, routing, notifications
+- **Hooks** (`src/hooks/`) — ~25 custom hooks wrapping React Query for each domain
+- **Stores** (`src/stores/`) — Zustand: auth, context (multi-tenancy), preferences, saved-filters
+- **API** (`src/api/`) — ky HTTP client with Sanctum CSRF, JSON:API types, ~20 endpoint modules
+- **i18n** (`src/locales/`) — English + Russian translations via i18next
 
 ### Stack Integration
 
@@ -66,14 +88,26 @@ Laravel serves JSON API. Dashboard SPA runs on Vite port 3000, proxies `/api` an
 
 ## Tech Stack Details
 
-- **PHP**: 8.3+ | **Laravel**: 13 | **Testing**: Pest PHP
+- **PHP**: 8.4+ | **Laravel**: 13 | **Testing**: Pest PHP
 - **Node**: 22 | **React**: 19 (with React Compiler) | **TypeScript**: 5.9
-- **Build**: Vite 8 | **CSS**: Tailwind 4 | **UI**: Radix primitives
+- **Build**: Vite 8 | **CSS**: Tailwind 4 | **UI**: shadcn/ui + Radix primitives
 - **Auth**: Laravel Sanctum SPA + custom 2FA (google2fa)
 - **State**: Zustand | **Routing**: TanStack Router | **Data**: React Query + ky
+- **Forms**: react-hook-form + Zod | **Charts**: Recharts | **Icons**: Lucide
 - **Queue**: Database driver
 - **Code Style**: Pint (PHP, preset: laravel), ESLint + Prettier (TS/React)
+- **Static Analysis**: Larastan + PHPStan (strict rules) | **Architecture**: Deptrac
+
+## Key Patterns
+
+- **Repository Pattern** — Interface → Eloquent implementation for all data access
+- **Service Layer** — Business logic isolated from controllers
+- **State Machine** — `PaymentStateMachine` manages payment status transitions
+- **Multi-Tenancy** — Organization → Merchant → Business Profile hierarchy with middleware resolution
+- **RBAC** — UserRole (Admin, Operator, Viewer) per organization with weight-based authorization
+- **JSON:API v1.1** — All API responses follow JSON:API spec via `JsonApiResource`
+- **Event-Driven Webhooks** — Payment events → audit log + webhook delivery
 
 ## Testing
 
-Backend tests use Pest PHP with `RefreshDatabase` trait and in-memory SQLite. Test structure: `tests/Feature/Auth/`, `tests/Feature/Api/`. Frontend tests use Vitest with happy-dom. CI runs tests against PHP 8.3, 8.4, 8.5.
+Backend tests use Pest PHP with `RefreshDatabase` trait and in-memory SQLite. 85+ test files organized: `tests/Feature/` (Api, Auth, Dashboard, Services, Jobs, EdgeCases, ContractViolations) and `tests/Unit/` (Builders, Connectors, Enums, StateMachine). Frontend tests use Vitest with happy-dom (50+ test files). E2E tests use Playwright. CI runs tests against PHP 8.3, 8.4, 8.5.
