@@ -87,6 +87,14 @@ test('processes payment status update from webhook and sets amount_received', fu
     $fresh = $payment->fresh();
     expect($fresh->status)->toBe(PaymentStatus::Succeeded)
         ->and($fresh->amount_received)->toBe(5000);
+
+    // Verify exact values in DB including connector field
+    $this->assertDatabaseHas('payment_intents', [
+        'id' => $payment->id,
+        'status' => 'succeeded',
+        'amount_received' => 5000,
+        'connector' => 'cloudpayments',
+    ]);
 });
 
 test('processes failed webhook and does not set amount_received', function () {
@@ -108,6 +116,13 @@ test('processes failed webhook and does not set amount_received', function () {
     $fresh = $payment->fresh();
     expect($fresh->status)->toBe(PaymentStatus::Failed)
         ->and($fresh->amount_received)->toBeNull();
+
+    // Verify DB state: status changed, amount_received stays null
+    $this->assertDatabaseHas('payment_intents', [
+        'id' => $payment->id,
+        'status' => 'failed',
+        'connector' => 'test',
+    ]);
 });
 
 test('ignores webhook with invalid payment status transition', function () {
@@ -129,6 +144,12 @@ test('ignores webhook with invalid payment status transition', function () {
     // Status should NOT change — Succeeded is terminal
     expect($fresh->status)->toBe(PaymentStatus::Succeeded)
         ->and($fresh->amount_received)->toBeNull();
+
+    // Verify DB still has original status — no mutation
+    $this->assertDatabaseHas('payment_intents', [
+        'id' => $payment->id,
+        'status' => 'succeeded',
+    ]);
 });
 
 test('unknown webhook type does not change payment status', function () {
@@ -150,6 +171,14 @@ test('unknown webhook type does not change payment status', function () {
     $fresh = $payment->fresh();
     expect($fresh->status)->toBe(PaymentStatus::Processing)
         ->and($fresh->amount_received)->toBeNull();
+
+    // Verify DB unchanged — unknown event types must not mutate payment
+    $this->assertDatabaseHas('payment_intents', [
+        'id' => $payment->id,
+        'status' => 'processing',
+        'amount' => 2500,
+        'currency' => 'EUR',
+    ]);
 });
 
 test('webhook for non-existent payment still returns ok', function () {
@@ -198,4 +227,11 @@ test('cancelled webhook transitions requires_confirmation payment to cancelled',
     $fresh = $payment->fresh();
     expect($fresh->status)->toBe(PaymentStatus::Cancelled)
         ->and($fresh->amount_received)->toBeNull();
+
+    // Verify exact DB state after cancellation webhook
+    $this->assertDatabaseHas('payment_intents', [
+        'id' => $payment->id,
+        'status' => 'cancelled',
+        'amount' => 7500,
+    ]);
 });

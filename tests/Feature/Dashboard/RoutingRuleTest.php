@@ -65,6 +65,14 @@ test('routing rule create returns 201 with correct attributes and persists to da
         'active' => false,
         'priority' => 5,
     ]);
+
+    // Verify rules JSON stored correctly
+    $rule = RoutingRule::where('name', 'Primary')->first();
+    expect($rule)->not->toBeNull();
+    expect($rule->rules)->toBe(['connectors' => ['stripe']]);
+    expect($rule->type->value)->toBe('priority');
+    expect($rule->active)->toBeFalse();
+    expect($rule->priority)->toBe(5);
 });
 
 test('routing rule create defaults active to true and priority to 0', function () {
@@ -118,6 +126,21 @@ test('routing rule update changes specific fields', function () {
     expect($rule->name)->toBe('Updated');
     expect($rule->active)->toBeFalse();
     expect($rule->priority)->toBe(10);
+
+    // Verify old values gone, new values in DB
+    $this->assertDatabaseMissing('routing_rules', [
+        'id' => $rule->id,
+        'name' => 'Default',
+    ]);
+    $this->assertDatabaseHas('routing_rules', [
+        'id' => $rule->id,
+        'name' => 'Updated',
+        'active' => false,
+        'priority' => 10,
+    ]);
+
+    // Rules JSON should remain unchanged after partial update
+    expect($rule->rules)->toBe(['connectors' => ['stripe']]);
 });
 
 test('routing rule delete returns 204 and removes from database', function () {
@@ -208,6 +231,10 @@ test('routing rule create with rule_based type', function () {
         'name' => 'Rule Based',
         'type' => 'rule_based',
     ]);
+
+    // Verify rules JSON stored correctly with conditions
+    $rule = RoutingRule::where('name', 'Rule Based')->first();
+    expect($rule->rules)->toBe($rules);
 });
 
 test('routing rule create with volume_split type', function () {
@@ -233,4 +260,8 @@ test('routing rule create with volume_split type', function () {
         'name' => 'Volume Split',
         'type' => 'volume_split',
     ]);
+
+    // Verify splits JSON stored correctly
+    $rule = RoutingRule::where('name', 'Volume Split')->first();
+    expect($rule->rules)->toBe($rules);
 });
