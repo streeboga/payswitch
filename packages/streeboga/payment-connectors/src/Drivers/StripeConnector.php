@@ -240,6 +240,7 @@ final class StripeConnector implements ConnectorInterface
                     'code' => 'requires_action',
                     'data' => array_merge($body, [
                         'redirect_url' => $body['next_action']['redirect_to_url']['url'],
+                        'redirect_method' => 'GET',
                     ]),
                 ];
             }

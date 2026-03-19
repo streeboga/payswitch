@@ -155,6 +155,12 @@ final class CloudPaymentsConnector implements ConnectorInterface
                     'code' => 'requires_action',
                     'data' => [
                         'redirect_url' => $model['AcsUrl'],
+                        'redirect_method' => 'POST',
+                        'redirect_params' => [
+                            'PaReq' => $model['PaReq'] ?? null,
+                            'MD' => $model['TransactionId'] ?? null,
+                            'TermUrl' => $model['TermUrl'] ?? null,
+                        ],
                         'transaction_id' => $model['TransactionId'] ?? null,
                         'pa_req' => $model['PaReq'] ?? null,
                     ],

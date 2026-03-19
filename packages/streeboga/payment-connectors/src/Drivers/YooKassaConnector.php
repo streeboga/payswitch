@@ -203,6 +203,7 @@ final class YooKassaConnector implements ConnectorInterface
                     'code' => 'requires_action',
                     'data' => array_merge($body, [
                         'redirect_url' => $body['confirmation']['confirmation_url'],
+                        'redirect_method' => 'GET',
                     ]),
                 ];
             }
