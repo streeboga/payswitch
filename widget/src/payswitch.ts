@@ -1,4 +1,6 @@
 import { PaymentApi } from './api';
+import { renderWidget, unmountWidget } from './ui/PaymentWidget';
+import './ui/styles.css';
 import type {
   PayswitchInstance,
   WidgetOptions,
@@ -22,6 +24,7 @@ class PaymentWidgetImpl implements PaymentWidget {
   private container: HTMLElement | null = null;
   private listeners: Map<WidgetEvent, Set<WidgetEventHandler>> = new Map();
   private selectedMethod: string | null = null;
+  private methods: PaymentMethodInfo[] = [];
   private destroyed = false;
 
   constructor(
@@ -40,7 +43,7 @@ class PaymentWidgetImpl implements PaymentWidget {
       throw new Error(`Element not found: ${selector}`);
     }
 
-    this.container.innerHTML = '<div class="payswitch-loading">Loading payment methods...</div>';
+    this.render({ loading: true });
 
     const paymentKey = extractPaymentKey(this.clientSecret);
 
@@ -48,19 +51,23 @@ class PaymentWidgetImpl implements PaymentWidget {
       .getPaymentMethods(paymentKey, this.clientSecret)
       .then((methods) => {
         if (this.destroyed || !this.container) return;
-        this.renderMethods(methods);
+        this.methods = methods;
+        if (methods.length > 0) {
+          this.selectedMethod = methods[0].payment_method;
+        }
+        this.render();
         this.emit('ready', {});
       })
       .catch((err) => {
         if (this.destroyed || !this.container) return;
-        this.container.innerHTML = `<div class="payswitch-error">${err.message}</div>`;
+        this.render({ error: err.message });
         this.emit('error', { error: err.message });
       });
   }
 
   unmount(): void {
     if (this.container) {
-      this.container.innerHTML = '';
+      unmountWidget(this.container);
       this.container = null;
     }
   }
@@ -79,44 +86,25 @@ class PaymentWidgetImpl implements PaymentWidget {
   }
 
   update(_options: Record<string, unknown>): void {
-    // Will be extended in Task 7 with Preact UI
+    this.render();
   }
 
   getSelectedMethod(): string | null {
     return this.selectedMethod;
   }
 
-  private renderMethods(methods: PaymentMethodInfo[]): void {
+  private render(overrides?: { loading?: boolean; error?: string | null }): void {
     if (!this.container) return;
-
-    if (methods.length === 0) {
-      this.container.innerHTML =
-        '<div class="payswitch-empty">No payment methods available</div>';
-      return;
-    }
-
-    const html = methods
-      .map(
-        (m, i) => `
-        <label class="payswitch-method">
-          <input type="radio" name="payswitch-method" value="${m.payment_method}" ${i === 0 ? 'checked' : ''} />
-          <span>${m.payment_method}</span>
-        </label>
-      `,
-      )
-      .join('');
-
-    this.container.innerHTML = `<div class="payswitch-methods">${html}</div>`;
-
-    // Auto-select first method
-    this.selectedMethod = methods[0].payment_method;
-
-    // Listen for changes
-    this.container.querySelectorAll<HTMLInputElement>('input[name="payswitch-method"]').forEach((input) => {
-      input.addEventListener('change', () => {
-        this.selectedMethod = input.value;
-        this.emit('change', { paymentMethod: input.value });
-      });
+    renderWidget(this.container, {
+      methods: this.methods,
+      selectedMethod: this.selectedMethod,
+      onMethodChange: (method) => {
+        this.selectedMethod = method;
+        this.render();
+        this.emit('change', { paymentMethod: method });
+      },
+      loading: overrides?.loading,
+      error: overrides?.error,
     });
   }
 

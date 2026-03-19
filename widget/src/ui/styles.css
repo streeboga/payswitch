@@ -1,0 +1,67 @@
+.ps-widget {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+.ps-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ps-method {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.ps-method:hover {
+  border-color: #999;
+}
+
+.ps-method--selected {
+  border-color: #0066ff;
+  background-color: #f0f7ff;
+}
+
+.ps-method input[type="radio"] {
+  display: none;
+}
+
+.ps-method-icon {
+  font-size: 20px;
+}
+
+.ps-method-label {
+  font-weight: 500;
+}
+
+.ps-loading, .ps-error, .ps-empty {
+  padding: 24px;
+  text-align: center;
+  color: #666;
+}
+
+.ps-error {
+  color: #dc2626;
+}
+
+.ps-spinner {
+  width: 24px;
+  height: 24px;
+  margin: 0 auto;
+  border: 3px solid #e0e0e0;
+  border-top-color: #0066ff;
+  border-radius: 50%;
+  animation: ps-spin 0.6s linear infinite;
+}
+
+@keyframes ps-spin {
+  to { transform: rotate(360deg); }
+}
