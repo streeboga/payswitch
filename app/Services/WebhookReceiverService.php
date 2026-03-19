@@ -155,6 +155,10 @@ final readonly class WebhookReceiverService
             return;
         }
 
+        if ($refund->status === RefundStatus::Succeeded || $refund->status === RefundStatus::Failed) {
+            return;
+        }
+
         $eventType = $payload['type'] ?? '';
 
         if (str_contains($eventType, 'succeeded')) {
