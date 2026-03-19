@@ -66,6 +66,12 @@ final readonly class PaymentConfirmationService
             $explicitConnector = $connectorOverride ?? $dto->connector;
             $mca = $this->routingService->resolve($merchantAccountId, $explicitConnector, $dto->payment_method, $payment->currency, $payment->amount);
 
+            $returnUrl = $payment->return_url;
+            if ($returnUrl) {
+                $separator = str_contains($returnUrl, '?') ? '&' : '?';
+                $returnUrl .= $separator . 'payment_id=' . urlencode($payment->key);
+            }
+
             $connectorParams = [
                 'payment_id' => $payment->key,
                 'payment_method' => $dto->payment_method,
@@ -74,6 +80,7 @@ final readonly class PaymentConfirmationService
                 'amount' => $payment->amount,
                 'currency' => $payment->currency,
                 'description' => $payment->description,
+                'return_url' => $returnUrl,
             ];
 
             $result = $this->executeConnectorCall($payment, $mca, $connectorParams);
