@@ -15,6 +15,7 @@ use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Exceptions\InvalidStateTransitionException;
 use Streeboga\PaymentData\Exceptions\PaymentException;
+use Streeboga\PaymentData\Models\Customer;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
@@ -32,6 +33,15 @@ final readonly class PaymentService
             $existing = $this->paymentRepository->findByKeyOrNull($dto->payment_id, $merchantAccountId);
             if ($existing) {
                 return $existing;
+            }
+        }
+
+        if ($dto->customer_id) {
+            $customer = Customer::where('key', $dto->customer_id)
+                ->where('merchant_account_id', $merchantAccountId)
+                ->first();
+            if (! $customer) {
+                throw new PaymentException('Customer not found', 'customer_not_found', 'invalid_request_error', 400);
             }
         }
 
@@ -105,6 +115,7 @@ final readonly class PaymentService
             $connector = ConnectorFactory::resolve($mca);
             $result = $connector->capture([
                 'amount' => $amount,
+                'currency' => $payment->currency,
                 'transaction_id' => $lastAttempt->connector_transaction_id,
             ]);
 
