@@ -14,6 +14,8 @@ use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
 
+covers(BusinessProfileQueryBuilder::class);
+
 beforeEach(function () {
     $org = Organization::create(['name' => 'Test Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'Merchant']);
@@ -107,6 +109,24 @@ test('sortBy orders by created_at descending', function () {
         ->get();
 
     expect($results->first()->id)->toBe($second->id);
+});
+
+test('sortBy orders by updated_at ascending', function () {
+    // Insert first record with LATER updated_at so natural order differs from sorted order
+    $first = BusinessProfile::create(['merchant_account_id' => $this->merchant->id]);
+    BusinessProfile::query()->where('id', $first->id)->update(['updated_at' => now()->addMinute()]);
+
+    $second = BusinessProfile::create(['merchant_account_id' => $this->merchant->id]);
+    BusinessProfile::query()->where('id', $second->id)->update(['updated_at' => now()->subMinute()]);
+
+    // Ascending by updated_at: $second (earlier) should come before $first (later)
+    $results = BusinessProfileQueryBuilder::make()
+        ->forMerchant($this->merchant->id)
+        ->sortBy('updated_at', 'asc')
+        ->get();
+
+    expect($results->first()->id)->toBe($second->id)
+        ->and($results->last()->id)->toBe($first->id);
 });
 
 test('sortBy ignores disallowed column', function () {

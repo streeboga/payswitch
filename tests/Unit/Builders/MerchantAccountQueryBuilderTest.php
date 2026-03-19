@@ -227,6 +227,67 @@ test('getQuery returns underlying builder', function () {
     expect($query)->toBeInstanceOf(Builder::class);
 });
 
+test('search escapes percent wildcard in term', function () {
+    $builder = MerchantAccountQueryBuilder::make()->search('100%');
+    $query = $builder->getQuery();
+    $bindings = $query->getBindings();
+
+    // The % in the search term should be escaped to \%
+    expect($bindings)->toContain('%100\%%');
+});
+
+test('search escapes underscore wildcard in term', function () {
+    $builder = MerchantAccountQueryBuilder::make()->search('test_value');
+    $query = $builder->getQuery();
+    $bindings = $query->getBindings();
+
+    // The _ in the search term should be escaped to \_
+    expect($bindings)->toContain('%test\_value%');
+});
+
+test('search escapes both percent and underscore in term', function () {
+    $builder = MerchantAccountQueryBuilder::make()->search('100%_test');
+    $query = $builder->getQuery();
+    $bindings = $query->getBindings();
+
+    // Both % and _ should be escaped
+    expect($bindings)->toContain('%100\%\_test%');
+});
+
+test('sortBy accepts created_at column', function () {
+    $old = MerchantAccount::create(['org_id' => $this->org->id, 'name' => 'Old']);
+    MerchantAccount::query()->where('id', $old->id)->update(['created_at' => now()->subHour()]);
+    $new = MerchantAccount::create(['org_id' => $this->org->id, 'name' => 'New']);
+
+    $results = MerchantAccountQueryBuilder::make()
+        ->forOrganization($this->org->id)
+        ->sortBy('created_at', 'desc')
+        ->get();
+
+    expect($results->first()->name)->toBe('New')
+        ->and($results->last()->name)->toBe('Old');
+});
+
+test('sortBy accepts updated_at column', function () {
+    // Create B first, then A, so insertion order is B, A
+    $b = MerchantAccount::create(['org_id' => $this->org->id, 'name' => 'B']);
+    $a = MerchantAccount::create(['org_id' => $this->org->id, 'name' => 'A']);
+    // Make A have earlier updated_at than B
+    MerchantAccount::query()->where('id', $a->id)->update(['updated_at' => now()->subHour()]);
+    // Touch B to ensure it has later updated_at
+    MerchantAccount::query()->where('id', $b->id)->update(['updated_at' => now()]);
+
+    $results = MerchantAccountQueryBuilder::make()
+        ->forOrganization($this->org->id)
+        ->sortBy('updated_at', 'asc')
+        ->get();
+
+    // With sortBy working: A (earlier) comes first, B (later) comes second
+    // Without sortBy (mutation): insertion order is B, A — so this would fail
+    expect($results->first()->name)->toBe('A')
+        ->and($results->last()->name)->toBe('B');
+});
+
 test('methods can be chained together', function () {
     MerchantAccount::create(['org_id' => $this->org->id, 'name' => 'Alpha Store']);
     MerchantAccount::create(['org_id' => $this->org->id, 'name' => 'Beta Shop']);
