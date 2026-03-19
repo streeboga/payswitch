@@ -44,16 +44,18 @@
 | 21 | Connector health auto-monitoring | Dashboard widget есть, автоматических alert'ов нет |
 | 22 | Multi-currency settlement reporting | Нет конвертации/отчётности |
 
-## Не нужно (out of scope)
+## FUTURE — не в MVP, но архитектура должна поддерживать
 
-| Функционал | Почему не нужно |
-|-----------|----------------|
-| Raw card data / PCI DSS scope | Redirect-based: карты вводятся на стороне PSP |
-| Mandates / recurring | Подписки пока не в scope |
-| Saved cards / tokenization | Не храним card data |
-| Wallets (Apple Pay, Google Pay) | Через PSP checkout — не наша ответственность |
-| BNPL (Klarna, Afterpay) | Через PSP checkout |
-| iDEAL, SEPA, ACH | Через PSP redirect |
+Сейчас redirect-based (карты вводятся на стороне PSP). Но система должна быть готова к расширению до прямой обработки. ConnectorInterface, routing, state machine — всё должно работать и для этих сценариев.
+
+| # | Функционал | Готовность архитектуры | Что нужно для включения |
+|---|-----------|----------------------|------------------------|
+| 23 | **Raw card data / PCI DSS** | ConnectorInterface.purchase() уже принимает card data | Добавить PCI-compliant vault, TLS pinning, audit logging |
+| 24 | **Mandates / recurring** | PaymentIntent имеет `customer_id`, ConnectorInterface extensible | Добавить Mandate модель, `setup_future_usage` param, cron для recurring |
+| 25 | **Saved cards / tokenization** | Модель PaymentMethod существует, Customer CRUD есть | Добавить PaymentMethodService CRUD, токенизация через PSP |
+| 26 | **Wallets (Apple Pay, Google Pay)** | `payment_method` field поддерживает любые типы | Добавить wallet connector params, domain verification endpoints |
+| 27 | **BNPL (Klarna, Afterpay)** | Routing rules могут фильтровать по payment_method | Добавить BNPL коннекторы, redirect flow уже работает |
+| 28 | **iDEAL, SEPA, ACH** | Redirect flow готов, multi-currency работает | Добавить bank transfer коннекторы |
 
 ---
 
