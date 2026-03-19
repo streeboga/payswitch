@@ -131,7 +131,9 @@ export function DisputesPage() {
       },
       {
         accessorKey: 'amount',
-        header: ({ column }) => <ColumnHeader column={column} title={t('disputes.columnAmount')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('disputes.columnAmount')} />
+        ),
         cell: ({ row }) => (
           <MoneyFormat amount={row.original.amount} currency={row.original.currency} />
         ),
@@ -154,7 +156,9 @@ export function DisputesPage() {
       },
       {
         accessorKey: 'status',
-        header: ({ column }) => <ColumnHeader column={column} title={t('disputes.columnStatus')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('disputes.columnStatus')} />
+        ),
         cell: ({ row }) => (
           <StatusBadge
             status={row.original.status}
@@ -174,7 +178,9 @@ export function DisputesPage() {
       },
       {
         accessorKey: 'deadline',
-        header: ({ column }) => <ColumnHeader column={column} title={t('disputes.columnDeadline')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('disputes.columnDeadline')} />
+        ),
         cell: ({ row }) => {
           const urgent = isDeadlineUrgent(row.original.deadline)
           return (
@@ -195,7 +201,9 @@ export function DisputesPage() {
       },
       {
         accessorKey: 'created_at',
-        header: ({ column }) => <ColumnHeader column={column} title={t('disputes.columnDate')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('disputes.columnDate')} />
+        ),
         cell: ({ row }) => <DateFormat date={row.original.created_at} />,
         enableSorting: true,
       },

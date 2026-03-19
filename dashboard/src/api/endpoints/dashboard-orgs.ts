@@ -1,4 +1,10 @@
-import { getCollection, getResource, createResource, updateResource, deleteResource } from '../client'
+import {
+  getCollection,
+  getResource,
+  createResource,
+  updateResource,
+  deleteResource,
+} from '../client'
 import type {
   OrganizationAttributes,
   MerchantAccountAttributes,
@@ -39,7 +45,10 @@ export const dashboardOrgs = {
   },
 
   async create(data: { name: string }) {
-    const doc = await createResource<OrganizationAttributes>('dashboard/organizations', data)
+    const doc = await createResource<OrganizationAttributes>(
+      'dashboard/organizations',
+      data,
+    )
     return extractAttributes(doc.data)
   },
 
@@ -62,7 +71,10 @@ export const dashboardOrgs = {
   },
 
   async createMerchant(data: { name: string; organization_id: string }) {
-    const doc = await createResource<MerchantAccountAttributes>('dashboard/merchants', data)
+    const doc = await createResource<MerchantAccountAttributes>(
+      'dashboard/merchants',
+      data,
+    )
     return extractAttributes(doc.data)
   },
 

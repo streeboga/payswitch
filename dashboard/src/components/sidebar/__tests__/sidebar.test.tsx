@@ -141,7 +141,11 @@ describe('Sidebar', () => {
   })
 
   it('shows admin group for admin users', async () => {
-    mockAuthStore.user = { ...mockUser, role: 'admin', roles: [{ organization_id: 'org1', role: 'admin' }] }
+    mockAuthStore.user = {
+      ...mockUser,
+      role: 'admin',
+      roles: [{ organization_id: 'org1', role: 'admin' }],
+    }
     const { Sidebar } = await import('../sidebar')
     render(<Sidebar />)
 

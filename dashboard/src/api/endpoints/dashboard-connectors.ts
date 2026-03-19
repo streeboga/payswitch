@@ -46,7 +46,10 @@ export const dashboardConnectors = {
   },
 
   async update(key: string, attrs: ConnectorUpdateAttrs) {
-    const doc = await updateResource<ConnectorAttributes>(`dashboard/connectors/${key}`, attrs)
+    const doc = await updateResource<ConnectorAttributes>(
+      `dashboard/connectors/${key}`,
+      attrs,
+    )
     return extractAttributes(doc.data)
   },
 

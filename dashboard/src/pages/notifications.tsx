@@ -157,7 +157,9 @@ export function NotificationsPage() {
           return (
             <span className="font-mono text-xs">
               {resource_type && (
-                <span className="text-muted-foreground capitalize">{resource_type}: </span>
+                <span className="text-muted-foreground capitalize">
+                  {resource_type}:{' '}
+                </span>
               )}
               {resource_id}
             </span>
@@ -168,7 +170,9 @@ export function NotificationsPage() {
       },
       {
         accessorKey: 'created_at',
-        header: ({ column }) => <ColumnHeader column={column} title={t('notifications.columns.time')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('notifications.columns.time')} />
+        ),
         cell: ({ row }) => <DateFormat date={row.original.created_at} />,
         enableSorting: true,
       },
@@ -178,7 +182,9 @@ export function NotificationsPage() {
         size: 80,
         cell: ({ row }) =>
           row.original.read_at ? (
-            <span className="text-muted-foreground text-xs">{t('notifications.columns.statusRead')}</span>
+            <span className="text-muted-foreground text-xs">
+              {t('notifications.columns.statusRead')}
+            </span>
           ) : (
             <span className="bg-primary inline-block h-2.5 w-2.5 rounded-full" />
           ),

@@ -66,7 +66,8 @@ export function LoginPage() {
         const resp = (error as { response: Response }).response
         if (resp.status === 422) {
           const body = await resp.json()
-          const message = body?.errors?.email?.[0] ?? body?.message ?? t('auth.loginError')
+          const message =
+            body?.errors?.email?.[0] ?? body?.message ?? t('auth.loginError')
           setServerError(message)
           return
         }

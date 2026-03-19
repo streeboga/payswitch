@@ -92,8 +92,13 @@ export function useUpdateMerchant() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ merchantKey, data }: { merchantKey: string; data: { name: string } }) =>
-      dashboardOrgs.updateMerchant(merchantKey, data),
+    mutationFn: ({
+      merchantKey,
+      data,
+    }: {
+      merchantKey: string
+      data: { name: string }
+    }) => dashboardOrgs.updateMerchant(merchantKey, data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['merchants'] })
       void queryClient.invalidateQueries({ queryKey: ['organizations'] })

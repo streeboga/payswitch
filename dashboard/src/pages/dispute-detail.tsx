@@ -220,7 +220,9 @@ export function DisputeDetailPage() {
           <InfoRow label={t('disputeDetail.labelDeadline')}>
             <DateFormat date={dispute.deadline} />
           </InfoRow>
-          <InfoRow label={t('disputeDetail.labelConnector')}>{dispute.connector ?? '—'}</InfoRow>
+          <InfoRow label={t('disputeDetail.labelConnector')}>
+            {dispute.connector ?? '—'}
+          </InfoRow>
           <InfoRow label={t('disputeDetail.labelCreated')}>
             <DateFormat date={dispute.created_at} />
           </InfoRow>
@@ -266,7 +268,9 @@ export function DisputeDetailPage() {
               }
             >
               <Upload className="mr-2 h-4 w-4" />
-              {uploadEvidence.isPending ? t('disputeDetail.submitting') : t('disputeDetail.submitButton')}
+              {uploadEvidence.isPending
+                ? t('disputeDetail.submitting')
+                : t('disputeDetail.submitButton')}
             </Button>
           </CardContent>
         </Card>

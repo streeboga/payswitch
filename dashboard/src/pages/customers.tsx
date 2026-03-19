@@ -94,7 +94,9 @@ export function CustomersPage() {
       },
       {
         accessorKey: 'name',
-        header: ({ column }) => <ColumnHeader column={column} title={t('customers.columnName')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('customers.columnName')} />
+        ),
         cell: ({ row }) => (
           <Link
             to="/customers/$customerKey"
@@ -325,7 +327,11 @@ function CreateCustomerDialog({
                 <FormItem>
                   <FormLabel>{t('customers.columnEmail')}</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder={t('customers.placeholderEmail')} {...field} />
+                    <Input
+                      type="email"
+                      placeholder={t('customers.placeholderEmail')}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -353,7 +359,10 @@ function CreateCustomerDialog({
                 <FormItem>
                   <FormLabel>{t('common.description')}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t('customers.placeholderDescription')} {...field} />
+                    <Input
+                      placeholder={t('customers.placeholderDescription')}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

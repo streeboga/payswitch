@@ -38,7 +38,9 @@ export function TestLiveToggle() {
             onClick={handleClick}
             data-testid="test-live-toggle"
             aria-label={
-              testMode ? t('testLiveToggle.switchToLive') : t('testLiveToggle.switchToTest')
+              testMode
+                ? t('testLiveToggle.switchToLive')
+                : t('testLiveToggle.switchToTest')
             }
           >
             <span

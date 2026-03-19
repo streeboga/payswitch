@@ -39,8 +39,14 @@ export function ContextSwitcher() {
   const merchants = merchantsData ?? EMPTY_ARRAY
   const profiles = profilesData ?? EMPTY_ARRAY
 
-  const orgMap = useMemo(() => new Map(organizations.map((o) => [o.key, o])), [organizations])
-  const merchantMap = useMemo(() => new Map(merchants.map((m) => [m.key, m])), [merchants])
+  const orgMap = useMemo(
+    () => new Map(organizations.map((o) => [o.key, o])),
+    [organizations],
+  )
+  const merchantMap = useMemo(
+    () => new Map(merchants.map((m) => [m.key, m])),
+    [merchants],
+  )
   const profileMap = useMemo(() => new Map(profiles.map((p) => [p.key, p])), [profiles])
 
   const invalidateContextQueries = useCallback(() => {
@@ -93,7 +99,8 @@ export function ContextSwitcher() {
   )
 
   const orgInitial = orgMap.get(currentOrgKey ?? '')?.name?.[0]?.toUpperCase() ?? 'O'
-  const merchantInitial = merchantMap.get(currentMerchantKey ?? '')?.name?.[0]?.toUpperCase() ?? 'M'
+  const merchantInitial =
+    merchantMap.get(currentMerchantKey ?? '')?.name?.[0]?.toUpperCase() ?? 'M'
   const profileInitial = currentProfileKey
     ? (profileMap.get(currentProfileKey)?.name?.[0]?.toUpperCase() ?? 'P')
     : '*'
@@ -143,7 +150,12 @@ export function ContextSwitcher() {
         </TooltipContent>
       </Tooltip>
 
-      <PopoverContent side="right" align="start" sideOffset={8} className="w-64 space-y-3 p-3">
+      <PopoverContent
+        side="right"
+        align="start"
+        sideOffset={8}
+        className="w-64 space-y-3 p-3"
+      >
         <div>
           <label className="text-muted-foreground mb-1 flex items-center gap-1.5 text-[10px] font-medium tracking-wider uppercase">
             <Building2 className="size-3" />

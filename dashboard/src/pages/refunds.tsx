@@ -105,7 +105,9 @@ export function RefundsPage() {
       },
       {
         accessorKey: 'amount',
-        header: ({ column }) => <ColumnHeader column={column} title={t('common.amount')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('common.amount')} />
+        ),
         cell: ({ row }) => (
           <MoneyFormat amount={row.original.amount} currency={row.original.currency} />
         ),
@@ -124,7 +126,9 @@ export function RefundsPage() {
       },
       {
         accessorKey: 'status',
-        header: ({ column }) => <ColumnHeader column={column} title={t('common.status')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('common.status')} />
+        ),
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
         enableSorting: false,
       },

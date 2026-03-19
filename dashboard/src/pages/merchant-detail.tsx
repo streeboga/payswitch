@@ -4,9 +4,22 @@ import { useParams, Link, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Store, Key, Plug, Route, LayoutDashboard, Pencil, Trash2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  Store,
+  Key,
+  Plug,
+  Route,
+  LayoutDashboard,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
 
-import { useMerchantDetail, useUpdateMerchant, useDeleteMerchant } from '@/hooks/use-organizations'
+import {
+  useMerchantDetail,
+  useUpdateMerchant,
+  useDeleteMerchant,
+} from '@/hooks/use-organizations'
 import { useProfilesList } from '@/hooks/use-profiles'
 import { useApiKeysList } from '@/hooks/use-api-keys'
 import { useConnectorsList } from '@/hooks/use-connectors'
@@ -200,8 +213,12 @@ export function MerchantDetailPage() {
                 <CardTitle>{t('merchantDetail.cardStats')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <InfoRow label={t('merchantDetail.labelProfilesCount')}>{merchant.profiles_count}</InfoRow>
-                <InfoRow label={t('merchantDetail.labelConnectorsCount')}>{merchant.connectors_count}</InfoRow>
+                <InfoRow label={t('merchantDetail.labelProfilesCount')}>
+                  {merchant.profiles_count}
+                </InfoRow>
+                <InfoRow label={t('merchantDetail.labelConnectorsCount')}>
+                  {merchant.connectors_count}
+                </InfoRow>
               </CardContent>
             </Card>
           </div>
@@ -284,7 +301,9 @@ function ProfilesTab() {
     return (
       <Card>
         <CardContent className="py-8 text-center">
-          <p className="text-muted-foreground text-sm">{t('merchantDetail.profilesEmpty')}</p>
+          <p className="text-muted-foreground text-sm">
+            {t('merchantDetail.profilesEmpty')}
+          </p>
         </CardContent>
       </Card>
     )
@@ -300,11 +319,21 @@ function ProfilesTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('common.id')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.profilesColumnWebhook')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.profilesColumnConnectors')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.profilesColumnRules')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.profilesColumnDate')}</th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('common.id')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.profilesColumnWebhook')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.profilesColumnConnectors')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.profilesColumnRules')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.profilesColumnDate')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -321,14 +350,20 @@ function ProfilesTab() {
                   </td>
                   <td className="px-3 py-2">
                     {item.webhook_url ? (
-                      <span className="font-mono text-xs">{item.webhook_url.length > 40 ? item.webhook_url.slice(0, 40) + '...' : item.webhook_url}</span>
+                      <span className="font-mono text-xs">
+                        {item.webhook_url.length > 40
+                          ? item.webhook_url.slice(0, 40) + '...'
+                          : item.webhook_url}
+                      </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-3 py-2">{item.connectors_count}</td>
                   <td className="px-3 py-2">{item.routing_rules_count}</td>
-                  <td className="px-3 py-2"><DateFormat date={item.created_at} /></td>
+                  <td className="px-3 py-2">
+                    <DateFormat date={item.created_at} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -369,18 +404,30 @@ function ApiKeysTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.keysColumnName')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.keysColumnPrefix')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.keysColumnType')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.keysColumnStatus')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.keysColumnDate')}</th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.keysColumnName')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.keysColumnPrefix')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.keysColumnType')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.keysColumnStatus')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.keysColumnDate')}
+                </th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className="border-b last:border-0">
                   <td className="px-3 py-2">{item.name}</td>
-                  <td className="px-3 py-2"><span className="font-mono text-xs">{item.key_prefix}</span></td>
+                  <td className="px-3 py-2">
+                    <span className="font-mono text-xs">{item.key_prefix}</span>
+                  </td>
                   <td className="px-3 py-2">{item.type}</td>
                   <td className="px-3 py-2">
                     {item.revoked_at ? (
@@ -389,7 +436,9 @@ function ApiKeysTab() {
                       <Badge variant="secondary">{t('apiKeys.statusActive')}</Badge>
                     )}
                   </td>
-                  <td className="px-3 py-2"><DateFormat date={item.created_at} /></td>
+                  <td className="px-3 py-2">
+                    <DateFormat date={item.created_at} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -414,7 +463,9 @@ function ConnectorsTab() {
     return (
       <Card>
         <CardContent className="py-8 text-center">
-          <p className="text-muted-foreground text-sm">{t('merchantDetail.connectorsEmpty')}</p>
+          <p className="text-muted-foreground text-sm">
+            {t('merchantDetail.connectorsEmpty')}
+          </p>
         </CardContent>
       </Card>
     )
@@ -430,11 +481,21 @@ function ConnectorsTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.connectorsColumnName')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.connectorsColumnType')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.connectorsColumnTestMode')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.connectorsColumnDisabled')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.connectorsColumnDate')}</th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.connectorsColumnName')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.connectorsColumnType')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.connectorsColumnTestMode')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.connectorsColumnDisabled')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.connectorsColumnDate')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -456,7 +517,9 @@ function ConnectorsTab() {
                       <span className="text-muted-foreground">{t('common.no')}</span>
                     )}
                   </td>
-                  <td className="px-3 py-2"><DateFormat date={item.created_at} /></td>
+                  <td className="px-3 py-2">
+                    <DateFormat date={item.created_at} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -481,7 +544,9 @@ function RoutingTab() {
     return (
       <Card>
         <CardContent className="py-8 text-center">
-          <p className="text-muted-foreground text-sm">{t('merchantDetail.routingEmpty')}</p>
+          <p className="text-muted-foreground text-sm">
+            {t('merchantDetail.routingEmpty')}
+          </p>
         </CardContent>
       </Card>
     )
@@ -497,11 +562,21 @@ function RoutingTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.routingColumnName')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.routingColumnType')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.routingColumnActive')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.routingColumnPriority')}</th>
-                <th className="text-muted-foreground px-3 py-2 text-left font-medium">{t('merchantDetail.routingColumnDate')}</th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.routingColumnName')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.routingColumnType')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.routingColumnActive')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.routingColumnPriority')}
+                </th>
+                <th className="text-muted-foreground px-3 py-2 text-left font-medium">
+                  {t('merchantDetail.routingColumnDate')}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -517,7 +592,9 @@ function RoutingTab() {
                     )}
                   </td>
                   <td className="px-3 py-2">{item.priority}</td>
-                  <td className="px-3 py-2"><DateFormat date={item.created_at} /></td>
+                  <td className="px-3 py-2">
+                    <DateFormat date={item.created_at} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -626,9 +703,7 @@ function DeleteMerchantDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t('merchants.deleteTitle')}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t('merchants.deleteDesc')}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{t('merchants.deleteDesc')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>

@@ -25,7 +25,9 @@ export function MobileSidebar() {
   const isAdmin = useMemo(() => {
     if (!userRoles?.length) return false
     if (currentOrgKey) {
-      return userRoles.some((r) => r.organization_id === currentOrgKey && r.role === 'admin')
+      return userRoles.some(
+        (r) => r.organization_id === currentOrgKey && r.role === 'admin',
+      )
     }
     return userRoles.some((r) => r.role === 'admin')
   }, [userRoles, currentOrgKey])
@@ -60,7 +62,9 @@ export function MobileSidebar() {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-72 p-0">
           <SheetHeader className="border-border border-b p-4">
-            <SheetTitle className="text-sm">{userEmail ?? t('sidebar.account')}</SheetTitle>
+            <SheetTitle className="text-sm">
+              {userEmail ?? t('sidebar.account')}
+            </SheetTitle>
           </SheetHeader>
           <div className="border-border flex items-center gap-1 border-b px-2 py-1.5">
             <ContextSwitcher />

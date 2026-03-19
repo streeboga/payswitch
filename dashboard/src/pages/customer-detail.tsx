@@ -182,7 +182,9 @@ export function CustomerDetailPage() {
           <CardContent className="space-y-3">
             <InfoRow label={t('common.email')}>{customer.email ?? '—'}</InfoRow>
             <InfoRow label={t('customers.columnPhone')}>{customer.phone ?? '—'}</InfoRow>
-            <InfoRow label={t('common.description')}>{customer.description ?? '—'}</InfoRow>
+            <InfoRow label={t('common.description')}>
+              {customer.description ?? '—'}
+            </InfoRow>
             <InfoRow label={t('common.date')}>
               <DateFormat date={customer.created_at} />
             </InfoRow>
@@ -197,7 +199,9 @@ export function CustomerDetailPage() {
             {customer.metadata && Object.keys(customer.metadata).length > 0 ? (
               <JsonViewer data={customer.metadata} defaultExpanded={false} />
             ) : (
-              <p className="text-muted-foreground text-sm">{t('customerDetail.noMetadata')}</p>
+              <p className="text-muted-foreground text-sm">
+                {t('customerDetail.noMetadata')}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -244,7 +248,9 @@ export function CustomerDetailPage() {
       {/* Customer Payments */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('customerDetail.cardPayments')} ({payments.length})</CardTitle>
+          <CardTitle>
+            {t('customerDetail.cardPayments')} ({payments.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {payments.length === 0 ? (
@@ -393,7 +399,11 @@ function EditCustomerDialog({
 
   const editCustomerSchema = z.object({
     name: z.string().min(1, t('customerDetail.nameRequired')),
-    email: z.string().email(t('customerDetail.emailInvalid')).or(z.literal('')).optional(),
+    email: z
+      .string()
+      .email(t('customerDetail.emailInvalid'))
+      .or(z.literal(''))
+      .optional(),
     phone: z.string().optional(),
     description: z.string().optional(),
   })
@@ -453,7 +463,11 @@ function EditCustomerDialog({
                 <FormItem>
                   <FormLabel>{t('customers.columnEmail')}</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder={t('customers.placeholderEmail')} {...field} />
+                    <Input
+                      type="email"
+                      placeholder={t('customers.placeholderEmail')}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -481,7 +495,10 @@ function EditCustomerDialog({
                 <FormItem>
                   <FormLabel>{t('common.description')}</FormLabel>
                   <FormControl>
-                    <Input placeholder={t('customers.placeholderDescription')} {...field} />
+                    <Input
+                      placeholder={t('customers.placeholderDescription')}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

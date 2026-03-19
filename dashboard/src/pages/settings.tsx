@@ -207,7 +207,11 @@ function ProfileTab() {
                 <FormItem>
                   <FormLabel>{t('settings.emailLabel')}</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder={t('settings.emailPlaceholder')} {...field} />
+                    <Input
+                      type="email"
+                      placeholder={t('settings.emailPlaceholder')}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -237,7 +241,9 @@ function SecurityTab() {
         .object({
           current_password: z.string().min(1, t('settings.currentPasswordRequired')),
           new_password: z.string().min(8, t('settings.newPasswordMin')),
-          new_password_confirmation: z.string().min(1, t('settings.confirmPasswordRequired')),
+          new_password_confirmation: z
+            .string()
+            .min(1, t('settings.confirmPasswordRequired')),
         })
         .refine((data) => data.new_password === data.new_password_confirmation, {
           message: t('settings.passwordsMismatch'),
@@ -343,7 +349,9 @@ function SecurityTab() {
                   {t('settings.twoFactorScanDesc')}
                 </p>
                 <div className="bg-muted flex h-48 w-48 items-center justify-center rounded-md border">
-                  <span className="text-muted-foreground text-xs">{t('settings.qrCode')}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {t('settings.qrCode')}
+                  </span>
                 </div>
               </div>
 
@@ -410,7 +418,9 @@ function AppearanceTab() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="compact">{t('settings.densityCompact')}</SelectItem>
-              <SelectItem value="comfortable">{t('settings.densityComfortable')}</SelectItem>
+              <SelectItem value="comfortable">
+                {t('settings.densityComfortable')}
+              </SelectItem>
               <SelectItem value="spacious">{t('settings.densitySpacious')}</SelectItem>
             </SelectContent>
           </Select>
@@ -437,7 +447,10 @@ function RegionalTab() {
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label>{t('settings.languageLabel')}</Label>
-          <Select value={i18n.language} onValueChange={(v) => void i18n.changeLanguage(v)}>
+          <Select
+            value={i18n.language}
+            onValueChange={(v) => void i18n.changeLanguage(v)}
+          >
             <SelectTrigger className="w-[200px]">
               <SelectValue />
             </SelectTrigger>

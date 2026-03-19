@@ -54,7 +54,15 @@ export function RootLayout() {
           {showChrome && <Sidebar />}
           <main className="flex-1 overflow-y-auto p-6">
             {showChrome && <Breadcrumbs items={breadcrumbs} className="mb-4" />}
-            <Suspense fallback={<div className="flex h-64 items-center justify-center"><span className="text-muted-foreground text-sm">{t('common.loading')}</span></div>}>
+            <Suspense
+              fallback={
+                <div className="flex h-64 items-center justify-center">
+                  <span className="text-muted-foreground text-sm">
+                    {t('common.loading')}
+                  </span>
+                </div>
+              }
+            >
               <Outlet />
             </Suspense>
           </main>

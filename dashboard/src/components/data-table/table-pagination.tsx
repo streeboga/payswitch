@@ -37,7 +37,9 @@ export function TablePagination({
   return (
     <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
       <p className="text-muted-foreground text-sm">
-        {total > 0 ? t('table.showingResults', { from, to, total }) : t('table.noResults')}
+        {total > 0
+          ? t('table.showingResults', { from, to, total })
+          : t('table.noResults')}
       </p>
 
       <div className="flex items-center gap-4">

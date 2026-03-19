@@ -98,9 +98,7 @@ export function ShortcutsHelp() {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t('shortcuts.title')}</DialogTitle>
-          <DialogDescription>
-            {t('shortcuts.description')}
-          </DialogDescription>
+          <DialogDescription>{t('shortcuts.description')}</DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] space-y-4 overflow-y-auto">
           {sortedGroups.map((group) => (
@@ -110,7 +108,11 @@ export function ShortcutsHelp() {
               </h4>
               <div className="divide-border divide-y">
                 {grouped[group]?.map((entry) => (
-                  <ShortcutRow key={entry.keys} entry={entry} thenLabel={t('shortcuts.then')} />
+                  <ShortcutRow
+                    key={entry.keys}
+                    entry={entry}
+                    thenLabel={t('shortcuts.then')}
+                  />
                 ))}
               </div>
             </div>

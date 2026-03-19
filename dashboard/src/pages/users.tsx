@@ -323,9 +323,7 @@ function InviteDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('users.inviteTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('users.inviteDesc')}
-          </DialogDescription>
+          <DialogDescription>{t('users.inviteDesc')}</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -398,7 +396,9 @@ function ChangeRoleDialog({ user, onClose }: { user: UserRow; onClose: () => voi
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('users.changeRoleTitle')}</DialogTitle>
-          <DialogDescription>{t('users.changeRoleDesc', { name: user.name })}</DialogDescription>
+          <DialogDescription>
+            {t('users.changeRoleDesc', { name: user.name })}
+          </DialogDescription>
         </DialogHeader>
 
         <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>

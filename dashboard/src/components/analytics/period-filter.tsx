@@ -25,7 +25,11 @@ export function PeriodFilter({ value, onChange }: PeriodFilterProps) {
 
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger size="sm" aria-label={t('analytics.periodLabel')} data-testid="period-filter">
+      <SelectTrigger
+        size="sm"
+        aria-label={t('analytics.periodLabel')}
+        data-testid="period-filter"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

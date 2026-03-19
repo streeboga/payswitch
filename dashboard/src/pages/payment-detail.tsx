@@ -109,7 +109,11 @@ function buildTimeline(
       id: `attempt-${attempt.id}`,
       icon,
       iconClass,
-      label: t('paymentDetail.attemptLabel', { n: i + 1, connector: attempt.connector, status: attempt.status }),
+      label: t('paymentDetail.attemptLabel', {
+        n: i + 1,
+        connector: attempt.connector,
+        status: attempt.status,
+      }),
       timestamp: attempt.created_at,
     })
   }
@@ -299,7 +303,9 @@ export function PaymentDetailPage() {
             <InfoRow label={t('paymentDetail.labelCaptureMethod')}>
               <span className="capitalize">{payment.capture_method}</span>
             </InfoRow>
-            <InfoRow label={t('paymentDetail.labelConnector')}>{payment.connector ?? '—'}</InfoRow>
+            <InfoRow label={t('paymentDetail.labelConnector')}>
+              {payment.connector ?? '—'}
+            </InfoRow>
             <InfoRow label={t('paymentDetail.labelCustomer')}>
               {payment.customer_id ? (
                 <span className="font-mono text-sm">{payment.customer_id}</span>
@@ -318,7 +324,9 @@ export function PaymentDetailPage() {
             <InfoRow label={t('paymentDetail.labelCreated')}>
               <DateFormat date={payment.created_at} />
             </InfoRow>
-            <InfoRow label={t('paymentDetail.labelDescription')}>{payment.description ?? '—'}</InfoRow>
+            <InfoRow label={t('paymentDetail.labelDescription')}>
+              {payment.description ?? '—'}
+            </InfoRow>
             <InfoRow label={t('paymentDetail.labelReturnUrl')}>
               {payment.return_url ? (
                 <a
@@ -344,7 +352,11 @@ export function PaymentDetailPage() {
                   variant="ghost"
                   size="icon-xs"
                   onClick={() => setSecretVisible(!secretVisible)}
-                  aria-label={secretVisible ? t('paymentDetail.hideSecret') : t('paymentDetail.showSecret')}
+                  aria-label={
+                    secretVisible
+                      ? t('paymentDetail.hideSecret')
+                      : t('paymentDetail.showSecret')
+                  }
                 >
                   {secretVisible ? (
                     <EyeOff className="h-3.5 w-3.5" />
@@ -362,16 +374,22 @@ export function PaymentDetailPage() {
       {/* Attempts Section */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('paymentDetail.cardAttempts', { count: attempts.length })}</CardTitle>
+          <CardTitle>
+            {t('paymentDetail.cardAttempts', { count: attempts.length })}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {attempts.length === 0 ? (
-            <p className="text-muted-foreground text-sm">{t('paymentDetail.noAttempts')}</p>
+            <p className="text-muted-foreground text-sm">
+              {t('paymentDetail.noAttempts')}
+            </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">{t('paymentDetail.attemptColumns.index')}</TableHead>
+                  <TableHead className="w-12">
+                    {t('paymentDetail.attemptColumns.index')}
+                  </TableHead>
                   <TableHead>{t('paymentDetail.attemptColumns.connector')}</TableHead>
                   <TableHead>{t('paymentDetail.attemptColumns.status')}</TableHead>
                   <TableHead>{t('paymentDetail.attemptColumns.amount')}</TableHead>
@@ -426,7 +444,9 @@ export function PaymentDetailPage() {
       {/* Refunds Section */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('paymentDetail.cardRefunds', { count: refunds.length })}</CardTitle>
+          <CardTitle>
+            {t('paymentDetail.cardRefunds', { count: refunds.length })}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {refunds.length === 0 ? (
@@ -525,7 +545,10 @@ export function PaymentDetailPage() {
         }}
         onCancel={() => setConfirmAction(null)}
         title={t('paymentDetail.dialogCapture')}
-        description={t('paymentDetail.dialogCaptureDesc', { currency: payment.currency, amount: payment.amount })}
+        description={t('paymentDetail.dialogCaptureDesc', {
+          currency: payment.currency,
+          amount: payment.amount,
+        })}
         confirmLabel={t('paymentDetail.buttonCapture')}
       />
 

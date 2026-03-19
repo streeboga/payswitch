@@ -27,4 +27,9 @@ export function useMerchantsList(params: OrgListParams = {}) {
   })
 }
 
-export { useMerchantDetail, useCreateMerchant, useUpdateMerchant, useDeleteMerchant } from './use-organizations'
+export {
+  useMerchantDetail,
+  useCreateMerchant,
+  useUpdateMerchant,
+  useDeleteMerchant,
+} from './use-organizations'

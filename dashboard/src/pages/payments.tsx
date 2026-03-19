@@ -128,7 +128,9 @@ export function PaymentsPage() {
       },
       {
         accessorKey: 'amount',
-        header: ({ column }) => <ColumnHeader column={column} title={t('payments.columnAmount')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('payments.columnAmount')} />
+        ),
         cell: ({ row }) => (
           <MoneyFormat amount={row.original.amount} currency={row.original.currency} />
         ),
@@ -147,7 +149,9 @@ export function PaymentsPage() {
       },
       {
         accessorKey: 'status',
-        header: ({ column }) => <ColumnHeader column={column} title={t('payments.columnStatus')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('payments.columnStatus')} />
+        ),
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
         enableSorting: true,
       },
@@ -188,7 +192,9 @@ export function PaymentsPage() {
       },
       {
         accessorKey: 'created_at',
-        header: ({ column }) => <ColumnHeader column={column} title={t('payments.columnDate')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('payments.columnDate')} />
+        ),
         cell: ({ row }) => <DateFormat date={row.original.created_at} />,
         enableSorting: true,
       },

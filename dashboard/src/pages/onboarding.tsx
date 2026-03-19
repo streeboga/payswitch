@@ -14,7 +14,9 @@ import {
 } from 'lucide-react'
 
 const ConnectWizard = lazy(() =>
-  import('@/components/connectors/connect-wizard').then((m) => ({ default: m.ConnectWizard })),
+  import('@/components/connectors/connect-wizard').then((m) => ({
+    default: m.ConnectWizard,
+  })),
 )
 const TestPaymentForm = lazy(() =>
   import('@/pages/test-payment').then((m) => ({ default: m.TestPaymentForm })),
@@ -113,9 +115,7 @@ function StepOrganization({
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">
-        {t('onboarding.step1Text')}
-      </p>
+      <p className="text-muted-foreground text-sm">{t('onboarding.step1Text')}</p>
       <div className="space-y-2">
         <Label htmlFor="org-name">{t('onboarding.orgNameLabel')}</Label>
         <Input
@@ -143,9 +143,7 @@ function StepMerchant({
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">
-        {t('onboarding.step2Text')}
-      </p>
+      <p className="text-muted-foreground text-sm">{t('onboarding.step2Text')}</p>
       <div className="space-y-2">
         <Label htmlFor="merchant-name">{t('onboarding.merchantNameLabel')}</Label>
         <Input
@@ -168,11 +166,11 @@ function StepConnector({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">
-        {t('onboarding.step3Text')}
-      </p>
+      <p className="text-muted-foreground text-sm">{t('onboarding.step3Text')}</p>
       {!wizardOpen && (
-        <Button onClick={() => setWizardOpen(true)}>{t('onboarding.connectButton')}</Button>
+        <Button onClick={() => setWizardOpen(true)}>
+          {t('onboarding.connectButton')}
+        </Button>
       )}
       <Suspense fallback={<Loader2 className="h-6 w-6 animate-spin" />}>
         <ConnectWizard
@@ -192,9 +190,7 @@ function StepRouting() {
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">
-        {t('onboarding.step4Text')}
-      </p>
+      <p className="text-muted-foreground text-sm">{t('onboarding.step4Text')}</p>
       <div className="bg-muted/50 rounded-lg p-6 text-center">
         <GitBranch className="text-muted-foreground mx-auto mb-2 h-10 w-10" />
         <p className="text-muted-foreground text-sm">
@@ -212,9 +208,7 @@ function StepTestPayment({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-muted-foreground text-sm">
-        {t('onboarding.step5Text')}
-      </p>
+      <p className="text-muted-foreground text-sm">{t('onboarding.step5Text')}</p>
       <Suspense fallback={<Loader2 className="h-6 w-6 animate-spin" />}>
         <TestPaymentForm onSuccess={onComplete} />
       </Suspense>

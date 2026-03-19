@@ -141,7 +141,9 @@ export function ProfilesPage() {
     },
     {
       accessorKey: 'created_at',
-      header: ({ column }) => <ColumnHeader column={column} title={t('profiles.columnDate')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('profiles.columnDate')} />
+      ),
       cell: ({ row }) => <DateFormat date={row.original.created_at} />,
       enableSorting: true,
     },
@@ -297,7 +299,11 @@ function CreateProfileDialog({
   const createMutation = useCreateProfile()
 
   const createProfileSchema = z.object({
-    webhook_url: z.string().url(t('profiles.webhookUrlInvalid')).or(z.literal('')).optional(),
+    webhook_url: z
+      .string()
+      .url(t('profiles.webhookUrlInvalid'))
+      .or(z.literal(''))
+      .optional(),
   })
 
   type CreateProfileForm = z.infer<typeof createProfileSchema>
@@ -377,9 +383,7 @@ function DeleteProfileDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t('profiles.deleteTitle')}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t('profiles.deleteDesc')}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{t('profiles.deleteDesc')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>

@@ -1,4 +1,10 @@
-import { getCollection, getResource, createResource, updateResource, deleteResource } from '../client'
+import {
+  getCollection,
+  getResource,
+  createResource,
+  updateResource,
+  deleteResource,
+} from '../client'
 import type { BusinessProfileAttributes, PaginatedResult } from '../types'
 import { parseCollection, buildJsonApiParams, extractAttributes } from '../types'
 
@@ -35,7 +41,10 @@ export const dashboardProfiles = {
   },
 
   async create(data: { webhook_url?: string }) {
-    const doc = await createResource<BusinessProfileAttributes>('dashboard/profiles', data)
+    const doc = await createResource<BusinessProfileAttributes>(
+      'dashboard/profiles',
+      data,
+    )
     return extractAttributes(doc.data)
   },
 

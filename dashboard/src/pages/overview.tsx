@@ -55,7 +55,7 @@ export function OverviewPage() {
   }
 
   return (
-    <div className={`space-y-6${isPending ? ' opacity-60 transition-opacity' : ''}`}>
+    <div className={`space-y-6${isPending ? 'opacity-60 transition-opacity' : ''}`}>
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">{t('overview.title')}</h1>
         <PeriodFilter value={period} onChange={handlePeriodChange} />

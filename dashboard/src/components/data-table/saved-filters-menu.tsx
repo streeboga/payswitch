@@ -52,7 +52,10 @@ export function SavedFiltersMenu({ page, currentParams }: SavedFiltersMenuProps)
   const [filterName, setFilterName] = useState('')
 
   // Filters for current page (user-saved + presets)
-  const pageFilters = useMemo(() => filters.filter((f) => f.page === page), [filters, page])
+  const pageFilters = useMemo(
+    () => filters.filter((f) => f.page === page),
+    [filters, page],
+  )
   const pagePresets = useMemo(
     () => getFilterPresets(t).filter((f) => f.page === page),
     [t, page],

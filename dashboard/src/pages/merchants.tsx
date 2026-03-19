@@ -127,7 +127,9 @@ export function MerchantsPage() {
     },
     {
       accessorKey: 'name',
-      header: ({ column }) => <ColumnHeader column={column} title={t('merchants.columnName')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('merchants.columnName')} />
+      ),
       cell: ({ row }) => (
         <Link
           to="/merchants/$merchantKey"
@@ -168,7 +170,9 @@ export function MerchantsPage() {
     },
     {
       accessorKey: 'created_at',
-      header: ({ column }) => <ColumnHeader column={column} title={t('merchants.columnDate')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('merchants.columnDate')} />
+      ),
       cell: ({ row }) => <DateFormat date={row.original.created_at} />,
       enableSorting: true,
     },
@@ -527,9 +531,7 @@ function DeleteMerchantDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t('merchants.deleteTitle')}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t('merchants.deleteDesc')}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{t('merchants.deleteDesc')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>

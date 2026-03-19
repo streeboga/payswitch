@@ -144,7 +144,11 @@ describe('MobileSidebar', () => {
   })
 
   it('shows admin group for admin users', async () => {
-    mockAuthStore.user = { ...mockUser, role: 'admin', roles: [{ organization_id: 'org1', role: 'admin' }] }
+    mockAuthStore.user = {
+      ...mockUser,
+      role: 'admin',
+      roles: [{ organization_id: 'org1', role: 'admin' }],
+    }
     const { MobileSidebar } = await import('../mobile-sidebar')
     render(<MobileSidebar />)
 

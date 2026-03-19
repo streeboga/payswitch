@@ -93,7 +93,9 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
         card_exp_year: cardExpYear,
         card_cvc: cardCvc,
         capture_method: captureMethod,
-        ...(connectorName && connectorName !== '__auto__' ? { connector_name: connectorName } : {}),
+        ...(connectorName && connectorName !== '__auto__'
+          ? { connector_name: connectorName }
+          : {}),
         ...(description ? { description } : {}),
       },
       {
@@ -110,9 +112,7 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
       <Card>
         <CardHeader>
           <CardTitle>{t('testPayment.title')}</CardTitle>
-          <CardDescription>
-            {t('testPayment.formDesc')}
-          </CardDescription>
+          <CardDescription>{t('testPayment.formDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -166,7 +166,9 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
                   <SelectValue placeholder={t('testPayment.connectorAuto')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__auto__">{t('testPayment.connectorAuto')}</SelectItem>
+                  <SelectItem value="__auto__">
+                    {t('testPayment.connectorAuto')}
+                  </SelectItem>
                   {activeConnectors.map((c) => (
                     <SelectItem key={c.id} value={c.connector_name}>
                       {c.connector_name}
@@ -187,7 +189,9 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="payment-method">{t('testPayment.labelPaymentMethod')}</Label>
+              <Label htmlFor="payment-method">
+                {t('testPayment.labelPaymentMethod')}
+              </Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger id="payment-method">
                   <SelectValue />
@@ -230,7 +234,9 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="capture-method">{t('testPayment.labelCaptureMethod')}</Label>
+              <Label htmlFor="capture-method">
+                {t('testPayment.labelCaptureMethod')}
+              </Label>
               <Select value={captureMethod} onValueChange={setCaptureMethod}>
                 <SelectTrigger id="capture-method">
                   <SelectValue />
@@ -255,7 +261,8 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
 
             {mutation.isError && (
               <p className="text-destructive text-sm">
-                {t('testPayment.errorPrefix')} {mutation.error?.message ?? t('testPayment.errorCreatePayment')}
+                {t('testPayment.errorPrefix')}{' '}
+                {mutation.error?.message ?? t('testPayment.errorCreatePayment')}
               </p>
             )}
           </form>
@@ -269,11 +276,15 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">{t('testPayment.resultStatus')}</span>
+              <span className="text-muted-foreground text-sm">
+                {t('testPayment.resultStatus')}
+              </span>
               <StatusBadge status={result.status} />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">{t('testPayment.resultId')}</span>
+              <span className="text-muted-foreground text-sm">
+                {t('testPayment.resultId')}
+              </span>
               <Link
                 to="/payments/$paymentKey"
                 params={{ paymentKey: result.id }}
@@ -283,12 +294,16 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
               </Link>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">{t('testPayment.resultAmount')}</span>
+              <span className="text-muted-foreground text-sm">
+                {t('testPayment.resultAmount')}
+              </span>
               <MoneyFormat amount={result.amount} currency={result.currency} />
             </div>
             {result.connector && (
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-sm">{t('testPayment.resultConnector')}</span>
+                <span className="text-muted-foreground text-sm">
+                  {t('testPayment.resultConnector')}
+                </span>
                 <span className="text-sm">{result.connector}</span>
               </div>
             )}

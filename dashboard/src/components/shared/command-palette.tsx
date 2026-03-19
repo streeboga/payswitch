@@ -47,7 +47,11 @@ export function CommandPalette() {
 
   const quickActions: QuickAction[] = useMemo(
     () => [
-      { label: t('commandPalette.createPayment'), path: '/test-payment', icon: FlaskConical },
+      {
+        label: t('commandPalette.createPayment'),
+        path: '/test-payment',
+        icon: FlaskConical,
+      },
       { label: t('commandPalette.connectConnector'), path: '/connectors', icon: Plus },
     ],
     [t],
@@ -149,7 +153,9 @@ export function CommandPalette() {
         {isSearching ? (
           <div className="flex items-center justify-center gap-2 py-6">
             <Loader2 className="text-muted-foreground size-4 animate-spin" />
-            <span className="text-muted-foreground text-sm">{t('commandPalette.searching')}</span>
+            <span className="text-muted-foreground text-sm">
+              {t('commandPalette.searching')}
+            </span>
           </div>
         ) : hasQuery ? (
           <>
@@ -175,7 +181,9 @@ export function CommandPalette() {
             ))}
             <CommandEmpty>
               <div className="flex flex-col items-center gap-2 py-4">
-                <p className="text-muted-foreground text-sm">{t('commandPalette.noResults')}</p>
+                <p className="text-muted-foreground text-sm">
+                  {t('commandPalette.noResults')}
+                </p>
                 <p className="text-muted-foreground text-xs">
                   {t('commandPalette.noResultsHint')}
                 </p>
@@ -228,7 +236,9 @@ export function CommandPalette() {
             </CommandGroup>
             <CommandEmpty>
               <div className="flex flex-col items-center gap-2 py-4">
-                <p className="text-muted-foreground text-sm">{t('commandPalette.noResults')}</p>
+                <p className="text-muted-foreground text-sm">
+                  {t('commandPalette.noResults')}
+                </p>
               </div>
             </CommandEmpty>
           </>

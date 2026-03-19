@@ -15,7 +15,8 @@ export function getLanguageDir(lng: string): 'ltr' | 'rtl' {
 
 // Detect locale before initialising so we can eager-load only what's needed.
 const detectedLng =
-  (localStorage.getItem('payswitch-language') ?? navigator.language.split('-')[0]) === 'en'
+  (localStorage.getItem('payswitch-language') ?? navigator.language.split('-')[0]) ===
+  'en'
     ? 'en'
     : 'ru'
 

@@ -101,7 +101,8 @@ function DistributionBar({
       <p
         className={`text-xs ${total === 100 ? 'text-muted-foreground' : 'text-destructive'}`}
       >
-        {totalLabel}{total !== 100 && ` ${totalNeededLabel}`}
+        {totalLabel}
+        {total !== 100 && ` ${totalNeededLabel}`}
       </p>
     </div>
   )

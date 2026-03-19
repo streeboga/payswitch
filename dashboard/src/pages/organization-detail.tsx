@@ -246,7 +246,9 @@ export function OrganizationDetailPage() {
       </Card>
 
       <div>
-        <h2 className="mb-4 text-xl font-semibold">{t('organizationDetail.merchantsTitle', { count: merchantRows.length })}</h2>
+        <h2 className="mb-4 text-xl font-semibold">
+          {t('organizationDetail.merchantsTitle', { count: merchantRows.length })}
+        </h2>
         <DataTable
           table={table}
           columns={merchantColumns}
@@ -383,9 +385,7 @@ function DeleteOrgDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t('organizations.deleteTitle')}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t('organizations.deleteDesc')}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{t('organizations.deleteDesc')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>

@@ -160,8 +160,12 @@ function ExpandedRowContent({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-20">{t('webhooks.expandedAttemptIndex')}</TableHead>
-                  <TableHead className="w-32">{t('webhooks.expandedStatusCode')}</TableHead>
+                  <TableHead className="w-20">
+                    {t('webhooks.expandedAttemptIndex')}
+                  </TableHead>
+                  <TableHead className="w-32">
+                    {t('webhooks.expandedStatusCode')}
+                  </TableHead>
                   <TableHead>{t('webhooks.columnDate')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -340,7 +344,9 @@ export function WebhooksPage() {
       },
       {
         accessorKey: 'delivery_attempts',
-        header: ({ column }) => <ColumnHeader column={column} title={t('webhooks.columnAttempts')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('webhooks.columnAttempts')} />
+        ),
         size: 100,
         cell: ({ row }) => (
           <span className="font-mono text-sm">{row.original.delivery_attempts}</span>
@@ -372,7 +378,9 @@ export function WebhooksPage() {
       },
       {
         accessorKey: 'created_at',
-        header: ({ column }) => <ColumnHeader column={column} title={t('webhooks.columnDate')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('webhooks.columnDate')} />
+        ),
         cell: ({ row }) => <DateFormat date={row.original.created_at} />,
         enableSorting: true,
       },

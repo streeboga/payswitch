@@ -151,7 +151,9 @@ export function ConnectorHealthPage() {
         accessorKey: 'error_message',
         header: t('connectorHealth.columnMessage'),
         cell: ({ row }) => (
-          <span className="text-muted-foreground text-sm">{row.original.error_message}</span>
+          <span className="text-muted-foreground text-sm">
+            {row.original.error_message}
+          </span>
         ),
         enableSorting: false,
       },
@@ -267,7 +269,9 @@ export function ConnectorHealthPage() {
       </div>
 
       {/* Charts */}
-      <div className={`grid grid-cols-1 gap-6 lg:grid-cols-2${isPending ? ' opacity-60 transition-opacity' : ''}`}>
+      <div
+        className={`grid grid-cols-1 gap-6 lg:grid-cols-2${isPending ? 'opacity-60 transition-opacity' : ''}`}
+      >
         <Card>
           <CardHeader>
             <CardTitle>{t('connectorHealth.chartLatency')}</CardTitle>

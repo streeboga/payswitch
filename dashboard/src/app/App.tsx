@@ -37,7 +37,12 @@ function HtmlLangSync() {
 
 export function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
       <QueryClientProvider client={queryClient}>
         <HtmlLangSync />
         <RouterProvider router={router} />

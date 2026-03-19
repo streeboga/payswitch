@@ -85,7 +85,9 @@ function createColumns(
   return [
     {
       accessorKey: 'name',
-      header: ({ column }) => <ColumnHeader column={column} title={t('apiKeys.columnName')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('apiKeys.columnName')} />
+      ),
       cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
       enableSorting: true,
     },
@@ -143,7 +145,9 @@ function createColumns(
     },
     {
       accessorKey: 'created_at',
-      header: ({ column }) => <ColumnHeader column={column} title={t('apiKeys.columnCreated')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('apiKeys.columnCreated')} />
+      ),
       cell: ({ row }) => <DateFormat date={row.original.created_at} />,
       enableSorting: true,
     },
@@ -402,9 +406,7 @@ function ShowOnceKeyDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('apiKeys.createdTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('apiKeys.createdDesc')}
-          </DialogDescription>
+          <DialogDescription>{t('apiKeys.createdDesc')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -416,9 +418,7 @@ function ShowOnceKeyDialog({
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>{t('apiKeys.alertTitle')}</AlertTitle>
-            <AlertDescription>
-              {t('apiKeys.alertDesc')}
-            </AlertDescription>
+            <AlertDescription>{t('apiKeys.alertDesc')}</AlertDescription>
           </Alert>
         </div>
 

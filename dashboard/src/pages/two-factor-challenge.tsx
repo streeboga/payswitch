@@ -84,9 +84,7 @@ export function TwoFactorChallengePage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">{t('auth.twoFactorTitle')}</CardTitle>
           <CardDescription>
-            {useRecovery
-              ? t('auth.twoFactorRecoveryDesc')
-              : t('auth.twoFactorOtpDesc')}
+            {useRecovery ? t('auth.twoFactorRecoveryDesc') : t('auth.twoFactorOtpDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

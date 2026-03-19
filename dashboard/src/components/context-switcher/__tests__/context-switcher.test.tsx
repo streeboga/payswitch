@@ -66,7 +66,9 @@ vi.mock('@/components/ui/popover', () => ({
 // Mock Avatar components
 vi.mock('@/components/ui/avatar', () => ({
   Avatar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AvatarFallback: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  AvatarFallback: ({ children }: { children: React.ReactNode }) => (
+    <span>{children}</span>
+  ),
   AvatarGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
@@ -163,6 +165,8 @@ describe('ContextSwitcher', () => {
     const { ContextSwitcher } = await import('../context-switcher')
     render(<ContextSwitcher />, { wrapper: createWrapper() })
 
-    expect(screen.getAllByText('contextSwitcher.allProfiles').length).toBeGreaterThanOrEqual(1)
+    expect(
+      screen.getAllByText('contextSwitcher.allProfiles').length,
+    ).toBeGreaterThanOrEqual(1)
   })
 })

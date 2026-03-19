@@ -68,7 +68,9 @@ afterEach(cleanup)
 describe('TestPaymentPage', () => {
   it('renders form', async () => {
     renderWithProviders()
-    expect(await screen.findByRole('heading', { name: 'testPayment.title' })).toBeDefined()
+    expect(
+      await screen.findByRole('heading', { name: 'testPayment.title' }),
+    ).toBeDefined()
     expect(screen.getByText('testPayment.sendButton')).toBeDefined()
   })
 

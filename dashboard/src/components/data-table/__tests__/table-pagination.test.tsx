@@ -86,8 +86,12 @@ describe('TablePagination', () => {
       />,
     )
 
-    expect(screen.getByLabelText('table.firstPage').getAttribute('disabled')).not.toBeNull()
-    expect(screen.getByLabelText('table.previousPage').getAttribute('disabled')).not.toBeNull()
+    expect(
+      screen.getByLabelText('table.firstPage').getAttribute('disabled'),
+    ).not.toBeNull()
+    expect(
+      screen.getByLabelText('table.previousPage').getAttribute('disabled'),
+    ).not.toBeNull()
   })
 
   it('enables next/last buttons when not on last page', () => {
@@ -112,8 +116,12 @@ describe('TablePagination', () => {
       />,
     )
 
-    expect(screen.getByLabelText('table.nextPage').getAttribute('disabled')).not.toBeNull()
-    expect(screen.getByLabelText('table.lastPage').getAttribute('disabled')).not.toBeNull()
+    expect(
+      screen.getByLabelText('table.nextPage').getAttribute('disabled'),
+    ).not.toBeNull()
+    expect(
+      screen.getByLabelText('table.lastPage').getAttribute('disabled'),
+    ).not.toBeNull()
   })
 
   it('calls onPageChange with next page', () => {

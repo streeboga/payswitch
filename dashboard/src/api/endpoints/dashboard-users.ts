@@ -36,12 +36,18 @@ export const dashboardUsers = {
   },
 
   async invite(data: UserInviteData) {
-    const doc = await createResource<DashboardUserAttributes>('dashboard/users/roles', data)
+    const doc = await createResource<DashboardUserAttributes>(
+      'dashboard/users/roles',
+      data,
+    )
     return extractAttributes(doc.data)
   },
 
   async update(id: string, data: UserUpdateData) {
-    const doc = await updateResource<DashboardUserAttributes>(`dashboard/users/roles/${id}`, data)
+    const doc = await updateResource<DashboardUserAttributes>(
+      `dashboard/users/roles/${id}`,
+      data,
+    )
     return extractAttributes(doc.data)
   },
 

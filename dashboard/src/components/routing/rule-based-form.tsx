@@ -123,7 +123,9 @@ export function RuleBasedForm({
                     <Select onValueChange={f.onChange} value={f.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={t('ruleBasedForm.fieldPlaceholder')} />
+                          <SelectValue
+                            placeholder={t('ruleBasedForm.fieldPlaceholder')}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -147,7 +149,9 @@ export function RuleBasedForm({
                     <Select onValueChange={f.onChange} value={f.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={t('ruleBasedForm.operatorPlaceholder')} />
+                          <SelectValue
+                            placeholder={t('ruleBasedForm.operatorPlaceholder')}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -184,7 +188,9 @@ export function RuleBasedForm({
                     <Select onValueChange={f.onChange} value={f.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder={t('ruleBasedForm.connectorPlaceholder')} />
+                          <SelectValue
+                            placeholder={t('ruleBasedForm.connectorPlaceholder')}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

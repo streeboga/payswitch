@@ -128,7 +128,9 @@ export function EventLogsPage() {
       accessorKey: 'detail',
       header: t('eventLogs.columnDetail'),
       cell: ({ row }) => (
-        <span className="text-muted-foreground text-sm">{row.original.detail ?? '—'}</span>
+        <span className="text-muted-foreground text-sm">
+          {row.original.detail ?? '—'}
+        </span>
       ),
       enableSorting: false,
       meta: { hiddenOnMobile: true },

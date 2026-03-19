@@ -168,7 +168,9 @@ function FilterField({ filter, value, onChange }: FilterFieldProps) {
         <div className="space-y-1.5">
           <Label className="text-xs">{filter.label}</Label>
           <Input
-            placeholder={filter.placeholder ?? t('table.searchFilter', { label: filter.label })}
+            placeholder={
+              filter.placeholder ?? t('table.searchFilter', { label: filter.label })
+            }
             value={value ?? ''}
             onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)}
             className="h-8"

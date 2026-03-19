@@ -59,8 +59,18 @@ export function getNavGroups(t: TFunction): NavGroup[] {
     {
       label: t('sidebar.development'),
       items: [
-        { label: t('sidebar.onboarding'), path: '/onboarding', icon: Rocket, testOnly: true },
-        { label: t('sidebar.testPayment'), path: '/test-payment', icon: FlaskConical, testOnly: true },
+        {
+          label: t('sidebar.onboarding'),
+          path: '/onboarding',
+          icon: Rocket,
+          testOnly: true,
+        },
+        {
+          label: t('sidebar.testPayment'),
+          path: '/test-payment',
+          icon: FlaskConical,
+          testOnly: true,
+        },
         { label: t('sidebar.eventLogs'), path: '/event-logs', icon: ScrollText },
       ],
     },
@@ -74,8 +84,18 @@ export function getNavGroups(t: TFunction): NavGroup[] {
           icon: Building2,
           adminOnly: true,
         },
-        { label: t('sidebar.merchants'), path: '/merchants', icon: Store, adminOnly: true },
-        { label: t('sidebar.profiles'), path: '/profiles', icon: Briefcase, adminOnly: true },
+        {
+          label: t('sidebar.merchants'),
+          path: '/merchants',
+          icon: Store,
+          adminOnly: true,
+        },
+        {
+          label: t('sidebar.profiles'),
+          path: '/profiles',
+          icon: Briefcase,
+          adminOnly: true,
+        },
         {
           label: t('sidebar.users'),
           path: '/users',

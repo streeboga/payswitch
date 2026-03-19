@@ -115,7 +115,9 @@ export function OrganizationsPage() {
     },
     {
       accessorKey: 'name',
-      header: ({ column }) => <ColumnHeader column={column} title={t('organizations.columnName')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('organizations.columnName')} />
+      ),
       cell: ({ row }) => (
         <Link
           to="/organizations/$orgKey"
@@ -136,7 +138,9 @@ export function OrganizationsPage() {
     },
     {
       accessorKey: 'created_at',
-      header: ({ column }) => <ColumnHeader column={column} title={t('organizations.columnDate')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('organizations.columnDate')} />
+      ),
       cell: ({ row }) => <DateFormat date={row.original.created_at} />,
       enableSorting: true,
     },
@@ -278,19 +282,11 @@ export function OrganizationsPage() {
       <CreateOrgDialog open={createOpen} onOpenChange={setCreateOpen} />
 
       {editOrg && (
-        <EditOrgDialog
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          org={editOrg}
-        />
+        <EditOrgDialog open={editOpen} onOpenChange={setEditOpen} org={editOrg} />
       )}
 
       {deleteOrg && (
-        <DeleteOrgDialog
-          open={deleteOpen}
-          onOpenChange={setDeleteOpen}
-          org={deleteOrg}
-        />
+        <DeleteOrgDialog open={deleteOpen} onOpenChange={setDeleteOpen} org={deleteOrg} />
       )}
     </div>
   )
@@ -464,9 +460,7 @@ function DeleteOrgDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t('organizations.deleteTitle')}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t('organizations.deleteDesc')}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{t('organizations.deleteDesc')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>

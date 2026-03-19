@@ -10,7 +10,9 @@ const mockContextStore = () => ({
 })
 
 vi.mock('@/stores/context', () => ({
-  useContextStore: (selector?: (state: ReturnType<typeof mockContextStore>) => unknown) => {
+  useContextStore: (
+    selector?: (state: ReturnType<typeof mockContextStore>) => unknown,
+  ) => {
     const state = mockContextStore()
     return selector ? selector(state) : state
   },
@@ -89,7 +91,9 @@ describe('TestLiveToggle', () => {
     fireEvent.click(toggle)
 
     // Confirm the dialog
-    fireEvent.click(screen.getByRole('button', { name: /testLiveToggle\.confirmButton/i }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /testLiveToggle\.confirmButton/i }),
+    )
     expect(mockSetTestMode).toHaveBeenCalledWith(false)
   })
 

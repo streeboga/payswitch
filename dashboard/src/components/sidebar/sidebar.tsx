@@ -1,5 +1,15 @@
 import { useMemo, useCallback } from 'react'
-import { PanelLeftClose, PanelLeft, LogOut, Sun, Moon, Monitor, Settings, Bell, User } from 'lucide-react'
+import {
+  PanelLeftClose,
+  PanelLeft,
+  LogOut,
+  Sun,
+  Moon,
+  Monitor,
+  Settings,
+  Bell,
+  User,
+} from 'lucide-react'
 import { useNavigate, Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from 'next-themes'
@@ -40,7 +50,9 @@ function ThemeToggle({ collapsed }: { collapsed: boolean }) {
       <Monitor className="size-3.5" />
     )
 
-  const label = t(`settings.theme${currentTheme === 'dark' ? 'Dark' : currentTheme === 'light' ? 'Light' : 'System'}`)
+  const label = t(
+    `settings.theme${currentTheme === 'dark' ? 'Dark' : currentTheme === 'light' ? 'Light' : 'System'}`,
+  )
 
   if (collapsed) {
     return (
@@ -64,7 +76,13 @@ function ThemeToggle({ collapsed }: { collapsed: boolean }) {
   }
 
   return (
-    <Button variant="ghost" size="icon" className="size-7" onClick={cycleTheme} aria-label={label}>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-7"
+      onClick={cycleTheme}
+      aria-label={label}
+    >
       {icon}
     </Button>
   )
@@ -126,7 +144,9 @@ export function Sidebar() {
   const isAdmin = useMemo(() => {
     if (!userRoles?.length) return false
     if (currentOrgKey) {
-      return userRoles.some((r) => r.organization_id === currentOrgKey && r.role === 'admin')
+      return userRoles.some(
+        (r) => r.organization_id === currentOrgKey && r.role === 'admin',
+      )
     }
     return userRoles.some((r) => r.role === 'admin')
   }, [userRoles, currentOrgKey])
@@ -187,7 +207,9 @@ export function Sidebar() {
       </nav>
 
       <div className="border-border border-t px-2 py-2">
-        <div className={`flex items-center ${sidebarCollapsed ? 'flex-col gap-1' : 'gap-1'}`}>
+        <div
+          className={`flex items-center ${sidebarCollapsed ? 'flex-col gap-1' : 'gap-1'}`}
+        >
           <Popover>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -204,7 +226,9 @@ export function Sidebar() {
                   ) : (
                     <button className="hover:bg-accent flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 transition-colors">
                       <User className="text-muted-foreground size-3.5 shrink-0" />
-                      <span className="text-muted-foreground truncate text-xs">{userEmail}</span>
+                      <span className="text-muted-foreground truncate text-xs">
+                        {userEmail}
+                      </span>
                     </button>
                   )}
                 </PopoverTrigger>

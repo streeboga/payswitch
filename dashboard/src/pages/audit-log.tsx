@@ -81,7 +81,9 @@ function JsonDiff({
 }) {
   const { t } = useTranslation()
   if (!oldValues && !newValues) {
-    return <span className="text-muted-foreground text-sm">{t('auditLog.noDiffData')}</span>
+    return (
+      <span className="text-muted-foreground text-sm">{t('auditLog.noDiffData')}</span>
+    )
   }
 
   const allKeys = new Set([
@@ -205,7 +207,9 @@ export function AuditLogPage() {
       },
       {
         accessorKey: 'created_at',
-        header: ({ column }) => <ColumnHeader column={column} title={t('auditLog.columnTime')} />,
+        header: ({ column }) => (
+          <ColumnHeader column={column} title={t('auditLog.columnTime')} />
+        ),
         cell: ({ row }) => <DateFormat date={row.original.created_at} />,
         enableSorting: true,
       },
@@ -363,7 +367,9 @@ export function AuditLogPage() {
             disabled={exportMutation.isPending}
           >
             <Download className="mr-1 h-4 w-4" />
-            {exportMutation.isPending ? t('auditLog.exporting') : t('auditLog.exportButton')}
+            {exportMutation.isPending
+              ? t('auditLog.exporting')
+              : t('auditLog.exportButton')}
           </Button>
           <TableDensityToggle />
         </div>

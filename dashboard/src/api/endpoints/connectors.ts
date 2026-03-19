@@ -32,7 +32,10 @@ export const connectors = {
       test_mode?: boolean
     },
   ) {
-    return createResource<ConnectorAttributes>(`merchants/${merchantKey}/connectors`, attrs)
+    return createResource<ConnectorAttributes>(
+      `merchants/${merchantKey}/connectors`,
+      attrs,
+    )
   },
 
   update(
