@@ -473,7 +473,13 @@
     "typeRuleBasedDesc": "Route based on conditions (currency, amount, etc.)",
     "typeVolumeSplitDesc": "Percentage distribution between connectors",
     "deleteTitle": "Delete rule",
-    "deleteConfirm": "This action is irreversible."
+    "deleteConfirm": "This action is irreversible.",
+    "editPriorityTitle": "Edit priority",
+    "editPriorityDesc": "Change connector priority order",
+    "editRuleBasedTitle": "Edit rule",
+    "editRuleBasedDesc": "Change payment routing conditions",
+    "editVolumeSplitTitle": "Edit distribution",
+    "editVolumeSplitDesc": "Change traffic distribution percentages"
   },
   "priorityForm": {
     "namePlaceholder": "Main connector priority",

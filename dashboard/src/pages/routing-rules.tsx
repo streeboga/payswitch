@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useReactTable, getCoreRowModel, type ColumnDef } from '@tanstack/react-table'
-import { GitBranch, Plus, Trash2 } from 'lucide-react'
+import { GitBranch, Pencil, Plus, Trash2 } from 'lucide-react'
 
 import type { RoutingRuleAttributes, RoutingRuleType } from '@/api/types'
 import type { RoutingRuleListParams } from '@/api/endpoints/dashboard-routing-rules'
@@ -34,12 +34,19 @@ import {
 import type { PriorityFormValues } from '@/components/routing/priority-form'
 import type { RuleBasedFormValues } from '@/components/routing/rule-based-form'
 import type { VolumeSplitFormValues } from '@/components/routing/volume-split-form'
+import {
+  deserializePriorityRules,
+  deserializeRuleBasedRules,
+  deserializeVolumeSplitRules,
+} from '@/components/routing/deserialize-rules'
 
 const PriorityForm = lazy(() =>
   import('@/components/routing/priority-form').then((m) => ({ default: m.PriorityForm })),
 )
 const RuleBasedForm = lazy(() =>
-  import('@/components/routing/rule-based-form').then((m) => ({ default: m.RuleBasedForm })),
+  import('@/components/routing/rule-based-form').then((m) => ({
+    default: m.RuleBasedForm,
+  })),
 )
 const VolumeSplitForm = lazy(() =>
   import('@/components/routing/volume-split-form').then((m) => ({
@@ -63,6 +70,7 @@ const TYPE_VARIANTS: Record<RoutingRuleType, string> = {
 
 function createColumns(
   onToggleActive: (row: RoutingRuleRow) => void,
+  onEdit: (row: RoutingRuleRow) => void,
   onDelete: (row: RoutingRuleRow) => void,
   t: (key: string) => string,
 ): ColumnDef<RoutingRuleRow, unknown>[] {
@@ -75,7 +83,9 @@ function createColumns(
   return [
     {
       accessorKey: 'name',
-      header: ({ column }) => <ColumnHeader column={column} title={t('routingRules.columnName')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('routingRules.columnName')} />
+      ),
       cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
       enableSorting: true,
     },
@@ -95,7 +105,9 @@ function createColumns(
     },
     {
       accessorKey: 'priority',
-      header: ({ column }) => <ColumnHeader column={column} title={t('routingRules.columnPriority')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('routingRules.columnPriority')} />
+      ),
       size: 100,
       cell: ({ row }) => (
         <span className="font-mono text-sm">{row.original.priority}</span>
@@ -117,24 +129,37 @@ function createColumns(
     },
     {
       accessorKey: 'created_at',
-      header: ({ column }) => <ColumnHeader column={column} title={t('routingRules.columnDate')} />,
+      header: ({ column }) => (
+        <ColumnHeader column={column} title={t('routingRules.columnDate')} />
+      ),
       cell: ({ row }) => <DateFormat date={row.original.created_at} />,
       enableSorting: true,
     },
     {
       id: 'actions',
       header: '',
-      size: 50,
+      size: 80,
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-destructive"
-          onClick={() => onDelete(row.original)}
-          aria-label={`${t('common.delete')} ${row.original.name}`}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => onEdit(row.original)}
+            aria-label={`${t('common.edit')} ${row.original.name}`}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() => onDelete(row.original)}
+            aria-label={`${t('common.delete')} ${row.original.name}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
       enableSorting: false,
     },
@@ -198,6 +223,7 @@ export function RoutingRulesPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createStep, setCreateStep] = useState<CreateStep>('select-type')
   const [deleteTarget, setDeleteTarget] = useState<RoutingRuleRow | null>(null)
+  const [editTarget, setEditTarget] = useState<RoutingRuleRow | null>(null)
 
   const createMutation = useCreateRoutingRule()
   const updateMutation = useUpdateRoutingRule()
@@ -248,6 +274,55 @@ export function RoutingRulesPage() {
       })
     },
     [updateMutation],
+  )
+
+  const handleEdit = useCallback((row: RoutingRuleRow) => {
+    setEditTarget(row)
+  }, [])
+
+  const handleEditSubmit = useCallback(
+    (values: PriorityFormValues | RuleBasedFormValues | VolumeSplitFormValues) => {
+      if (!editTarget) return
+
+      let rules: unknown[]
+      const type = editTarget.type
+
+      if (type === 'priority') {
+        const v = values as PriorityFormValues
+        rules = v.connectors.map((c, i) => ({
+          connector_id: c.connector_id,
+          priority: i + 1,
+        }))
+      } else if (type === 'rule_based') {
+        const v = values as RuleBasedFormValues
+        rules = [
+          ...v.conditions.map((c) => ({
+            field: c.field,
+            operator: c.operator,
+            value: c.value,
+            connector_id: c.connector_id,
+          })),
+          { default: true, connector_id: v.default_connector_id },
+        ]
+      } else {
+        const v = values as VolumeSplitFormValues
+        rules = v.splits.map((s) => ({
+          connector_id: s.connector_id,
+          percentage: s.percentage,
+        }))
+      }
+
+      updateMutation.mutate(
+        {
+          key: editTarget.id,
+          attrs: { name: values.name, rules },
+        },
+        {
+          onSuccess: () => setEditTarget(null),
+        },
+      )
+    },
+    [editTarget, updateMutation],
   )
 
   const handleDelete = useCallback((row: RoutingRuleRow) => {
@@ -318,8 +393,8 @@ export function RoutingRulesPage() {
   )
 
   const columns = useMemo(
-    () => createColumns(handleToggleActive, handleDelete, t),
-    [handleToggleActive, handleDelete, t],
+    () => createColumns(handleToggleActive, handleEdit, handleDelete, t),
+    [handleToggleActive, handleEdit, handleDelete, t],
   )
 
   const table = useReactTable({
@@ -413,6 +488,73 @@ export function RoutingRulesPage() {
               <VolumeSplitForm
                 onSubmit={(values) => handleCreateSubmit('volume_split', values)}
                 isPending={createMutation.isPending}
+              />
+            )}
+          </Suspense>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Rule Dialog */}
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editTarget?.type === 'priority' && t('routingRules.editPriorityTitle')}
+              {editTarget?.type === 'rule_based' && t('routingRules.editRuleBasedTitle')}
+              {editTarget?.type === 'volume_split' &&
+                t('routingRules.editVolumeSplitTitle')}
+            </DialogTitle>
+            <DialogDescription>
+              {editTarget?.type === 'priority' && t('routingRules.editPriorityDesc')}
+              {editTarget?.type === 'rule_based' && t('routingRules.editRuleBasedDesc')}
+              {editTarget?.type === 'volume_split' &&
+                t('routingRules.editVolumeSplitDesc')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Suspense fallback={null}>
+            {editTarget?.type === 'priority' && (
+              <PriorityForm
+                key={editTarget.id}
+                defaultValues={deserializePriorityRules(
+                  editTarget.name,
+                  editTarget.rules as { connector_id?: string; priority?: number }[],
+                )}
+                onSubmit={handleEditSubmit}
+                isPending={updateMutation.isPending}
+              />
+            )}
+            {editTarget?.type === 'rule_based' && (
+              <RuleBasedForm
+                key={editTarget.id}
+                defaultValues={deserializeRuleBasedRules(
+                  editTarget.name,
+                  editTarget.rules as {
+                    field?: string
+                    operator?: string
+                    value?: string
+                    connector_id?: string
+                    default?: boolean
+                  }[],
+                )}
+                onSubmit={handleEditSubmit}
+                isPending={updateMutation.isPending}
+              />
+            )}
+            {editTarget?.type === 'volume_split' && (
+              <VolumeSplitForm
+                key={editTarget.id}
+                defaultValues={deserializeVolumeSplitRules(
+                  editTarget.name,
+                  editTarget.rules as { connector_id?: string; percentage?: number }[],
+                )}
+                onSubmit={handleEditSubmit}
+                isPending={updateMutation.isPending}
               />
             )}
           </Suspense>

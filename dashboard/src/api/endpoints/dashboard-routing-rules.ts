@@ -1,4 +1,10 @@
-import { createResource, updateResource, deleteResource, getCollection } from '../client'
+import {
+  api,
+  createResource,
+  updateResource,
+  deleteResource,
+  getCollection,
+} from '../client'
 import type { RoutingRuleAttributes, PaginatedResult } from '../types'
 import { parseCollection, buildJsonApiParams, extractAttributes } from '../types'
 
@@ -43,8 +49,18 @@ export const dashboardRoutingRules = {
     return parseCollection(doc)
   },
 
+  async get(key: string) {
+    const doc = await api
+      .get(`dashboard/routing-rules/${key}`)
+      .json<{ data: { type: string; id: string; attributes: RoutingRuleAttributes } }>()
+    return extractAttributes(doc.data)
+  },
+
   async create(attrs: RoutingRuleCreateAttrs) {
-    const doc = await createResource<RoutingRuleAttributes>('dashboard/routing-rules', attrs)
+    const doc = await createResource<RoutingRuleAttributes>(
+      'dashboard/routing-rules',
+      attrs,
+    )
     return extractAttributes(doc.data)
   },
 

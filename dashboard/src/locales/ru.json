@@ -473,7 +473,13 @@
     "typeRuleBasedDesc": "Маршрутизация на основе условий (валюта, сумма и др.)",
     "typeVolumeSplitDesc": "Процентное распределение между коннекторами",
     "deleteTitle": "Удалить правило",
-    "deleteConfirm": "Это действие необратимо."
+    "deleteConfirm": "Это действие необратимо.",
+    "editPriorityTitle": "Редактировать приоритет",
+    "editPriorityDesc": "Измените порядок приоритета коннекторов",
+    "editRuleBasedTitle": "Редактировать правило",
+    "editRuleBasedDesc": "Измените условия маршрутизации платежей",
+    "editVolumeSplitTitle": "Редактировать распределение",
+    "editVolumeSplitDesc": "Измените процентное распределение трафика"
   },
   "priorityForm": {
     "namePlaceholder": "Приоритет основных коннекторов",

@@ -21,6 +21,18 @@ export function useRoutingRulesList(params: RoutingRuleListParams = {}) {
   })
 }
 
+export function useRoutingRule(key: string | null) {
+  const merchantKey = useContextStore((s) => s.currentMerchantKey)
+  const testMode = useContextStore((s) => s.testMode)
+
+  return useQuery({
+    queryKey: ['routing-rules', 'detail', key, merchantKey, testMode],
+    queryFn: () => dashboardRoutingRules.get(key!),
+    staleTime: STALE_TIME,
+    enabled: !!merchantKey && !!key,
+  })
+}
+
 export function useCreateRoutingRule() {
   const queryClient = useQueryClient()
 
