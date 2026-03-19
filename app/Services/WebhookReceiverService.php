@@ -7,12 +7,15 @@ namespace App\Services;
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use App\Repositories\Contracts\RefundRepositoryInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Enums\RefundStatus;
+use Streeboga\PaymentData\Models\Refund;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
 final readonly class WebhookReceiverService
@@ -20,6 +23,7 @@ final readonly class WebhookReceiverService
     public function __construct(
         private MerchantRepositoryInterface $merchantRepository,
         private PaymentIntentRepositoryInterface $paymentRepository,
+        private RefundRepositoryInterface $refundRepository,
     ) {}
 
     /**
@@ -61,7 +65,7 @@ final readonly class WebhookReceiverService
         ]);
 
         try {
-            $this->processWebhook($connector, $mca->merchant_account_id, $payload);
+            $this->processWebhook($connector, $mca->merchant_account_id, $payload, $mca->connector_name);
         } catch (\Exception $e) {
             Log::error('Webhook processing failed', [
                 'mca_key' => $mcaKey,
@@ -79,7 +83,16 @@ final readonly class WebhookReceiverService
         ConnectorInterface $connector,
         int $merchantAccountId,
         array $payload,
+        string $connectorName,
     ): void {
+        $eventType = $payload['type'] ?? '';
+
+        if (str_contains($eventType, 'refund')) {
+            $this->processRefundWebhook($payload, $connectorName);
+
+            return;
+        }
+
         $paymentId = $connector->extractPaymentIdFromWebhook($payload);
         if (! $paymentId) {
             return;
@@ -90,12 +103,12 @@ final readonly class WebhookReceiverService
             return;
         }
 
-        $newStatus = $connector->mapWebhookEventToStatus($payload['type'] ?? '');
+        $newStatus = $connector->mapWebhookEventToStatus($eventType);
         if (! $newStatus || ! PaymentStateMachine::canTransition($payment->status, $newStatus)) {
             return;
         }
 
-        $result = DB::transaction(function () use ($payment, $newStatus) {
+        $result = DB::transaction(function () use ($payment, $newStatus, $connectorName) {
             $lockedPayment = $this->paymentRepository->findByIdLocked($payment->id);
             if (! $lockedPayment) {
                 return null;
@@ -103,7 +116,10 @@ final readonly class WebhookReceiverService
             $previousStatus = $lockedPayment->status->value;
 
             if (PaymentStateMachine::canTransition($lockedPayment->status, $newStatus)) {
-                $updateData = ['status' => $newStatus];
+                $updateData = [
+                    'status' => $newStatus,
+                    'connector' => $connectorName,
+                ];
                 if ($newStatus === PaymentStatus::Succeeded) {
                     $updateData['amount_received'] = $lockedPayment->amount;
                 }
@@ -119,6 +135,38 @@ final readonly class WebhookReceiverService
 
         if ($result) {
             event(new PaymentStatusChanged($result['payment'], $result['previousStatus']));
+        }
+    }
+
+    /**
+     * Process a refund webhook by updating the Refund model status.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function processRefundWebhook(array $payload, string $connectorName): void
+    {
+        $connectorRefundId = $payload['object']['id'] ?? null;
+        if (! $connectorRefundId) {
+            return;
+        }
+
+        $refund = Refund::where('connector_refund_id', $connectorRefundId)->first();
+        if (! $refund) {
+            return;
+        }
+
+        $eventType = $payload['type'] ?? '';
+
+        if (str_contains($eventType, 'succeeded')) {
+            $refund->update([
+                'status' => RefundStatus::Succeeded,
+                'connector' => $connectorName,
+            ]);
+        } elseif (str_contains($eventType, 'failed') || str_contains($eventType, 'canceled')) {
+            $refund->update([
+                'status' => RefundStatus::Failed,
+                'connector' => $connectorName,
+            ]);
         }
     }
 }
