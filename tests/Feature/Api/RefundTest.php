@@ -84,6 +84,14 @@ test('refund stores exact amount and status in DB', function () {
     expect($refund->amount)->toBe(2500);
     expect($refund->status->value)->toBe('succeeded');
     expect($refund->connector)->not->toBeNull();
+
+    // Verify exact values via assertDatabaseHas
+    $this->assertDatabaseHas('refunds', [
+        'key' => $refundId,
+        'amount' => 2500,
+        'status' => 'succeeded',
+        'connector' => 'test',
+    ]);
 });
 
 test('refund currency matches payment currency', function () {
@@ -140,6 +148,8 @@ test('refund is linked to correct payment in DB', function () {
 test('refund amount exceeding payment amount returns 400 with specific error code', function () {
     $paymentId = makeSucceededPayment(5000);
 
+    $refundCountBefore = Refund::count();
+
     $response = $this->postJson('/api/v1/refunds', [
         'payment_id' => $paymentId,
         'amount' => 5001,
@@ -147,6 +157,9 @@ test('refund amount exceeding payment amount returns 400 with specific error cod
 
     $response->assertStatus(400)
         ->assertJsonPath('errors.0.code', 'refund_exceeds_payment');
+
+    // Verify no refund record was created
+    expect(Refund::count())->toBe($refundCountBefore);
 });
 
 // ─── Boundary: refund on non-succeeded payment ────────────────────────────────
@@ -233,6 +246,14 @@ test('multiple partial refunds track total correctly and reject overflow', funct
     ], refundHeaders());
     $r3->assertStatus(201);
 
+    // Verify 3 refunds stored in DB with exact amounts
+    $payment = PaymentIntent::where('key', $paymentId)->first();
+    $refunds = Refund::where('payment_intent_id', $payment->id)->orderBy('id')->get();
+    expect($refunds)->toHaveCount(3);
+    expect($refunds[0]->amount)->toBe(3000);
+    expect($refunds[1]->amount)->toBe(5000);
+    expect($refunds[2]->amount)->toBe(2000);
+
     // Fourth refund: 1 more — should fail
     $r4 = $this->postJson('/api/v1/refunds', [
         'payment_id' => $paymentId,
@@ -240,6 +261,9 @@ test('multiple partial refunds track total correctly and reject overflow', funct
     ], refundHeaders());
     $r4->assertStatus(400)
         ->assertJsonPath('errors.0.code', 'refund_exceeds_payment');
+
+    // Still only 3 refunds after rejection
+    expect(Refund::where('payment_intent_id', $payment->id)->count())->toBe(3);
 });
 
 test('refund creates webhook event', function () {

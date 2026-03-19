@@ -299,6 +299,50 @@ test('capture exceeding capturable amount returns 400 with specific error code',
         ->assertJsonPath('errors.0.code', 'amount_exceeds_capturable');
 });
 
+test('capture with amount zero is rejected by validation', function () {
+    $create = $this->postJson('/api/v1/payments', [
+        'amount' => 5000,
+        'currency' => 'USD',
+        'capture_method' => 'manual',
+    ], headers());
+    $paymentId = $create->json('data.id');
+    $this->postJson("/api/v1/payments/{$paymentId}/confirm", cardData(), headers());
+
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/capture", [
+        'amount_to_capture' => 0,
+    ], headers());
+
+    $response->assertStatus(422);
+
+    // Verify payment state unchanged after rejected capture
+    $payment = PaymentIntent::where('key', $paymentId)->first();
+    expect($payment->status->value)->toBe('requires_capture');
+    expect($payment->amount_capturable)->toBe(5000);
+    expect($payment->amount_received)->toBeNull();
+});
+
+test('capture on already succeeded payment returns error', function () {
+    $create = $this->postJson('/api/v1/payments', [
+        'amount' => 3000,
+        'currency' => 'USD',
+    ], headers());
+    $paymentId = $create->json('data.id');
+
+    // Confirm with automatic capture -> succeeded
+    $this->postJson("/api/v1/payments/{$paymentId}/confirm", cardData(), headers())->assertOk();
+
+    $payment = PaymentIntent::where('key', $paymentId)->first();
+    expect($payment->status->value)->toBe('succeeded');
+
+    // Try to capture a succeeded payment
+    $response = $this->postJson("/api/v1/payments/{$paymentId}/capture", [
+        'amount_to_capture' => 1000,
+    ], headers());
+
+    $response->assertStatus(400)
+        ->assertJsonPath('errors.0.code', 'invalid_state_transition');
+});
+
 // ─── Cancel: assertions ────────────────────────────────────────────────────────
 
 test('cancel transitions payment to cancelled status in DB', function () {

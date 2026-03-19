@@ -78,6 +78,33 @@ test('customer create returns 201 and persists to database', function () {
         'email' => 'new@example.com',
         'merchant_account_id' => $this->merchant->id,
     ]);
+
+    // Verify exact model values in DB
+    $customer = Customer::where('email', 'new@example.com')->first();
+    expect($customer)->not->toBeNull();
+    expect($customer->name)->toBe('New Customer');
+    expect($customer->email)->toBe('new@example.com');
+    expect($customer->merchant_account_id)->toBe($this->merchant->id);
+});
+
+test('customer create with phone and description persists all fields', function () {
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/v1/dashboard/customers', [
+            'name' => 'Full Customer',
+            'email' => 'full@example.com',
+            'phone' => '+1234567890',
+            'description' => 'VIP customer',
+        ], $this->headers);
+
+    $response->assertStatus(201);
+
+    $this->assertDatabaseHas('customers', [
+        'name' => 'Full Customer',
+        'email' => 'full@example.com',
+        'phone' => '+1234567890',
+        'description' => 'VIP customer',
+        'merchant_account_id' => $this->merchant->id,
+    ]);
 });
 
 test('customer update changes the specified fields', function () {
@@ -103,6 +130,17 @@ test('customer update changes the specified fields', function () {
     $customer->refresh();
     expect($customer->name)->toBe('Updated Name');
     expect($customer->email)->toBe('updated@example.com');
+
+    // Verify old values are gone and new values are in DB
+    $this->assertDatabaseMissing('customers', [
+        'id' => $customer->id,
+        'name' => 'Old Name',
+    ]);
+    $this->assertDatabaseHas('customers', [
+        'id' => $customer->id,
+        'name' => 'Updated Name',
+        'email' => 'updated@example.com',
+    ]);
 });
 
 test('customer update with empty data returns unchanged customer', function () {
