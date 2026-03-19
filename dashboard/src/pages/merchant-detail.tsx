@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, Link, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
@@ -15,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-react'
 
+import { useContextStore } from '@/stores/context'
 import {
   useMerchantDetail,
   useUpdateMerchant,
@@ -84,6 +85,15 @@ export function MerchantDetailPage() {
   const { data, isLoading, isError, error, refetch } = useMerchantDetail(merchantKey)
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+
+  // Sync context store so tabs fetch data for the viewed merchant
+  const setMerchant = useContextStore((s) => s.setMerchant)
+  const currentMerchantKey = useContextStore((s) => s.currentMerchantKey)
+  useEffect(() => {
+    if (merchantKey && merchantKey !== currentMerchantKey) {
+      setMerchant(merchantKey)
+    }
+  }, [merchantKey, currentMerchantKey, setMerchant])
 
   if (isLoading) {
     return (
