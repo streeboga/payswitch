@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
+use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 
+/**
+ * @mixin MerchantConnectorAccount
+ */
 final class ConnectorResource extends JsonApiResource
 {
     public function toType(Request $request): string

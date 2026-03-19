@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Enums\ApiKeyType;
 use Illuminate\Http\Request;
+use Streeboga\PaymentData\Models\ApiKey;
 
+/**
+ * @mixin ApiKey
+ */
 final class ApiKeyResource extends JsonApiResource
 {
     public function toType(Request $request): string
@@ -19,7 +22,7 @@ final class ApiKeyResource extends JsonApiResource
     {
         $attrs = [
             'name' => $this->name,
-            'type' => $this->type?->value ?? ApiKeyType::Secret->value,
+            'type' => $this->type->value,
             'key_prefix' => $this->key_prefix,
             'expires_at' => $this->expires_at?->toIso8601String(),
             'revoked_at' => $this->revoked_at?->toIso8601String(),
@@ -37,7 +40,7 @@ final class ApiKeyResource extends JsonApiResource
     public function toLinks(Request $request): array
     {
         return [
-            'self' => "/api/v1/dashboard/api-keys/{$this->key}",
+            'self' => "/api/v1/dashboard/api-keys/{$this->id}",
         ];
     }
 }

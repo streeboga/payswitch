@@ -6,6 +6,15 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 
+/**
+ * @property string $event_id
+ * @property string $type
+ * @property string $action
+ * @property string $resource_id
+ * @property string $status
+ * @property string|null $detail
+ * @property string $created_at
+ */
 final class EventLogResource extends JsonApiResource
 {
     public function toId(Request $request): string

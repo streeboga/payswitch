@@ -27,7 +27,7 @@ final class DashboardWebhookEventController extends Controller
      *
      * Retrieve webhook events for the current merchant with optional filters.
      */
-    #[QueryParameter('filter[status]', type: 'string', description: 'Filter by delivery status', enum: ['delivered', 'failed', 'pending'])]
+    #[QueryParameter('filter[status]', type: 'string', description: 'Filter by delivery status (delivered, failed, pending)')]
     #[QueryParameter('filter[event_type]', type: 'string', description: 'Filter by event type')]
     #[QueryParameter('page[size]', type: 'integer', description: 'Items per page', example: 20)]
     #[QueryParameter('page[number]', type: 'integer', description: 'Page number', example: 1)]

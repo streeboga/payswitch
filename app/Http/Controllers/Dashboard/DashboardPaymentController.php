@@ -33,7 +33,7 @@ final class DashboardPaymentController extends Controller
     #[QueryParameter('filter[status]', type: 'string', description: 'Filter by payment status', example: 'succeeded')]
     #[QueryParameter('filter[currency]', type: 'string', description: 'Filter by currency (ISO 4217)', example: 'USD')]
     #[QueryParameter('filter[connector]', type: 'string', description: 'Filter by connector name')]
-    #[QueryParameter('filter[capture_method]', type: 'string', description: 'Filter by capture method', enum: ['automatic', 'manual'])]
+    #[QueryParameter('filter[capture_method]', type: 'string', description: 'Filter by capture method (automatic, manual)')]
     #[QueryParameter('filter[amount_min]', type: 'integer', description: 'Minimum amount filter')]
     #[QueryParameter('filter[amount_max]', type: 'integer', description: 'Maximum amount filter')]
     #[QueryParameter('filter[from]', type: 'string', description: 'Start date (YYYY-MM-DD)', example: '2026-01-01')]

@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
+use Streeboga\PaymentData\Models\Organization;
 
+/**
+ * @mixin Organization
+ */
 final class OrganizationResource extends JsonApiResource
 {
     public function toType(Request $request): string

@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
+use Streeboga\PaymentData\Models\Refund;
 
+/**
+ * @mixin Refund
+ */
 final class RefundResource extends JsonApiResource
 {
     public function toType(Request $request): string
@@ -17,7 +21,7 @@ final class RefundResource extends JsonApiResource
     public function toAttributes(Request $request): array
     {
         return [
-            'payment_id' => $this->paymentIntent?->key,
+            'payment_id' => $this->paymentIntent->key,
             'amount' => $this->amount,
             'currency' => $this->currency,
             'status' => $this->status->value,

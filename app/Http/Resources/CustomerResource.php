@@ -6,7 +6,11 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Streeboga\PaymentData\Models\Customer;
 
+/**
+ * @mixin Customer
+ */
 final class CustomerResource extends JsonApiResource
 {
     public function toType(Request $request): string

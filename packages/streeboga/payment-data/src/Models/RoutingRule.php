@@ -7,8 +7,22 @@ namespace Streeboga\PaymentData\Models;
 use App\Enums\RoutingRuleType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Streeboga\PaymentData\Support\IdGenerator;
 
+/**
+ * @property int $id
+ * @property string $key
+ * @property int $merchant_account_id
+ * @property int|null $business_profile_id
+ * @property RoutingRuleType $type
+ * @property string $name
+ * @property array<string, mixed> $rules
+ * @property bool $active
+ * @property int $priority
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ */
 class RoutingRule extends Model
 {
     protected $fillable = [

@@ -6,7 +6,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $timezone
+ * @property string $date_format
+ * @property string $number_format
+ * @property string $base_currency
+ * @property string $theme
+ * @property string $data_density
+ * @property bool $notification_email
+ * @property bool $notification_inapp
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User $user
+ */
 class UserPreference extends Model
 {
     protected $fillable = [

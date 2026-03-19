@@ -7,10 +7,18 @@ namespace App\Models;
 use App\Enums\UserRole as UserRoleEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Streeboga\PaymentData\Models\Organization;
 
 /**
+ * @property int $id
+ * @property int $user_id
+ * @property int $organization_id
  * @property UserRoleEnum $role
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read User $user
+ * @property-read Organization $organization
  */
 class UserRole extends Model
 {

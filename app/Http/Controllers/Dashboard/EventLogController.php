@@ -12,6 +12,7 @@ use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Event Logs', description: 'Combined webhook and payment status change timeline', weight: 18)]
@@ -26,7 +27,7 @@ final class EventLogController extends Controller
      *
      * Combined timeline of webhook deliveries and payment status changes.
      */
-    #[QueryParameter('filter[type]', type: 'string', description: 'Event type filter', enum: ['webhook', 'status_change'])]
+    #[QueryParameter('filter[type]', type: 'string', description: 'Event type filter (webhook, status_change)')]
     #[QueryParameter('filter[from]', type: 'string', description: 'Start date (YYYY-MM-DD)')]
     #[QueryParameter('filter[to]', type: 'string', description: 'End date (YYYY-MM-DD)')]
     #[QueryParameter('page[size]', type: 'integer', description: 'Items per page', example: 20)]
@@ -38,7 +39,7 @@ final class EventLogController extends Controller
 
         // Resolve page number from JSON:API page[number] param
         $pageNumber = (int) $request->input('page.number', 1);
-        \Illuminate\Pagination\Paginator::currentPageResolver(fn () => $pageNumber);
+        Paginator::currentPageResolver(fn () => $pageNumber);
 
         $paginator = $this->eventLogService->list($merchantId, [
             'type' => $request->input('filter.type'),

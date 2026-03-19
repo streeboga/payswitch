@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\UserPreference;
 use Illuminate\Http\Request;
 
+/**
+ * @mixin UserPreference
+ */
 final class UserPreferenceResource extends JsonApiResource
 {
     public function toId(Request $request): string

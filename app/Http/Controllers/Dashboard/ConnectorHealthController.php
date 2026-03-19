@@ -28,7 +28,7 @@ final class ConnectorHealthController extends Controller
      * Current health metrics for a connector based on recent payment attempts.
      */
     #[PathParameter('connectorKey', description: 'Connector public key')]
-    #[QueryParameter('filter[period]', type: 'string', description: 'Time period', enum: ['24h', '7d', '30d'])]
+    #[QueryParameter('filter[period]', type: 'string', description: 'Time period (24h, 7d, 30d)')]
     #[Response(200, description: 'Connector health snapshot')]
     #[Response(404, description: 'Connector not found')]
     public function health(string $connectorKey, Request $request): JsonResponse

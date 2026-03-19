@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
+use Streeboga\PaymentData\Models\MerchantAccount;
 
+/**
+ * @mixin MerchantAccount
+ */
 final class MerchantAccountResource extends JsonApiResource
 {
     public function toType(Request $request): string
@@ -19,7 +23,7 @@ final class MerchantAccountResource extends JsonApiResource
         return [
             'name' => $this->name,
             'publishable_key' => $this->publishable_key,
-            'organization_id' => $this->organization?->key,
+            'organization_id' => $this->organization->key,
             'profiles_count' => $this->business_profiles_count ?? 0,
             'connectors_count' => $this->connector_accounts_count ?? 0,
             'created_at' => $this->created_at->toIso8601String(),

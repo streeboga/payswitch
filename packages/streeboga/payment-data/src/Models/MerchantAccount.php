@@ -7,8 +7,22 @@ namespace Streeboga\PaymentData\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Streeboga\PaymentData\Support\IdGenerator;
 
+/**
+ * @property int $id
+ * @property string $key
+ * @property int $org_id
+ * @property string $name
+ * @property string $publishable_key
+ * @property array<string, mixed>|null $metadata
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read int|null $business_profiles_count
+ * @property-read int|null $connector_accounts_count
+ * @property-read Organization $organization
+ */
 class MerchantAccount extends Model
 {
     protected $fillable = [

@@ -38,6 +38,7 @@ beforeEach(function () {
 test('event logs returns paginated json:api response', function () {
     WebhookEvent::create([
         'merchant_account_id' => $this->merchant->id,
+        'payment_intent_id' => $this->payment->id,
         'event_type' => 'payment.succeeded',
         'content' => [],
         'delivered' => true,
@@ -64,6 +65,7 @@ test('event logs returns paginated json:api response', function () {
 test('event logs filters by type', function () {
     WebhookEvent::create([
         'merchant_account_id' => $this->merchant->id,
+        'payment_intent_id' => $this->payment->id,
         'event_type' => 'payment.succeeded',
         'content' => [],
         'delivered' => true,

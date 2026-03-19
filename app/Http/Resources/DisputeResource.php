@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\Dispute;
 use Illuminate\Http\Request;
 
+/**
+ * @mixin Dispute
+ */
 final class DisputeResource extends JsonApiResource
 {
     public function toType(Request $request): string
@@ -17,7 +21,7 @@ final class DisputeResource extends JsonApiResource
     public function toAttributes(Request $request): array
     {
         return [
-            'payment_id' => $this->paymentIntent?->key,
+            'payment_id' => $this->paymentIntent->key,
             'amount' => $this->amount,
             'currency' => $this->currency,
             'type' => $this->type->value,
@@ -26,7 +30,7 @@ final class DisputeResource extends JsonApiResource
             'reason_description' => $this->reason_description,
             'deadline_at' => $this->deadline_at?->toIso8601String(),
             'resolved_at' => $this->resolved_at?->toIso8601String(),
-            'created_at' => $this->created_at->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
 

@@ -17,8 +17,8 @@ use Illuminate\Support\Carbon;
  * @property int $amount
  * @property string|null $error_code
  * @property string|null $error_message
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class PaymentAttempt extends Model
 {

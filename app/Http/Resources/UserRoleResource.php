@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\UserRole;
 use Illuminate\Http\Request;
 
+/**
+ * @mixin UserRole
+ */
 final class UserRoleResource extends JsonApiResource
 {
     public function toId(Request $request): string
@@ -23,13 +27,13 @@ final class UserRoleResource extends JsonApiResource
     {
         return [
             'user_id' => $this->user_id,
-            'name' => $this->user?->name,
-            'email' => $this->user?->email,
+            'name' => $this->user->name,
+            'email' => $this->user->email,
             'role' => $this->role->value,
-            'two_factor_enabled' => (bool) $this->user?->two_factor_confirmed_at,
+            'two_factor_enabled' => (bool) $this->user->two_factor_confirmed_at,
             'last_login_at' => null,
             'status' => 'active',
-            'created_at' => $this->created_at->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
 

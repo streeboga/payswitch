@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\SavedFilter;
 use Illuminate\Http\Request;
 
+/**
+ * @mixin SavedFilter
+ */
 final class SavedFilterResource extends JsonApiResource
 {
     public function toId(Request $request): string

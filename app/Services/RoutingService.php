@@ -97,15 +97,11 @@ final readonly class RoutingService
     private function evaluateRule(RoutingRule $rule, ?string $paymentMethod, ?string $currency, ?int $amount, int|string $merchantAccountId): ?MerchantConnectorAccount
     {
         $config = $rule->rules;
-        if (! is_array($config)) {
-            return null;
-        }
 
         return match ($rule->type) {
             RoutingRuleType::Priority => $this->evaluatePriorityRule($config, $merchantAccountId),
             RoutingRuleType::RuleBased => $this->evaluateRuleBasedRule($config, $currency, $amount, $merchantAccountId),
             RoutingRuleType::VolumeSplit => $this->evaluateVolumeSplitRule($config, $merchantAccountId),
-            default => null,
         };
     }
 

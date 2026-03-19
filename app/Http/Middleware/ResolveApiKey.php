@@ -17,7 +17,7 @@ final class ResolveApiKey
     {
         $apiKey = $request->header('api-key');
 
-        if (! $apiKey || ! is_string($apiKey)) {
+        if (! $apiKey) {
             throw new ApiAuthenticationException('API key is required', 'api_key_missing', 'authentication_error');
         }
 

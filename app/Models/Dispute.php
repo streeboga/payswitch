@@ -6,13 +6,34 @@ namespace App\Models;
 
 use App\Enums\DisputeStatus;
 use App\Enums\DisputeType;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\PaymentIntent;
 
+/**
+ * @property int $id
+ * @property string $key
+ * @property int $payment_intent_id
+ * @property int $merchant_account_id
+ * @property int $amount
+ * @property string $currency
+ * @property DisputeType $type
+ * @property DisputeStatus $status
+ * @property string|null $reason_code
+ * @property string|null $reason_description
+ * @property Carbon|null $deadline_at
+ * @property Carbon|null $resolved_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read PaymentIntent $paymentIntent
+ * @property-read MerchantAccount $merchantAccount
+ * @property-read Collection<int, DisputeEvidence> $evidences
+ */
 class Dispute extends Model
 {
     protected $fillable = [

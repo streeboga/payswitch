@@ -15,6 +15,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * Implements JSON:API v1.1 envelope format with {data: {type, id, attributes, relationships, links}}.
  * Subclasses override toId(), toType(), toAttributes(), toRelationships(), toLinks().
+ *
+ * @property string|null $key
+ * @property int|string $id
  */
 abstract class JsonApiResource extends JsonResource
 {
@@ -79,7 +82,7 @@ abstract class JsonApiResource extends JsonResource
 
         $resolved = [];
         foreach ($this->toRelationships($request) as $name => $resolver) {
-            $related = is_callable($resolver) ? $resolver() : $resolver;
+            $related = $resolver();
             if ($related instanceof JsonApiResource) {
                 $resolved[$name] = [
                     'data' => [
@@ -87,9 +90,9 @@ abstract class JsonApiResource extends JsonResource
                         'id' => $related->toId($request),
                     ],
                 ];
-            } elseif ($related instanceof AnonymousResourceCollection) {
+            } elseif ($related instanceof AnonymousResourceCollection && $related->collection !== null) {
                 $resolved[$name] = [
-                    'data' => $related->map(fn ($r) => [
+                    'data' => $related->collection->map(fn ($r) => [
                         'type' => $r->toType($request),
                         'id' => $r->toId($request),
                     ])->toArray(),
@@ -130,8 +133,9 @@ abstract class JsonApiResource extends JsonResource
      */
     public static function jsonApiCollection($paginator, Request $request): JsonResponse
     {
+        $class = static::class;
         $data = collect($paginator->items())->map(
-            fn ($item) => (new static($item))->toArray($request)
+            fn ($item) => (new $class($item))->toArray($request)
         )->toArray();
 
         return response()->json([
@@ -158,8 +162,9 @@ abstract class JsonApiResource extends JsonResource
      */
     public static function jsonApiList($items, Request $request): JsonResponse
     {
+        $class = static::class;
         $data = collect($items)->map(
-            fn ($item) => (new static($item))->toArray($request)
+            fn ($item) => (new $class($item))->toArray($request)
         )->values()->toArray();
 
         return response()->json(

@@ -7,7 +7,20 @@ namespace Streeboga\PaymentData\Models;
 use App\Enums\ApiKeyType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $merchant_account_id
+ * @property string $key_hash
+ * @property string $key_prefix
+ * @property string|null $name
+ * @property ApiKeyType $type
+ * @property Carbon|null $expires_at
+ * @property Carbon|null $revoked_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ */
 class ApiKey extends Model
 {
     protected $fillable = [

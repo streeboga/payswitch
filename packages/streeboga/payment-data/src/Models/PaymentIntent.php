@@ -14,28 +14,29 @@ use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Support\IdGenerator;
 
 /**
+ * @property int $id
  * @property string $key
  * @property int $merchant_account_id
  * @property int|null $business_profile_id
  * @property int $amount
- * @property int $net_amount
- * @property int $amount_capturable
- * @property int $amount_received
+ * @property int|null $net_amount
+ * @property int|null $amount_capturable
+ * @property int|null $amount_received
  * @property string $currency
  * @property PaymentStatus $status
+ * @property string $client_secret
  * @property CaptureMethod $capture_method
  * @property AuthenticationType $authentication_type
- * @property int|null $customer_id
+ * @property string|null $customer_id
  * @property string|null $return_url
  * @property string|null $description
  * @property array<string, mixed>|null $metadata
  * @property string|null $connector
  * @property int $attempt_count
- * @property int|null $session_expiry
+ * @property int $session_expiry
  * @property string|null $error_code
  * @property string|null $error_message
  * @property string|null $cancellation_reason
- * @property string|null $client_secret
  * @property Carbon|null $expires_on
  * @property Carbon $created_at
  * @property Carbon $updated_at

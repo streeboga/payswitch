@@ -26,7 +26,7 @@ final class AnalyticsController extends Controller
      *
      * Aggregated payment and refund totals for the selected period.
      */
-    #[QueryParameter('filter[period]', type: 'string', description: 'Preset period', enum: ['7d', '30d', '90d'])]
+    #[QueryParameter('filter[period]', type: 'string', description: 'Preset period (7d, 30d, 90d)')]
     #[QueryParameter('filter[from]', type: 'string', description: 'Start date (YYYY-MM-DD)', example: '2026-01-01')]
     #[QueryParameter('filter[to]', type: 'string', description: 'End date (YYYY-MM-DD)', example: '2026-03-18')]
     #[Response(200, description: 'Analytics overview')]

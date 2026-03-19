@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,7 @@ final readonly class AuthService
      *
      * @throws ValidationException
      */
-    public function authenticate(Request $request, string $email, string $password, bool $remember): array
+    public function authenticate(LoginRequest $request, string $email, string $password, bool $remember): array
     {
         if (! Auth::attempt(['email' => $email, 'password' => $password], $remember)) {
             RateLimiter::hit($request->throttleKey());

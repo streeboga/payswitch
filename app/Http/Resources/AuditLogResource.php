@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
+use Spatie\Activitylog\Models\Activity;
 
+/**
+ * @mixin Activity
+ */
 final class AuditLogResource extends JsonApiResource
 {
     public function toId(Request $request): string
@@ -30,7 +34,7 @@ final class AuditLogResource extends JsonApiResource
             'causer_type' => $this->causer_type,
             'causer_id' => $this->causer_id,
             'properties' => $this->properties?->toArray(),
-            'created_at' => $this->created_at->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
 

@@ -27,7 +27,7 @@ final class NotificationController extends Controller
      * Retrieve notifications for the authenticated user.
      */
     #[QueryParameter('filter[type]', type: 'string', description: 'Filter by notification type')]
-    #[QueryParameter('filter[read]', type: 'string', description: 'Filter by read status', enum: ['true', 'false'])]
+    #[QueryParameter('filter[read]', type: 'string', description: 'Filter by read status (true, false)')]
     #[QueryParameter('page[size]', type: 'integer', description: 'Items per page', example: 20)]
     #[Response(200, description: 'Paginated notification list')]
     public function index(Request $request): JsonResponse

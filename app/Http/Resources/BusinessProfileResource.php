@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
+use Streeboga\PaymentData\Models\BusinessProfile;
 
+/**
+ * @mixin BusinessProfile
+ */
 final class BusinessProfileResource extends JsonApiResource
 {
     public function toType(Request $request): string
@@ -17,7 +21,7 @@ final class BusinessProfileResource extends JsonApiResource
     public function toAttributes(Request $request): array
     {
         return [
-            'merchant_id' => $this->merchantAccount?->key,
+            'merchant_id' => $this->merchantAccount->key,
             'webhook_url' => $this->webhook_url,
             'payment_response_hash_key' => $this->payment_response_hash_key,
             'connectors_count' => $this->connector_accounts_count ?? 0,

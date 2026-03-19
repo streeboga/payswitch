@@ -7,8 +7,25 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string $key
+ * @property int $user_id
+ * @property int|null $merchant_account_id
+ * @property string $type
+ * @property string $title
+ * @property string|null $content
+ * @property string|null $resource_type
+ * @property string|null $resource_id
+ * @property Carbon|null $read_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ * @property-read User $user
+ */
 class AppNotification extends Model
 {
     use SoftDeletes;

@@ -66,7 +66,7 @@ final class DeliverWebhookJob implements ShouldQueue
             'event_id' => $event->key,
             'event_type' => $event->event_type,
             'content' => $event->content,
-            'updated' => $event->updated_at?->toIso8601String(),
+            'updated' => $event->updated_at->toIso8601String(),
         ], JSON_THROW_ON_ERROR);
 
         $signature = WebhookSigner::sign($payload, $profile->payment_response_hash_key);

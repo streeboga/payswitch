@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
+use Streeboga\PaymentData\Models\WebhookEvent;
 
+/**
+ * @mixin WebhookEvent
+ */
 final class WebhookEventResource extends JsonApiResource
 {
     public function toType(Request $request): string

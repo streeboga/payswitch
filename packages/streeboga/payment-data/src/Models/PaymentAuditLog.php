@@ -6,7 +6,19 @@ namespace Streeboga\PaymentData\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $payment_intent_id
+ * @property int $merchant_account_id
+ * @property string $action
+ * @property string|null $previous_status
+ * @property string|null $new_status
+ * @property string|null $actor
+ * @property array<string, mixed>|null $metadata
+ * @property Carbon $created_at
+ */
 class PaymentAuditLog extends Model
 {
     public $timestamps = false;

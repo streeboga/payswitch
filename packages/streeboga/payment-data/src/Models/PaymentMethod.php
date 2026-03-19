@@ -6,8 +6,27 @@ namespace Streeboga\PaymentData\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Streeboga\PaymentData\Support\IdGenerator;
 
+/**
+ * @property int $id
+ * @property string $key
+ * @property int $customer_id
+ * @property int $merchant_account_id
+ * @property string $type
+ * @property string|null $card_last4
+ * @property string|null $card_brand
+ * @property string|null $card_exp_month
+ * @property string|null $card_exp_year
+ * @property string|null $card_holder_name
+ * @property string $connector_name
+ * @property string|null $connector_token
+ * @property bool $is_default
+ * @property array<string, mixed>|null $metadata
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ */
 class PaymentMethod extends Model
 {
     protected $fillable = [

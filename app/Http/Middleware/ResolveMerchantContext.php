@@ -16,7 +16,7 @@ final class ResolveMerchantContext
     {
         $merchantKey = $request->header('X-Merchant-Key');
 
-        if (! $merchantKey || ! is_string($merchantKey)) {
+        if (! $merchantKey) {
             throw new NotFoundHttpException('X-Merchant-Key header is required');
         }
 

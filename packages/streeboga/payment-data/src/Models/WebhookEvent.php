@@ -6,8 +6,24 @@ namespace Streeboga\PaymentData\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use Streeboga\PaymentData\Support\IdGenerator;
 
+/**
+ * @property int $id
+ * @property string $key
+ * @property string $event_type
+ * @property int $merchant_account_id
+ * @property int|null $business_profile_id
+ * @property int|null $payment_intent_id
+ * @property array<string, mixed> $content
+ * @property bool $delivered
+ * @property int $delivery_attempts
+ * @property Carbon|null $next_retry_at
+ * @property string|null $last_error
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ */
 class WebhookEvent extends Model
 {
     protected $fillable = [

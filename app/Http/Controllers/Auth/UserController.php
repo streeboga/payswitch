@@ -27,7 +27,7 @@ final class UserController extends Controller
         $user->load('roles.organization');
 
         $roles = $user->roles->map(fn (UserRole $r) => [
-            'organization_id' => $r->organization?->key,
+            'organization_id' => $r->organization->key,
             'role' => $r->role->value,
         ]);
 

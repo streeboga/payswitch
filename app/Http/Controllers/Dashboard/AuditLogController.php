@@ -27,7 +27,7 @@ final class AuditLogController extends Controller
      * Paginated list of audit log entries with optional filters.
      */
     #[QueryParameter('filter[causer_id]', type: 'integer', description: 'Filter by user ID')]
-    #[QueryParameter('filter[event]', type: 'string', description: 'Filter by event type', enum: ['created', 'updated', 'deleted'])]
+    #[QueryParameter('filter[event]', type: 'string', description: 'Filter by event type (created, updated, deleted)')]
     #[QueryParameter('filter[subject_type]', type: 'string', description: 'Filter by resource type')]
     #[QueryParameter('filter[from]', type: 'string', description: 'Start date (YYYY-MM-DD)')]
     #[QueryParameter('filter[to]', type: 'string', description: 'End date (YYYY-MM-DD)')]
