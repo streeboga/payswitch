@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { FlaskConical, Loader2 } from 'lucide-react'
@@ -6,6 +6,8 @@ import { FlaskConical, Loader2 } from 'lucide-react'
 import type { PaymentIntentAttributes } from '@/api/types'
 import { useCreateTestPayment } from '@/hooks/use-test-payment'
 import { useConnectorsList } from '@/hooks/use-connectors'
+import { useMerchantDetail } from '@/hooks/use-merchants'
+import { useContextStore } from '@/stores/context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -314,17 +316,74 @@ export function TestPaymentForm({ onSuccess }: TestPaymentFormProps) {
   )
 }
 
+// ─── Widget Preview ─────────────────────────────────────────
+
+interface WidgetPreviewProps {
+  clientSecret: string
+  publishableKey: string
+}
+
+function WidgetPreview({ clientSecret, publishableKey }: WidgetPreviewProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation()
+
+  useEffect(() => {
+    if (!clientSecret || !containerRef.current) return
+
+    let destroyed = false
+    let widget: { mount(el: HTMLElement): void; destroy(): void } | undefined
+
+    const init = async () => {
+      const { createPayswitchInstance } = await import('@payswitch/js')
+      if (destroyed) return
+      const ps = createPayswitchInstance(publishableKey, '')
+      const widgets = ps.widgets({ clientSecret })
+      widget = widgets.create('payment')
+      widget.mount(containerRef.current!)
+    }
+    init().catch(console.error)
+
+    return () => {
+      destroyed = true
+      widget?.destroy()
+    }
+  }, [clientSecret, publishableKey])
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('testPayment.widgetPreview', 'Widget Preview')}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div ref={containerRef} />
+      </CardContent>
+    </Card>
+  )
+}
+
 // ─── Page Component ──────────────────────────────────────────
 
 export function TestPaymentPage() {
   const { t } = useTranslation()
+  const merchantKey = useContextStore((s) => s.currentMerchantKey)
+  const { data: merchant } = useMerchantDetail(merchantKey ?? '')
+  const [lastResult, setLastResult] = useState<TestPaymentResult | null>(null)
+
+  const publishableKey = merchant?.publishable_key ?? ''
+
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div className="flex items-center gap-3">
         <FlaskConical className="text-muted-foreground h-7 w-7" />
         <h1 className="text-3xl font-bold">{t('testPayment.title')}</h1>
       </div>
-      <TestPaymentForm />
+      <TestPaymentForm onSuccess={setLastResult} />
+      {lastResult?.client_secret && publishableKey && (
+        <WidgetPreview
+          clientSecret={lastResult.client_secret}
+          publishableKey={publishableKey}
+        />
+      )}
     </div>
   )
 }

@@ -58,7 +58,8 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "zod": "^4.3.6",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.12",
+    "@payswitch/js": "file:../widget"
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.91.3",
