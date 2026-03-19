@@ -45,7 +45,7 @@ test.describe('Form submissions — all mutations', () => {
   })
 
   test('create customer → POST /dashboard/customers', async ({ page }) => {
-    const errors = trackErrors(page)
+    trackErrors(page)
     await page.goto('/customers')
     await expect(page.getByRole('heading', { name: 'Клиенты' })).toBeVisible({ timeout: 10000 })
 
