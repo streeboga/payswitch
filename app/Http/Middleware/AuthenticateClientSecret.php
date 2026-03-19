@@ -13,6 +13,11 @@ final class AuthenticateClientSecret
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Secret API keys bypass client_secret validation — they authenticate via secret key itself
+        if ($request->attributes->get('api_key_type') === 'secret') {
+            return $next($request);
+        }
+
         $clientSecret = $request->input('client_secret');
 
         if (! $clientSecret) {

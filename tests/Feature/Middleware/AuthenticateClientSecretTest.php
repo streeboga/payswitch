@@ -1,14 +1,15 @@
 <?php
 
 use App\Http\Middleware\AuthenticateClientSecret;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Models\PaymentIntent;
-use Streeboga\PaymentData\Enums\PaymentStatus;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $org = Organization::create(['name' => 'Org']);
@@ -32,7 +33,8 @@ test('passes with valid client_secret in body', function () {
     ]);
     $request->attributes->set('api_key_type', 'publishable');
     $request->attributes->set('merchant_id', $this->merchant->id);
-    $request->setRouteResolver(fn () => new class ($this->payment->key) {
+    $request->setRouteResolver(fn () => new class($this->payment->key)
+    {
         public function __construct(private string $key) {}
 
         public function parameter(string $name)
@@ -55,7 +57,8 @@ test('passes with valid client_secret in query param', function () {
     );
     $request->attributes->set('api_key_type', 'publishable');
     $request->attributes->set('merchant_id', $this->merchant->id);
-    $request->setRouteResolver(fn () => new class ($this->payment->key) {
+    $request->setRouteResolver(fn () => new class($this->payment->key)
+    {
         public function __construct(private string $key) {}
 
         public function parameter(string $name)
@@ -74,7 +77,8 @@ test('rejects missing client_secret', function () {
     $request = Request::create('/api/v1/payments/'.$this->payment->key.'/confirm', 'POST');
     $request->attributes->set('api_key_type', 'publishable');
     $request->attributes->set('merchant_id', $this->merchant->id);
-    $request->setRouteResolver(fn () => new class ($this->payment->key) {
+    $request->setRouteResolver(fn () => new class($this->payment->key)
+    {
         public function __construct(private string $key) {}
 
         public function parameter(string $name)
@@ -97,7 +101,8 @@ test('rejects invalid client_secret', function () {
     ]);
     $request->attributes->set('api_key_type', 'publishable');
     $request->attributes->set('merchant_id', $this->merchant->id);
-    $request->setRouteResolver(fn () => new class ($this->payment->key) {
+    $request->setRouteResolver(fn () => new class($this->payment->key)
+    {
         public function __construct(private string $key) {}
 
         public function parameter(string $name)
@@ -121,7 +126,8 @@ test('rejects expired payment session', function () {
     ]);
     $request->attributes->set('api_key_type', 'publishable');
     $request->attributes->set('merchant_id', $this->merchant->id);
-    $request->setRouteResolver(fn () => new class ($this->payment->key) {
+    $request->setRouteResolver(fn () => new class($this->payment->key)
+    {
         public function __construct(private string $key) {}
 
         public function parameter(string $name)
@@ -147,7 +153,8 @@ test('rejects when publishable key merchant does not own payment', function () {
     ]);
     $request->attributes->set('api_key_type', 'publishable');
     $request->attributes->set('merchant_id', $otherMerchant->id);
-    $request->setRouteResolver(fn () => new class ($this->payment->key) {
+    $request->setRouteResolver(fn () => new class($this->payment->key)
+    {
         public function __construct(private string $key) {}
 
         public function parameter(string $name)
