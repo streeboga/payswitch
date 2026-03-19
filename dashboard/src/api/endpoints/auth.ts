@@ -20,7 +20,7 @@ function getCsrfToken(): string | undefined {
  */
 async function requireCsrfToken(): Promise<string> {
   if (!getCsrfToken()) {
-    await sanctumClient.get('/sanctum/csrf-cookie')
+    await sanctumClient.get('sanctum/csrf-cookie')
   }
   return getCsrfToken() ?? ''
 }
@@ -38,7 +38,7 @@ export const auth = {
     // must fetch it first. Sequential is correct here.
     const token = await requireCsrfToken()
     return sanctumClient
-      .post('/login', {
+      .post('login', {
         json: credentials,
         headers: { 'X-XSRF-TOKEN': token },
       })
@@ -53,7 +53,7 @@ export const auth = {
     // synchronously (no extra round-trip) in the common case.
     const token = await requireCsrfToken()
     return sanctumClient
-      .post('/two-factor-challenge', {
+      .post('two-factor-challenge', {
         json: data,
         headers: { 'X-XSRF-TOKEN': token },
       })
@@ -63,16 +63,16 @@ export const auth = {
   async logout() {
     // Cookie is always present for an authenticated session — resolves instantly.
     const token = await requireCsrfToken()
-    await sanctumClient.post('/logout', {
+    await sanctumClient.post('logout', {
       headers: { 'X-XSRF-TOKEN': token },
     })
   },
 
   async user() {
-    return sanctumClient.get('/api/v1/user').json<User>()
+    return sanctumClient.get('api/v1/user').json<User>()
   },
 
   async csrfCookie() {
-    await sanctumClient.get('/sanctum/csrf-cookie')
+    await sanctumClient.get('sanctum/csrf-cookie')
   },
 } as const
