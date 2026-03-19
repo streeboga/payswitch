@@ -17,15 +17,15 @@
 
 ## HIGH — нужно для прода
 
-| # | Функционал | Где | Что нужно |
-|---|-----------|-----|-----------|
-| 9 | **Payment sync endpoint** | `POST /api/v1/payments/{id}/sync` | Polling PSP для обновления статуса. После redirect клиента на PSP, мерчант опрашивает нас, мы опрашиваем PSP. |
-| 10 | **Redirect-based payment flow** | `PaymentConfirmationService` | Сейчас confirm принимает card data напрямую. Нужен flow: confirm → получить redirect_url от PSP → вернуть мерчанту → клиент платит на стороне PSP → webhook. |
-| 11 | **Return URL handling** | `PaymentController` | После оплаты на PSP клиент возвращается на return_url. Нужен endpoint `/api/v1/payments/{id}/return` для финализации. |
-| 12 | **Void/cancel at connector** | `PaymentService.cancel()` | cancel() вызывает refund() вместо void(). Нужен `void()` в ConnectorInterface. |
-| 13 | **Payment expiry cleanup** | `CleanExpiredPaymentsJob` | Платежи с истёкшим `expires_on` не переводятся в Expired. Нужен scheduled job. |
-| 14 | **Webhook idempotency** | `WebhookReceiverService` | Дупликаты webhook'ов обрабатываются повторно. Дедупликация по event_id. |
-| 15 | **Connector-specific redirect params** | Connectors | Каждый PSP отдаёт redirect по-своему: YooKassa — confirmation_url, CloudPayments — AcsUrl или 3DS form, Stripe — checkout session URL. Унифицировать в `redirect_url` + `redirect_method` (GET/POST). |
+| # | Функционал | Статус | Детали |
+|---|-----------|--------|--------|
+| ~~9~~ | ~~Payment sync endpoint~~ | **DONE** | `POST /api/v1/payments/{id}/sync` + `getPaymentStatus()` в ConnectorInterface |
+| ~~10~~ | ~~Redirect-based payment flow~~ | **DONE** | `createPaymentSession()` — confirm без card data возвращает redirect_url |
+| ~~11~~ | ~~Return URL handling~~ | **DONE** | payment_id добавляется в return_url query params |
+| ~~12~~ | ~~Void/cancel at connector~~ | **DONE** | `void()` в ConnectorInterface, cancel() использует void вместо refund |
+| ~~13~~ | ~~Payment expiry cleanup~~ | **DONE** | `CleanExpiredPaymentsJob` — каждые 5 минут через scheduler |
+| ~~14~~ | ~~Webhook idempotency~~ | **DONE** | Terminal-state guard для refund webhooks |
+| ~~15~~ | ~~Connector redirect params~~ | **DONE** | `redirect_method` (GET/POST) + `redirect_params` в ответах коннекторов |
 
 ## MEDIUM — улучшения
 
