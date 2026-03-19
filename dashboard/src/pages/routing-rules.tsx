@@ -273,7 +273,9 @@ export function RoutingRulesPage() {
         attrs: { active: !row.active },
       })
     },
-    [updateMutation],
+    // updateMutation.mutate is stable, but updateMutation object is not —
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [updateMutation.mutate],
   )
 
   const handleEdit = useCallback((row: RoutingRuleRow) => {
@@ -322,7 +324,8 @@ export function RoutingRulesPage() {
         },
       )
     },
-    [editTarget, updateMutation],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editTarget, updateMutation.mutate],
   )
 
   const handleDelete = useCallback((row: RoutingRuleRow) => {
@@ -389,7 +392,8 @@ export function RoutingRulesPage() {
         },
       )
     },
-    [createMutation],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [createMutation.mutate],
   )
 
   const columns = useMemo(

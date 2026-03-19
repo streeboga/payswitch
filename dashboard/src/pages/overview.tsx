@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useTransition } from 'react'
+import { lazy, Suspense, useMemo, useState, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AnalyticsPeriod } from '@/api/endpoints/analytics'
 import { PeriodFilter } from '@/components/analytics/period-filter'
@@ -24,6 +24,14 @@ const FailureReasonsChart = lazy(
   () => import('@/components/analytics/failure-reasons-chart'),
 )
 
+// Preload chart chunks immediately so they download in parallel with data fetches,
+// eliminating the waterfall: data → then chunk JS.
+void import('@/components/analytics/payments-chart')
+void import('@/components/analytics/volume-chart')
+void import('@/components/analytics/funnel-chart')
+void import('@/components/analytics/payment-methods-chart')
+void import('@/components/analytics/failure-reasons-chart')
+
 export function OverviewPage() {
   const { t } = useTranslation()
   const merchantKey = useContextStore((s) => s.currentMerchantKey)
@@ -31,7 +39,7 @@ export function OverviewPage() {
   const [period, setPeriod] = useState<AnalyticsPeriod>('7d')
   const [isPending, startTransition] = useTransition()
 
-  const ctx = { merchantKey, testMode }
+  const ctx = useMemo(() => ({ merchantKey, testMode }), [merchantKey, testMode])
 
   const overview = useOverview(period, ctx)
   const charts = useCharts(period, ctx)

@@ -9,12 +9,14 @@ import { RootLayout } from './root-layout'
 import { useAuthStore } from '@/stores/auth'
 import { useContextStore } from '@/stores/context'
 
-// Eager: login & 2FA (needed before auth), overview (most common landing)
+// Eager: login & 2FA (needed before auth)
 import { LoginPage } from '@/pages/login'
 import { TwoFactorChallengePage } from '@/pages/two-factor-challenge'
-import { OverviewPage } from '@/pages/overview'
 
-// Lazy: everything else
+// Lazy: all authenticated pages including overview
+const OverviewPage = lazy(() =>
+  import('@/pages/overview').then((m) => ({ default: m.OverviewPage })),
+)
 const PaymentsPage = lazy(() =>
   import('@/pages/payments').then((m) => ({ default: m.PaymentsPage })),
 )

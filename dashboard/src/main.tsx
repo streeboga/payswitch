@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import { auth } from './api/endpoints/auth'
 import { useAuthStore } from './stores/auth'
-import { i18nReady } from './lib/i18n'
+import './lib/i18n'
 import './app.css'
 
 // Try to restore the authenticated session on page load.
@@ -18,12 +18,10 @@ auth
     useAuthStore.getState().setLoading(false)
   })
 
-// Wait for i18n to load translations before rendering to avoid
-// showing raw translation keys on initial page load.
-i18nReady.then(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  )
-})
+// Render immediately — i18n initializes async and react-i18next Suspense
+// handles the loading state. No more blank white screen while waiting.
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
