@@ -25,4 +25,11 @@ interface RefundRepositoryInterface
      * @return LengthAwarePaginator<int, Refund>
      */
     public function paginateFiltered(int|string $merchantAccountId, array $filters = [], int $perPage = 20): LengthAwarePaginator;
+
+    public function findByConnectorRefundId(string $connectorRefundId): ?Refund;
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateRefund(Refund $refund, array $attributes): Refund;
 }

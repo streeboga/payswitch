@@ -16,6 +16,7 @@ final class YooKassaConnector implements ConnectorInterface
 
     private string $baseUrl = 'https://api.yookassa.ru/v3';
 
+    /** @param  array<string, string>  $credentials */
     public function __construct(array $credentials)
     {
         $this->shopId = $credentials['shop_id'] ?? '';
@@ -224,6 +225,38 @@ final class YooKassaConnector implements ConnectorInterface
                 'message' => $e->getMessage(),
                 'code' => 'connector_error',
             ];
+        }
+    }
+
+    public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+    {
+        return match ($rawStatus) {
+            'succeeded' => PaymentStatus::Succeeded,
+            'canceled', 'Declined' => PaymentStatus::Failed,
+            'waiting_for_capture' => PaymentStatus::RequiresCapture,
+            default => null,
+        };
+    }
+
+    public function testConnection(): array
+    {
+        try {
+            $response = Http::withBasicAuth($this->shopId, $this->secretKey)
+                ->timeout(10)
+                ->get($this->baseUrl.'/me');
+
+            if ($response->successful()) {
+                return ['success' => true, 'message' => 'Connection successful'];
+            }
+
+            $body = $response->json();
+
+            return [
+                'success' => false,
+                'message' => $body['description'] ?? 'Authentication failed',
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
         }
     }
 

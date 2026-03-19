@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Jobs\CleanExpiredPaymentsJob;
+use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -26,7 +27,7 @@ test('expires payments past expires_on in requires_payment_method', function () 
         'expires_on' => now()->subMinutes(5),
     ]);
 
-    (new CleanExpiredPaymentsJob)->handle();
+    (new CleanExpiredPaymentsJob)->handle(app(PaymentIntentRepositoryInterface::class));
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Expired);
 });
@@ -41,7 +42,7 @@ test('expires payments in requires_confirmation', function () {
         'expires_on' => now()->subMinutes(5),
     ]);
 
-    (new CleanExpiredPaymentsJob)->handle();
+    (new CleanExpiredPaymentsJob)->handle(app(PaymentIntentRepositoryInterface::class));
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Expired);
 });
@@ -56,7 +57,7 @@ test('expires payments in requires_customer_action', function () {
         'expires_on' => now()->subMinutes(5),
     ]);
 
-    (new CleanExpiredPaymentsJob)->handle();
+    (new CleanExpiredPaymentsJob)->handle(app(PaymentIntentRepositoryInterface::class));
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Expired);
 });
@@ -71,7 +72,7 @@ test('does not expire non-expired payment', function () {
         'expires_on' => now()->addMinutes(10),
     ]);
 
-    (new CleanExpiredPaymentsJob)->handle();
+    (new CleanExpiredPaymentsJob)->handle(app(PaymentIntentRepositoryInterface::class));
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::RequiresPaymentMethod);
 });
@@ -87,7 +88,7 @@ test('does not expire succeeded payment even if past expires_on', function () {
         'expires_on' => now()->subMinutes(5),
     ]);
 
-    (new CleanExpiredPaymentsJob)->handle();
+    (new CleanExpiredPaymentsJob)->handle(app(PaymentIntentRepositoryInterface::class));
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
 });
@@ -102,7 +103,7 @@ test('does not expire payment without expires_on', function () {
         'expires_on' => null,
     ]);
 
-    (new CleanExpiredPaymentsJob)->handle();
+    (new CleanExpiredPaymentsJob)->handle(app(PaymentIntentRepositoryInterface::class));
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::RequiresPaymentMethod);
 });

@@ -193,6 +193,16 @@ class SpyConnector implements ConnectorInterface
         return ['success' => false, 'code' => 'not_supported'];
     }
 
+    public function testConnection(): array
+    {
+        return ['success' => true, 'message' => 'ok'];
+    }
+
+    public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+    {
+        return null;
+    }
+
     private function success(array $params): array
     {
         return [

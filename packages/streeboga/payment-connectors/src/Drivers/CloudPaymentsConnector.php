@@ -18,6 +18,7 @@ final class CloudPaymentsConnector implements ConnectorInterface
 
     private string $baseUrl = 'https://api.cloudpayments.ru';
 
+    /** @param  array<string, string>  $credentials */
     public function __construct(array $credentials)
     {
         $this->credentials = $credentials;
@@ -133,6 +134,35 @@ final class CloudPaymentsConnector implements ConnectorInterface
                 'invoice_id' => $params['payment_id'] ?? '',
             ],
         ];
+    }
+
+    public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+    {
+        return match ($rawStatus) {
+            'Completed' => PaymentStatus::Succeeded,
+            'Declined' => PaymentStatus::Failed,
+            'Authorized' => PaymentStatus::RequiresCapture,
+            default => null,
+        };
+    }
+
+    public function testConnection(): array
+    {
+        try {
+            $response = Http::withBasicAuth($this->publicId, $this->apiSecret)
+                ->timeout(10)
+                ->post($this->baseUrl.'/test');
+
+            $body = $response->json();
+            $success = ($body['Success'] ?? false) === true;
+
+            return [
+                'success' => $success,
+                'message' => $success ? 'Connection successful' : ($body['Message'] ?? 'Authentication failed'),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
     }
 
     private function makeRequest(string $endpoint, array $data): array

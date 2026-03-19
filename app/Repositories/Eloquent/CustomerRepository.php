@@ -30,6 +30,11 @@ final readonly class CustomerRepository implements CustomerRepositoryInterface
         return $this->query()->forMerchant($merchantAccountId)->whereKey($key)->firstOrFail();
     }
 
+    public function findByKeyOrNull(string $key, int|string $merchantAccountId): ?Customer
+    {
+        return $this->query()->forMerchant($merchantAccountId)->whereKey($key)->first();
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

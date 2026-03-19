@@ -70,6 +70,14 @@ interface ConnectorInterface
     public function getPaymentStatus(array $params): array;
 
     /**
+     * Map a raw PSP payment status string to an internal PaymentStatus enum.
+     *
+     * Used by the sync flow to translate the PSP-specific status into
+     * the system's canonical status representation.
+     */
+    public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus;
+
+    /**
      * Create a payment session on the PSP and return a redirect URL.
      *
      * Used for the redirect-based confirm flow where the merchant sends
@@ -79,4 +87,11 @@ interface ConnectorInterface
      * @return array<string, mixed> Keys: success, redirect_url, session_id, code, transaction_id, data
      */
     public function createPaymentSession(array $params): array;
+
+    /**
+     * Test the connection to the PSP by performing a lightweight health check.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function testConnection(): array;
 }

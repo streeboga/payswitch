@@ -68,4 +68,19 @@ final readonly class RefundRepository implements RefundRepositoryInterface
 
         return $builder->with('paymentIntent')->paginate($perPage);
     }
+
+    public function findByConnectorRefundId(string $connectorRefundId): ?Refund
+    {
+        return Refund::where('connector_refund_id', $connectorRefundId)->first();
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateRefund(Refund $refund, array $attributes): Refund
+    {
+        $refund->update($attributes);
+
+        return $refund;
+    }
 }

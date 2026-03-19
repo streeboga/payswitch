@@ -101,6 +101,16 @@ beforeEach(function () {
         {
             return ['success' => false, 'code' => 'not_supported'];
         }
+
+        public function testConnection(): array
+        {
+            return ['success' => true, 'message' => 'ok'];
+        }
+
+        public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+        {
+            return null;
+        }
     };
     ConnectorFactory::register('throwing', get_class($throwingClass));
 

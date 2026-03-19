@@ -7,6 +7,7 @@ namespace Streeboga\PaymentConnectors;
 use Omnipay\Common\GatewayInterface;
 use Omnipay\Omnipay;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 
 abstract class AbstractConnector implements ConnectorInterface
 {
@@ -14,6 +15,7 @@ abstract class AbstractConnector implements ConnectorInterface
 
     protected array $credentials;
 
+    /** @param  array<string, string>  $credentials */
     public function __construct(array $credentials)
     {
         $this->credentials = $credentials;
@@ -139,5 +141,15 @@ abstract class AbstractConnector implements ConnectorInterface
             'transaction_id' => null,
             'data' => [],
         ];
+    }
+
+    public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+    {
+        return null;
+    }
+
+    public function testConnection(): array
+    {
+        return ['success' => false, 'message' => 'testConnection not supported by this connector'];
     }
 }

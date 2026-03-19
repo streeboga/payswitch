@@ -116,6 +116,16 @@ beforeEach(function () {
         {
             return ['success' => false, 'code' => 'not_supported'];
         }
+
+        public function testConnection(): array
+        {
+            return ['success' => true, 'message' => 'ok'];
+        }
+
+        public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+        {
+            return null;
+        }
     };
 
     ConnectorFactory::register('cancel_spy', get_class($spyClass));
@@ -249,6 +259,16 @@ test('cancel succeeds even when void throws exception', function () {
         public function createPaymentSession(array $params): array
         {
             return ['success' => false, 'code' => 'not_supported'];
+        }
+
+        public function testConnection(): array
+        {
+            return ['success' => true, 'message' => 'ok'];
+        }
+
+        public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+        {
+            return null;
         }
     };
 

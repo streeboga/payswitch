@@ -121,6 +121,21 @@ final class TestConnector implements ConnectorInterface
         ];
     }
 
+    public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+    {
+        return match ($rawStatus) {
+            'succeeded' => PaymentStatus::Succeeded,
+            'canceled', 'cancelled' => PaymentStatus::Failed,
+            'waiting_for_capture', 'requires_capture' => PaymentStatus::RequiresCapture,
+            default => null,
+        };
+    }
+
+    public function testConnection(): array
+    {
+        return ['success' => true, 'message' => 'Test connector is always available'];
+    }
+
     private function simulatePayment(array $params, bool $authorize = false): array
     {
         $cardNumber = $params['card_number'] ?? $params['payment_method_data']['card']['card_number'] ?? '4242424242424242';

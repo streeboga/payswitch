@@ -125,6 +125,7 @@ final class PaymentController extends Controller
     #[Response(200, description: 'Payment synced')]
     #[Response(400, description: 'Payment not in syncable state')]
     #[Response(404, description: 'Payment not found')]
+    #[Response(502, description: 'Connector unavailable')]
     public function sync(string $paymentKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');

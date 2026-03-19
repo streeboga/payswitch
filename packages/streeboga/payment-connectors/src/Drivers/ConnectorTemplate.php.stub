@@ -306,6 +306,17 @@ final class ExamplePspConnector implements ConnectorInterface
     //  Return: ['success' => bool, 'redirect_url' => '...', 'session_id' => '...', 'code' => 'redirect', 'transaction_id' => '...']
     // ──────────────────────────────────────────────────
 
+    public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+    {
+        // TODO: Map PSP-specific status strings to internal PaymentStatus.
+        return match ($rawStatus) {
+            'succeeded' => PaymentStatus::Succeeded,
+            'failed', 'canceled' => PaymentStatus::Failed,
+            'requires_capture' => PaymentStatus::RequiresCapture,
+            default => null,
+        };
+    }
+
     public function createPaymentSession(array $params): array
     {
         // TODO: Implement for your PSP

@@ -15,7 +15,6 @@ use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\RefundStatus;
-use Streeboga\PaymentData\Models\Refund;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
 final readonly class WebhookReceiverService
@@ -150,7 +149,7 @@ final readonly class WebhookReceiverService
             return;
         }
 
-        $refund = Refund::where('connector_refund_id', $connectorRefundId)->first();
+        $refund = $this->refundRepository->findByConnectorRefundId($connectorRefundId);
         if (! $refund) {
             return;
         }
@@ -162,12 +161,12 @@ final readonly class WebhookReceiverService
         $eventType = $payload['type'] ?? '';
 
         if (str_contains($eventType, 'succeeded')) {
-            $refund->update([
+            $this->refundRepository->updateRefund($refund, [
                 'status' => RefundStatus::Succeeded,
                 'connector' => $connectorName,
             ]);
         } elseif (str_contains($eventType, 'failed') || str_contains($eventType, 'canceled')) {
-            $refund->update([
+            $this->refundRepository->updateRefund($refund, [
                 'status' => RefundStatus::Failed,
                 'connector' => $connectorName,
             ]);

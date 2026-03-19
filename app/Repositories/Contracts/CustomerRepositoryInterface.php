@@ -17,6 +17,8 @@ interface CustomerRepositoryInterface
 
     public function findByKey(string $key, int|string $merchantAccountId): Customer;
 
+    public function findByKeyOrNull(string $key, int|string $merchantAccountId): ?Customer;
+
     /**
      * @param  array<string, mixed>  $attributes
      */

@@ -16,6 +16,7 @@ final class StripeConnector implements ConnectorInterface
 
     private string $baseUrl = 'https://api.stripe.com/v1';
 
+    /** @param  array<string, string>  $credentials */
     public function __construct(array $credentials)
     {
         $this->credentials = $credentials;
@@ -264,13 +265,38 @@ final class StripeConnector implements ConnectorInterface
         }
     }
 
-    /**
-     * Flatten nested arrays for Stripe's form-encoded format.
-     * ['metadata' => ['key' => 'val']] becomes ['metadata[key]' => 'val']
-     *
-     * @param  array<string, mixed>  $params
-     * @return array<string, mixed>
-     */
+    public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
+    {
+        return match ($rawStatus) {
+            'succeeded' => PaymentStatus::Succeeded,
+            'canceled' => PaymentStatus::Failed,
+            'requires_capture' => PaymentStatus::RequiresCapture,
+            default => null,
+        };
+    }
+
+    public function testConnection(): array
+    {
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(10)
+                ->get($this->baseUrl.'/balance');
+
+            if ($response->successful()) {
+                return ['success' => true, 'message' => 'Connection successful'];
+            }
+
+            $body = $response->json();
+
+            return [
+                'success' => false,
+                'message' => $body['error']['message'] ?? 'Authentication failed',
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
     private function flattenParams(array $params, string $prefix = ''): array
     {
         $result = [];

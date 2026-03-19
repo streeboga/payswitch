@@ -7,6 +7,7 @@ namespace App\Repositories\Eloquent;
 use App\Builders\PaymentIntentQueryBuilder;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
@@ -172,5 +173,12 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         }
 
         return $builder;
+    }
+
+    public function findExpiredInStatuses(array $statuses): Builder
+    {
+        return PaymentIntent::whereNotNull('expires_on')
+            ->where('expires_on', '<', now())
+            ->whereIn('status', $statuses);
     }
 }

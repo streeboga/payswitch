@@ -4,20 +4,25 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentData\Enums\PaymentStatus;
-use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
 final class CleanExpiredPaymentsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable;
 
-    public function handle(): void
+    public int $tries = 3;
+
+    /** @var array<int, int> */
+    public array $backoff = [30, 60];
+
+    public function handle(PaymentIntentRepositoryInterface $paymentRepository): void
     {
         $expirableStatuses = [
             PaymentStatus::RequiresPaymentMethod,
@@ -25,18 +30,15 @@ final class CleanExpiredPaymentsJob implements ShouldQueue
             PaymentStatus::RequiresCustomerAction,
         ];
 
-        $expired = PaymentIntent::whereNotNull('expires_on')
-            ->where('expires_on', '<', now())
-            ->whereIn('status', $expirableStatuses)
-            ->get();
-
         $count = 0;
-        foreach ($expired as $payment) {
-            if (PaymentStateMachine::canTransition($payment->status, PaymentStatus::Expired)) {
-                $payment->update(['status' => PaymentStatus::Expired]);
-                $count++;
+        $paymentRepository->findExpiredInStatuses($expirableStatuses)->chunkById(100, function ($payments) use ($paymentRepository, &$count) {
+            foreach ($payments as $payment) {
+                if (PaymentStateMachine::canTransition($payment->status, PaymentStatus::Expired)) {
+                    $paymentRepository->update($payment, ['status' => PaymentStatus::Expired]);
+                    $count++;
+                }
             }
-        }
+        });
 
         if ($count > 0) {
             Log::info("Expired {$count} payments");

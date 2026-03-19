@@ -6,6 +6,8 @@ namespace App\Repositories\Contracts;
 
 use App\Builders\PaymentIntentQueryBuilder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
@@ -66,4 +68,9 @@ interface PaymentIntentRepositoryInterface
      * @param  array<string, mixed>  $filters
      */
     public function filteredQuery(int|string $merchantAccountId, array $filters = []): PaymentIntentQueryBuilder;
+
+    /**
+     * @param  array<int, PaymentStatus>  $statuses
+     */
+    public function findExpiredInStatuses(array $statuses): Builder;
 }

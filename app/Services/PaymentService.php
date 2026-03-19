@@ -7,6 +7,7 @@ namespace App\Services;
 use App\DataTransferObjects\Payment\ConfirmPaymentData;
 use App\DataTransferObjects\Payment\CreatePaymentData;
 use App\Events\PaymentStatusChanged;
+use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,6 @@ use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Exceptions\InvalidStateTransitionException;
 use Streeboga\PaymentData\Exceptions\PaymentException;
-use Streeboga\PaymentData\Models\Customer;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
@@ -24,6 +24,7 @@ final readonly class PaymentService
     public function __construct(
         private PaymentIntentRepositoryInterface $paymentRepository,
         private MerchantRepositoryInterface $merchantRepository,
+        private CustomerRepositoryInterface $customerRepository,
         private PaymentConfirmationService $confirmationService,
     ) {}
 
@@ -37,9 +38,7 @@ final readonly class PaymentService
         }
 
         if ($dto->customer_id) {
-            $customer = Customer::where('key', $dto->customer_id)
-                ->where('merchant_account_id', $merchantAccountId)
-                ->first();
+            $customer = $this->customerRepository->findByKeyOrNull($dto->customer_id, $merchantAccountId);
             if (! $customer) {
                 throw new PaymentException('Customer not found', 'customer_not_found', 'invalid_request_error', 400);
             }
@@ -206,7 +205,7 @@ final readonly class PaymentService
         $result = $connector->getPaymentStatus(['transaction_id' => $lastAttempt->connector_transaction_id]);
 
         $pspStatus = $result['data']['status'] ?? null;
-        $newStatus = $this->mapSyncStatus($pspStatus);
+        $newStatus = $pspStatus ? $connector->mapPaymentStatusToInternal($pspStatus) : null;
 
         $previousStatus = $payment->status->value;
 
@@ -220,7 +219,8 @@ final readonly class PaymentService
                     $this->paymentRepository->update($payment, ['status' => $intermediate]);
                     $payment->refresh();
                 } else {
-                    // Cannot reach the target status — skip update
+                    Log::warning("Sync: cannot transition payment {$payment->key} from {$payment->status->value} to target status");
+
                     return $payment;
                 }
             }
@@ -236,20 +236,6 @@ final readonly class PaymentService
         }
 
         return $payment;
-    }
-
-    private function mapSyncStatus(?string $pspStatus): ?PaymentStatus
-    {
-        if (! $pspStatus) {
-            return null;
-        }
-
-        return match ($pspStatus) {
-            'succeeded', 'Completed' => PaymentStatus::Succeeded,
-            'canceled', 'cancelled', 'Declined' => PaymentStatus::Failed,
-            'waiting_for_capture', 'requires_capture', 'Authorized' => PaymentStatus::RequiresCapture,
-            default => null,
-        };
     }
 
     private function dispatchStatusChanged(PaymentIntent $payment, string $previousStatus): void

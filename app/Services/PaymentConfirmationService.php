@@ -38,7 +38,7 @@ final readonly class PaymentConfirmationService
                 throw new PaymentException('Payment session has expired', 'payment_expired', 'invalid_request_error', 400);
             }
 
-            if (! in_array($payment->status, [PaymentStatus::RequiresPaymentMethod, PaymentStatus::RequiresConfirmation])) {
+            if (! in_array($payment->status, [PaymentStatus::RequiresPaymentMethod, PaymentStatus::RequiresConfirmation], true)) {
                 throw new PaymentException(
                     "Payment cannot be confirmed in status '{$payment->status->value}'",
                     'invalid_state_transition',
@@ -197,10 +197,18 @@ final readonly class PaymentConfirmationService
             ]);
             $this->paymentRepository->incrementAttemptCount($payment);
 
-            return null;
+            throw new PaymentException(
+                'Failed to create payment session: '.$e->getMessage(),
+                'session_creation_failed',
+                'connector_error',
+                502,
+            );
         }
 
-        if (empty($result['redirect_url'])) {
+        $redirectUrl = $result['redirect_url'] ?? null;
+        $code = $result['code'] ?? null;
+
+        if (! $redirectUrl && $code !== 'widget') {
             return null;
         }
 
@@ -209,9 +217,10 @@ final readonly class PaymentConfirmationService
             'status' => PaymentStatus::RequiresCustomerAction,
             'connector' => $mca->connector_name,
             'metadata' => array_merge($payment->metadata ?? [], [
-                'redirect_url' => $result['redirect_url'],
+                'redirect_url' => $redirectUrl,
                 'redirect_method' => 'GET',
                 'session_id' => $result['session_id'] ?? null,
+                'widget_data' => $code === 'widget' ? ($result['data'] ?? null) : null,
             ]),
         ]);
 
