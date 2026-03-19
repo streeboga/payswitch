@@ -17,11 +17,17 @@ export default defineConfig({
     {
       name: 'auth',
       testMatch: /auth\.spec\.ts/,
-      // Auth tests manage their own login state
+    },
+    {
+      name: 'api',
+      testMatch: /api\/.*\.spec\.ts/,
+      use: {
+        baseURL: 'http://localhost:8000',
+      },
     },
     {
       name: 'e2e',
-      testIgnore: /auth\.(spec|setup)\.ts/,
+      testIgnore: /auth\.(spec|setup)\.ts|api\//,
       dependencies: ['setup'],
       use: {
         storageState: 'e2e/.auth/user.json',
