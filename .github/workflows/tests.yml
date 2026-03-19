@@ -54,3 +54,76 @@ jobs:
 
       - name: Tests
         run: ./vendor/bin/pest
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install PHP Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Install Node Dependencies
+        run: npm --prefix dashboard ci
+
+      - name: Install Playwright Browsers
+        run: npx --prefix dashboard playwright install --with-deps chromium
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Setup Database
+        run: |
+          touch database/database.sqlite
+          php artisan migrate --force
+        env:
+          DB_CONNECTION: sqlite
+
+      - name: Seed Test Data
+        run: php artisan db:seed --class=TestSeeder --force
+        continue-on-error: true
+        env:
+          DB_CONNECTION: sqlite
+
+      - name: Build Frontend
+        run: npm --prefix dashboard run build
+
+      - name: Start Laravel Server
+        run: php artisan serve --port=8000 &
+        env:
+          DB_CONNECTION: sqlite
+
+      - name: Start Vite Preview
+        run: npm --prefix dashboard run preview -- --port 3000 &
+
+      - name: Wait for servers
+        run: npx wait-on http://localhost:8000/up http://localhost:3000 --timeout 30000
+
+      - name: Run E2E Tests
+        run: npm --prefix dashboard run e2e
+        env:
+          CI: true
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: dashboard/playwright-report/
+          retention-days: 7
