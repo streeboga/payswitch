@@ -152,6 +152,19 @@ final class YooKassaConnector implements ConnectorInterface
             }
 
             $status = $body['status'] ?? '';
+
+            if ($status === 'pending' && ! empty($body['confirmation']['confirmation_url'])) {
+                return [
+                    'success' => false,
+                    'transaction_id' => $body['id'] ?? null,
+                    'message' => 'Requires 3D Secure authentication',
+                    'code' => 'requires_action',
+                    'data' => array_merge($body, [
+                        'redirect_url' => $body['confirmation']['confirmation_url'],
+                    ]),
+                ];
+            }
+
             $success = in_array($status, ['succeeded', 'waiting_for_capture'], true);
 
             return [
