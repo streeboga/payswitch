@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use PragmaRX\Google2FA\Google2FA;
 
 uses(RefreshDatabase::class);
@@ -129,4 +131,38 @@ test('logout clears session', function () {
     $response->assertNoContent();
 
     $this->getJson('/api/v1/user')->assertUnauthorized();
+});
+
+test('login rate limiting after multiple failures', function () {
+    $user = User::factory()->create();
+
+    // Exhaust the 5 attempts allowed per minute
+    for ($i = 0; $i < 5; $i++) {
+        $this->postJson('/login', [
+            'email' => $user->email,
+            'password' => 'wrong-password',
+        ])->assertUnprocessable();
+    }
+
+    // 6th attempt should be rate-limited (429)
+    $response = $this->postJson('/login', [
+        'email' => $user->email,
+        'password' => 'wrong-password',
+    ]);
+
+    $response->assertStatus(429);
+});
+
+test('throttle key includes email and ip', function () {
+    $request = Request::create('/login', 'POST', [
+        'email' => 'Test@Example.COM',
+    ]);
+
+    $loginRequest = LoginRequest::createFrom($request);
+    $loginRequest->setContainer(app());
+
+    $throttleKey = $loginRequest->throttleKey();
+
+    expect($throttleKey)->toContain('test@example.com');
+    expect($throttleKey)->toContain('|');
 });

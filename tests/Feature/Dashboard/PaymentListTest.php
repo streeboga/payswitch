@@ -177,6 +177,53 @@ test('payments export returns csv', function () {
         ->assertHeader('content-type', 'text/csv; charset=UTF-8');
 });
 
+test('payments export csv has correct headers', function () {
+    createTestPayment($this);
+
+    $response = $this->actingAs($this->user)
+        ->get('/api/v1/dashboard/payments/export', $this->headers);
+
+    $response->assertOk();
+
+    $csv = $response->streamedContent();
+    $lines = array_filter(explode("\n", trim($csv)));
+    $headers = str_getcsv($lines[0]);
+
+    expect($headers)->toBe(['id', 'status', 'amount', 'currency', 'connector', 'description', 'error_code', 'created_at']);
+});
+
+test('payments export csv contains payment data', function () {
+    $payment = createTestPayment($this, [
+        'currency' => 'EUR',
+        'description' => 'Test export payment',
+        'connector' => 'stripe',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get('/api/v1/dashboard/payments/export', $this->headers);
+
+    $response->assertOk();
+
+    $csv = $response->streamedContent();
+    $lines = array_filter(explode("\n", trim($csv)));
+
+    expect($lines)->toHaveCount(2); // header + 1 data row
+
+    $row = str_getcsv($lines[1]);
+    expect($row[0])->toBe($payment->key);
+    expect($row[1])->toBe('succeeded');
+    expect($row[2])->toBe('5000');
+    expect($row[3])->toBe('EUR');
+    expect($row[4])->toBe('stripe');
+    expect($row[5])->toBe('Test export payment');
+});
+
+test('payments export requires authentication', function () {
+    $response = $this->getJson('/api/v1/dashboard/payments/export', $this->headers);
+
+    $response->assertUnauthorized();
+});
+
 test('payments list requires authentication', function () {
     $response = $this->getJson('/api/v1/dashboard/payments', $this->headers);
 
