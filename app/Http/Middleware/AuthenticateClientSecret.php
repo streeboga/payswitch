@@ -45,6 +45,7 @@ final class AuthenticateClientSecret
             'errors' => [
                 [
                     'status' => '403',
+                    'title' => 'Authorization Error',
                     'code' => $code,
                     'detail' => $detail,
                 ],
