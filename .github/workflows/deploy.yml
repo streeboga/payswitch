@@ -15,7 +15,7 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: equity.su
-          username: root
+          username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/psapi.gnzs.pro
@@ -35,6 +35,4 @@ jobs:
             php artisan view:cache
             php artisan event:cache
 
-            chown -R www-data:www-data /var/www/psapi.gnzs.pro
-
-            supervisorctl restart payswitch-worker:*
+            sudo supervisorctl restart payswitch-worker:*
