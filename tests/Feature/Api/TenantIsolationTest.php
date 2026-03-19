@@ -196,7 +196,7 @@ test('payment creation is scoped per merchant', function () {
     createPaymentFor('B');
 
     // Verify via GET that each merchant only sees their own
-    $responseA1 = $this->getJson('/api/v1/payments/' . createPaymentFor('A'), headersA());
+    $responseA1 = $this->getJson('/api/v1/payments/'.createPaymentFor('A'), headersA());
     $responseA1->assertOk();
 
     // Merchant B cannot see merchant A's payments
