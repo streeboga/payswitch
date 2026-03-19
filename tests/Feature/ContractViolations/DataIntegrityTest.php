@@ -158,6 +158,16 @@ class SpyConnector implements ConnectorInterface
         ];
     }
 
+    public function void(array $params): array
+    {
+        return [
+            'success' => true,
+            'transaction_id' => 'spy_void_123',
+            'message' => 'Void successful',
+            'code' => 'ok',
+        ];
+    }
+
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         return true;
@@ -171,6 +181,16 @@ class SpyConnector implements ConnectorInterface
     public function extractPaymentIdFromWebhook(array $payload): ?string
     {
         return $payload['payment_id'] ?? null;
+    }
+
+    public function getPaymentStatus(array $params): array
+    {
+        return ['success' => true, 'transaction_id' => $params['transaction_id'] ?? 'test', 'code' => 'ok', 'data' => ['status' => 'succeeded']];
+    }
+
+    public function createPaymentSession(array $params): array
+    {
+        return ['success' => false, 'code' => 'not_supported'];
     }
 
     private function success(array $params): array

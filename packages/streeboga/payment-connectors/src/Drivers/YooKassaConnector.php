@@ -64,6 +64,14 @@ final class YooKassaConnector implements ConnectorInterface
         ], $idempotencyKey);
     }
 
+    public function void(array $params): array
+    {
+        $txnId = $params['transaction_id'] ?? '';
+        $idempotencyKey = ($params['payment_id'] ?? bin2hex(random_bytes(16))).'_void';
+
+        return $this->makeRequest('POST', "/payments/{$txnId}/cancel", [], $idempotencyKey);
+    }
+
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         // YooKassa uses IP whitelist for webhook verification, not signatures.
@@ -87,6 +95,40 @@ final class YooKassaConnector implements ConnectorInterface
     {
         return $payload['object']['metadata']['payment_id']
             ?? null;
+    }
+
+    public function getPaymentStatus(array $params): array
+    {
+        $txnId = $params['transaction_id'] ?? '';
+
+        return $this->makeRequest('GET', "/payments/{$txnId}", []);
+    }
+
+    public function createPaymentSession(array $params): array
+    {
+        $body = [
+            'amount' => [
+                'value' => number_format(($params['amount'] ?? 0) / 100, 2, '.', ''),
+                'currency' => $params['currency'] ?? 'RUB',
+            ],
+            'capture' => true,
+            'description' => $params['description'] ?? '',
+            'metadata' => ['payment_id' => $params['payment_id'] ?? ''],
+            'confirmation' => [
+                'type' => 'redirect',
+                'return_url' => $params['return_url'] ?? '',
+            ],
+        ];
+
+        $idempotencyKey = ($params['payment_id'] ?? bin2hex(random_bytes(16))).'_session';
+        $result = $this->makeRequest('POST', '/payments', $body, $idempotencyKey);
+
+        if (! empty($result['data']['confirmation']['confirmation_url'])) {
+            $result['redirect_url'] = $result['data']['confirmation']['confirmation_url'];
+            $result['code'] = 'redirect';
+        }
+
+        return $result;
     }
 
     private function createPayment(array $params, bool $capture): array
@@ -161,6 +203,7 @@ final class YooKassaConnector implements ConnectorInterface
                     'code' => 'requires_action',
                     'data' => array_merge($body, [
                         'redirect_url' => $body['confirmation']['confirmation_url'],
+                        'redirect_method' => 'GET',
                     ]),
                 ];
             }

@@ -98,4 +98,46 @@ abstract class AbstractConnector implements ConnectorInterface
             return ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_error'];
         }
     }
+
+    public function void(array $params): array
+    {
+        try {
+            $response = $this->gateway->void([
+                'transactionReference' => $params['transaction_id'] ?? '',
+            ])->send();
+
+            return [
+                'success' => $response->isSuccessful(),
+                'transaction_id' => $response->getTransactionReference(),
+                'message' => $response->getMessage(),
+                'code' => $response->getCode(),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_error'];
+        }
+    }
+
+    public function getPaymentStatus(array $params): array
+    {
+        // OmniPay-based connectors should override this method.
+        return [
+            'success' => false,
+            'transaction_id' => $params['transaction_id'] ?? null,
+            'message' => 'getPaymentStatus not supported by this connector',
+            'code' => 'not_supported',
+        ];
+    }
+
+    public function createPaymentSession(array $params): array
+    {
+        // OmniPay-based connectors should override this method.
+        return [
+            'success' => false,
+            'redirect_url' => null,
+            'session_id' => null,
+            'code' => 'not_supported',
+            'transaction_id' => null,
+            'data' => [],
+        ];
+    }
 }

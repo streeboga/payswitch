@@ -66,6 +66,12 @@ final readonly class PaymentConfirmationService
             $explicitConnector = $connectorOverride ?? $dto->connector;
             $mca = $this->routingService->resolve($merchantAccountId, $explicitConnector, $dto->payment_method, $payment->currency, $payment->amount);
 
+            $returnUrl = $payment->return_url;
+            if ($returnUrl) {
+                $separator = str_contains($returnUrl, '?') ? '&' : '?';
+                $returnUrl .= $separator.'payment_id='.urlencode($payment->key);
+            }
+
             $connectorParams = [
                 'payment_id' => $payment->key,
                 'payment_method' => $dto->payment_method,
@@ -74,7 +80,24 @@ final readonly class PaymentConfirmationService
                 'amount' => $payment->amount,
                 'currency' => $payment->currency,
                 'description' => $payment->description,
+                'return_url' => $returnUrl,
             ];
+
+            // Redirect flow: no card data and no saved token — create a PSP session
+            $isRedirectFlow = empty($dto->payment_method_data) && empty($token);
+
+            if ($isRedirectFlow) {
+                $result = $this->executeRedirectFlow($payment, $mca, $connectorParams);
+
+                if ($result !== null) {
+                    $payment->refresh();
+
+                    return ['payment' => $payment, 'previousStatus' => $previousStatus];
+                }
+
+                // Connector did not return redirect URL — fall through to error
+                throw new PaymentException('Connector did not return redirect URL', 'redirect_failed', 'connector_error', 502);
+            }
 
             $result = $this->executeConnectorCall($payment, $mca, $connectorParams);
 
@@ -146,6 +169,57 @@ final readonly class PaymentConfirmationService
             'amount' => $payment->amount,
             'error_code' => $attemptStatus === PaymentAttemptStatus::Succeeded ? null : ($result['code'] ?? null),
             'error_message' => $attemptStatus === PaymentAttemptStatus::Succeeded ? null : ($result['message'] ?? null),
+        ]);
+        $this->paymentRepository->incrementAttemptCount($payment);
+
+        return $result;
+    }
+
+    /**
+     * Execute the redirect-based confirm flow by creating a PSP payment session.
+     *
+     * @param  array<string, mixed>  $connectorParams
+     * @return array<string, mixed>|null The result array on success, or null if no redirect URL was returned.
+     */
+    private function executeRedirectFlow(PaymentIntent $payment, MerchantConnectorAccount $mca, array $connectorParams): ?array
+    {
+        $connector = ConnectorFactory::resolve($mca);
+
+        try {
+            $result = $connector->createPaymentSession($connectorParams);
+        } catch (\Throwable $e) {
+            $this->paymentRepository->createAttempt($payment, [
+                'connector' => $mca->connector_name,
+                'status' => PaymentAttemptStatus::Failed->value,
+                'amount' => $payment->amount,
+                'error_code' => 'connector_exception',
+                'error_message' => $e->getMessage(),
+            ]);
+            $this->paymentRepository->incrementAttemptCount($payment);
+
+            return null;
+        }
+
+        if (empty($result['redirect_url'])) {
+            return null;
+        }
+
+        PaymentStateMachine::assertTransition($payment->status, PaymentStatus::RequiresCustomerAction);
+        $this->paymentRepository->update($payment, [
+            'status' => PaymentStatus::RequiresCustomerAction,
+            'connector' => $mca->connector_name,
+            'metadata' => array_merge($payment->metadata ?? [], [
+                'redirect_url' => $result['redirect_url'],
+                'redirect_method' => 'GET',
+                'session_id' => $result['session_id'] ?? null,
+            ]),
+        ]);
+
+        $this->paymentRepository->createAttempt($payment, [
+            'connector' => $mca->connector_name,
+            'connector_transaction_id' => $result['transaction_id'] ?? null,
+            'status' => PaymentAttemptStatus::RequiresAction->value,
+            'amount' => $payment->amount,
         ]);
         $this->paymentRepository->incrementAttemptCount($payment);
 

@@ -54,6 +54,13 @@ final class StripeConnector implements ConnectorInterface
         ], $params['payment_id'] ?? null);
     }
 
+    public function void(array $params): array
+    {
+        $piId = $params['transaction_id'] ?? '';
+
+        return $this->makeRequest('POST', "/payment_intents/{$piId}/cancel", [], $params['payment_id'] ?? null);
+    }
+
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         $signatureHeader = $headers['stripe-signature'] ?? null;
@@ -117,6 +124,46 @@ final class StripeConnector implements ConnectorInterface
         return $payload['data']['object']['metadata']['payment_id'] ?? null;
     }
 
+    public function getPaymentStatus(array $params): array
+    {
+        $piId = $params['transaction_id'] ?? '';
+
+        return $this->makeRequest('GET', "/payment_intents/{$piId}", []);
+    }
+
+    public function createPaymentSession(array $params): array
+    {
+        $returnUrl = $params['return_url'] ?? '';
+        $successUrl = $returnUrl.(str_contains($returnUrl, '?') ? '&' : '?').'status=success';
+        $cancelUrl = $returnUrl.(str_contains($returnUrl, '?') ? '&' : '?').'status=cancelled';
+
+        $body = [
+            'mode' => 'payment',
+            'line_items' => [
+                [
+                    'price_data' => [
+                        'currency' => strtolower($params['currency'] ?? 'usd'),
+                        'unit_amount' => $params['amount'] ?? 0,
+                        'product_data' => ['name' => $params['description'] ?? 'Payment'],
+                    ],
+                    'quantity' => 1,
+                ],
+            ],
+            'metadata' => ['payment_id' => $params['payment_id'] ?? ''],
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+        ];
+
+        $result = $this->makeRequest('POST', '/checkout/sessions', $body, $params['payment_id'] ?? null);
+
+        if (! empty($result['data']['url'])) {
+            $result['redirect_url'] = $result['data']['url'];
+            $result['code'] = 'redirect';
+        }
+
+        return $result;
+    }
+
     private function createPaymentIntent(array $params, bool $capture): array
     {
         $amount = $params['amount'] ?? 0;
@@ -167,7 +214,9 @@ final class StripeConnector implements ConnectorInterface
                 $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);
             }
 
-            $response = $request->post($this->baseUrl.$endpoint, $this->flattenParams($data));
+            $response = $method === 'GET'
+                ? $request->get($this->baseUrl.$endpoint)
+                : $request->post($this->baseUrl.$endpoint, $this->flattenParams($data));
             $body = $response->json() ?? [];
 
             if (isset($body['error'])) {
@@ -191,6 +240,7 @@ final class StripeConnector implements ConnectorInterface
                     'code' => 'requires_action',
                     'data' => array_merge($body, [
                         'redirect_url' => $body['next_action']['redirect_to_url']['url'],
+                        'redirect_method' => 'GET',
                     ]),
                 ];
             }

@@ -73,6 +73,13 @@ final class CloudPaymentsConnector implements ConnectorInterface
         ]);
     }
 
+    public function void(array $params): array
+    {
+        return $this->makeRequest('/payments/void', [
+            'TransactionId' => $params['transaction_id'] ?? '',
+        ]);
+    }
+
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         $hmac = $headers['content-hmac'] ?? null;
@@ -101,6 +108,33 @@ final class CloudPaymentsConnector implements ConnectorInterface
         return $payload['InvoiceId'] ?? ($payload['data']['InvoiceId'] ?? null);
     }
 
+    public function getPaymentStatus(array $params): array
+    {
+        return $this->makeRequest('/payments/find', [
+            'TransactionId' => $params['transaction_id'] ?? '',
+        ]);
+    }
+
+    public function createPaymentSession(array $params): array
+    {
+        // CloudPayments uses client-side widget, not server-side redirect.
+        // Return parameters needed to initialize the widget.
+        return [
+            'success' => true,
+            'redirect_url' => null,
+            'session_id' => $params['payment_id'] ?? '',
+            'code' => 'widget',
+            'transaction_id' => null,
+            'data' => [
+                'public_id' => $this->publicId,
+                'amount' => ($params['amount'] ?? 0) / 100,
+                'currency' => $params['currency'] ?? 'RUB',
+                'description' => $params['description'] ?? '',
+                'invoice_id' => $params['payment_id'] ?? '',
+            ],
+        ];
+    }
+
     private function makeRequest(string $endpoint, array $data): array
     {
         try {
@@ -121,6 +155,12 @@ final class CloudPaymentsConnector implements ConnectorInterface
                     'code' => 'requires_action',
                     'data' => [
                         'redirect_url' => $model['AcsUrl'],
+                        'redirect_method' => 'POST',
+                        'redirect_params' => [
+                            'PaReq' => $model['PaReq'] ?? null,
+                            'MD' => $model['TransactionId'] ?? null,
+                            'TermUrl' => $model['TermUrl'] ?? null,
+                        ],
                         'transaction_id' => $model['TransactionId'] ?? null,
                         'pa_req' => $model['PaReq'] ?? null,
                     ],

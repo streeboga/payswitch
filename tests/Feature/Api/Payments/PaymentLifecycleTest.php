@@ -289,6 +289,11 @@ test('connector exception during confirm triggers fallback', function () {
             return ['success' => true, 'transaction_id' => 'x'];
         }
 
+        public function void(array $params): array
+        {
+            return ['success' => true, 'transaction_id' => 'x'];
+        }
+
         public function verifyWebhookSignature(string $payload, array $headers): bool
         {
             return false;
@@ -302,6 +307,16 @@ test('connector exception during confirm triggers fallback', function () {
         public function extractPaymentIdFromWebhook(array $payload): ?string
         {
             return null;
+        }
+
+        public function getPaymentStatus(array $params): array
+        {
+            return ['success' => true, 'transaction_id' => 'x', 'code' => 'ok', 'data' => ['status' => 'succeeded']];
+        }
+
+        public function createPaymentSession(array $params): array
+        {
+            return ['success' => false, 'code' => 'not_supported'];
         }
     };
     ConnectorFactory::register('throwing', get_class($throwingConnectorClass));
