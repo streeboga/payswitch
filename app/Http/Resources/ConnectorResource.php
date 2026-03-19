@@ -43,6 +43,9 @@ final class ConnectorResource extends JsonApiResource
     private function maskedCredentials(): array
     {
         $details = $this->connector_account_details ?? [];
+        if (! is_array($details)) {
+            return [];
+        }
         $masked = [];
         foreach ($details as $key => $value) {
             if (! is_string($value) || $value === '') {
