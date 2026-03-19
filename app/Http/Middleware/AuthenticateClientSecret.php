@@ -13,7 +13,7 @@ final class AuthenticateClientSecret
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $clientSecret = $request->input('client_secret') ?? $request->query('client_secret');
+        $clientSecret = $request->input('client_secret');
 
         if (! $clientSecret) {
             return $this->errorResponse('client_secret is required', 'client_secret_required');
@@ -49,6 +49,6 @@ final class AuthenticateClientSecret
                     'detail' => $detail,
                 ],
             ],
-        ], 403);
+        ], 403)->header('Content-Type', 'application/vnd.api+json');
     }
 }

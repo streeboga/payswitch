@@ -88,6 +88,7 @@ test('rejects missing client_secret', function () {
 
     expect($response->getStatusCode())->toBe(403);
     expect($response->getData(true)['errors'][0]['detail'])->toContain('client_secret');
+    expect($response->getData(true)['errors'][0]['code'])->toBe('client_secret_required');
 });
 
 test('rejects invalid client_secret', function () {
@@ -109,6 +110,7 @@ test('rejects invalid client_secret', function () {
     $response = $middleware->handle($request, fn ($req) => new JsonResponse(['ok' => true]));
 
     expect($response->getStatusCode())->toBe(403);
+    expect($response->getData(true)['errors'][0]['code'])->toBe('invalid_client_secret');
 });
 
 test('rejects expired payment session', function () {
@@ -133,6 +135,7 @@ test('rejects expired payment session', function () {
 
     expect($response->getStatusCode())->toBe(403);
     expect($response->getData(true)['errors'][0]['detail'])->toContain('expired');
+    expect($response->getData(true)['errors'][0]['code'])->toBe('session_expired');
 });
 
 test('rejects when publishable key merchant does not own payment', function () {
@@ -157,4 +160,5 @@ test('rejects when publishable key merchant does not own payment', function () {
     $response = $middleware->handle($request, fn ($req) => new JsonResponse(['ok' => true]));
 
     expect($response->getStatusCode())->toBe(403);
+    expect($response->getData(true)['errors'][0]['code'])->toBe('invalid_client_secret');
 });
