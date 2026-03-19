@@ -59,7 +59,8 @@ final class PublicPaymentController extends Controller
 
     public function paymentMethods(string $paymentKey, Request $request): JsonResponse
     {
-        $payment = $request->attributes->get('payment_intent');
+        $payment = $request->attributes->get('payment_intent')
+            ?? $this->paymentService->find($paymentKey, $request->attributes->get('merchant_id'));
 
         $connectors = MerchantConnectorAccount::query()
             ->where('business_profile_id', $payment->business_profile_id)
