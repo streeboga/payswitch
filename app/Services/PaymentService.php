@@ -158,7 +158,7 @@ final readonly class PaymentService
                     if ($mca) {
                         try {
                             $connector = ConnectorFactory::resolve($mca);
-                            $connector->refund(['amount' => $payment->amount, 'transaction_id' => $lastAttempt->connector_transaction_id]);
+                            $connector->void(['transaction_id' => $lastAttempt->connector_transaction_id, 'payment_id' => $payment->key]);
                         } catch (\Throwable $e) {
                             Log::warning("Failed to void authorization on cancel: {$e->getMessage()}");
                         }

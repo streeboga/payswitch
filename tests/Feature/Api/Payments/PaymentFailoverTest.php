@@ -72,6 +72,11 @@ beforeEach(function () {
             return ['success' => true, 'transaction_id' => 'x'];
         }
 
+        public function void(array $params): array
+        {
+            return ['success' => true, 'transaction_id' => 'x'];
+        }
+
         public function verifyWebhookSignature(string $payload, array $headers): bool
         {
             return false;

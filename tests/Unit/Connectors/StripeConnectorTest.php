@@ -167,6 +167,32 @@ test('refund sends correct request', function () {
     expect($result['transaction_id'])->toBe('re_test789');
 });
 
+// ── Void ────────────────────────────────────────────────────────────
+
+test('void cancels PaymentIntent', function () {
+    Http::fake([
+        'api.stripe.com/v1/payment_intents/pi_auth456/cancel' => Http::response([
+            'id' => 'pi_auth456',
+            'status' => 'canceled',
+        ]),
+    ]);
+
+    $result = stripeConnector()->void([
+        'transaction_id' => 'pi_auth456',
+        'payment_id' => 'pay_void_test',
+    ]);
+
+    // Stripe returns 'canceled' status which is not in ['succeeded', 'requires_capture']
+    expect($result['success'])->toBeFalse();
+    expect($result['transaction_id'])->toBe('pi_auth456');
+
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), '/payment_intents/pi_auth456/cancel')
+            && $request->hasHeader('Idempotency-Key')
+            && $request->header('Idempotency-Key')[0] === 'pay_void_test';
+    });
+});
+
 // ── Error handling ───────────────────────────────────────────────────
 
 test('handles Stripe error response', function () {

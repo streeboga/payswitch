@@ -98,4 +98,22 @@ abstract class AbstractConnector implements ConnectorInterface
             return ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_error'];
         }
     }
+
+    public function void(array $params): array
+    {
+        try {
+            $response = $this->gateway->void([
+                'transactionReference' => $params['transaction_id'] ?? '',
+            ])->send();
+
+            return [
+                'success' => $response->isSuccessful(),
+                'transaction_id' => $response->getTransactionReference(),
+                'message' => $response->getMessage(),
+                'code' => $response->getCode(),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_error'];
+        }
+    }
 }

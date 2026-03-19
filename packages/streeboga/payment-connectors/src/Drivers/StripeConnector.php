@@ -54,6 +54,13 @@ final class StripeConnector implements ConnectorInterface
         ], $params['payment_id'] ?? null);
     }
 
+    public function void(array $params): array
+    {
+        $piId = $params['transaction_id'] ?? '';
+
+        return $this->makeRequest('POST', "/payment_intents/{$piId}/cancel", [], $params['payment_id'] ?? null);
+    }
+
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         $signatureHeader = $headers['stripe-signature'] ?? null;

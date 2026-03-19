@@ -158,6 +158,16 @@ class SpyConnector implements ConnectorInterface
         ];
     }
 
+    public function void(array $params): array
+    {
+        return [
+            'success' => true,
+            'transaction_id' => 'spy_void_123',
+            'message' => 'Void successful',
+            'code' => 'ok',
+        ];
+    }
+
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         return true;

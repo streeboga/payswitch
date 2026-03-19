@@ -64,6 +64,14 @@ final class YooKassaConnector implements ConnectorInterface
         ], $idempotencyKey);
     }
 
+    public function void(array $params): array
+    {
+        $txnId = $params['transaction_id'] ?? '';
+        $idempotencyKey = ($params['payment_id'] ?? bin2hex(random_bytes(16))) . '_void';
+
+        return $this->makeRequest('POST', "/payments/{$txnId}/cancel", [], $idempotencyKey);
+    }
+
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         // YooKassa uses IP whitelist for webhook verification, not signatures.

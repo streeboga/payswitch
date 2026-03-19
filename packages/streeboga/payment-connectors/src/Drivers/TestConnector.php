@@ -68,6 +68,16 @@ final class TestConnector implements ConnectorInterface
         ];
     }
 
+    public function void(array $params): array
+    {
+        return [
+            'success' => true,
+            'transaction_id' => 'test_void_' . Str::ulid(),
+            'message' => 'Void successful',
+            'code' => 'ok',
+        ];
+    }
+
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         return true;

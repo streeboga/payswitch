@@ -178,6 +178,24 @@ final class ExamplePspConnector implements ConnectorInterface
         ]);
     }
 
+    // ──────────────────────────────────────────────────
+    //  void() — void (cancel) an authorized payment before capture
+    //
+    //  Releases the hold on the customer's funds instantly.
+    //  No refund fee is incurred.
+    //
+    //  $params:
+    //    'transaction_id' => string, // PSP transaction ID from authorize()
+    //    'payment_id'     => string, // Internal payment key (pay_xxx)
+    // ──────────────────────────────────────────────────
+
+    public function void(array $params): array
+    {
+        $txnId = $params['transaction_id'] ?? '';
+
+        return $this->makeRequest('POST', "/payments/{$txnId}/cancel", []);
+    }
+
     // ══════════════════════════════════════════════════
     //  WEBHOOKS
     // ══════════════════════════════════════════════════

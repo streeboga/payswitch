@@ -32,6 +32,14 @@ interface ConnectorInterface
      */
     public function refund(array $params): array;
 
+    /**
+     * Void (cancel) an authorized payment that has not yet been captured.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>
+     */
+    public function void(array $params): array;
+
     public function getName(): string;
 
     /**

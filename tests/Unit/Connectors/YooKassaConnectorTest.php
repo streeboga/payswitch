@@ -113,6 +113,29 @@ test('refund sends correct request', function () {
     expect($result['transaction_id'])->toBe('yk_ref_789');
 });
 
+test('void sends cancel request to YooKassa', function () {
+    Http::fake([
+        'api.yookassa.ru/v3/payments/yk_txn_auth456/cancel' => Http::response([
+            'id' => 'yk_txn_auth456',
+            'status' => 'canceled',
+        ]),
+    ]);
+
+    $result = yooKassaConnector()->void([
+        'transaction_id' => 'yk_txn_auth456',
+        'payment_id' => 'pay_VOID_TEST',
+    ]);
+
+    expect($result['success'])->toBeFalse(); // YooKassa 'canceled' maps to not-success
+    expect($result['transaction_id'])->toBe('yk_txn_auth456');
+
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), '/payments/yk_txn_auth456/cancel')
+            && $request->hasHeader('Idempotence-Key')
+            && $request->header('Idempotence-Key')[0] === 'pay_VOID_TEST_void';
+    });
+});
+
 test('handles failed payment', function () {
     Http::fake([
         'api.yookassa.ru/v3/payments' => Http::response([

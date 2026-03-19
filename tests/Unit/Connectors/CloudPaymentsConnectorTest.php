@@ -140,6 +140,28 @@ test('refund sends correct request', function () {
     });
 });
 
+test('void sends request to /payments/void', function () {
+    Http::fake([
+        'api.cloudpayments.ru/payments/void' => Http::response([
+            'Success' => true,
+            'Model' => [
+                'TransactionId' => 504_012_999,
+            ],
+        ]),
+    ]);
+
+    $result = cloudPaymentsConnector()->void([
+        'transaction_id' => 504_012_999,
+    ]);
+
+    expect($result['success'])->toBeTrue();
+
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), '/payments/void')
+            && $request['TransactionId'] == 504_012_999;
+    });
+});
+
 test('handles failed payment response', function () {
     Http::fake([
         'api.cloudpayments.ru/payments/cards/charge' => Http::response([

@@ -56,6 +56,14 @@ test('refund succeeds', function () {
     expect($result['success'])->toBeTrue();
 });
 
+test('void succeeds', function () {
+    $connector = new TestConnector;
+    $result = $connector->void(['transaction_id' => 'test_auth_123']);
+
+    expect($result['success'])->toBeTrue();
+    expect($result['transaction_id'])->toContain('test_void_');
+});
+
 test('getName returns test', function () {
     expect((new TestConnector)->getName())->toBe('test');
 });

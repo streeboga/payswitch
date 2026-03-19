@@ -73,6 +73,13 @@ final class CloudPaymentsConnector implements ConnectorInterface
         ]);
     }
 
+    public function void(array $params): array
+    {
+        return $this->makeRequest('/payments/void', [
+            'TransactionId' => $params['transaction_id'] ?? '',
+        ]);
+    }
+
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         $hmac = $headers['content-hmac'] ?? null;
