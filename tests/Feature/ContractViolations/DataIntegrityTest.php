@@ -183,6 +183,16 @@ class SpyConnector implements ConnectorInterface
         return $payload['payment_id'] ?? null;
     }
 
+    public function getPaymentStatus(array $params): array
+    {
+        return ['success' => true, 'transaction_id' => $params['transaction_id'] ?? 'test', 'code' => 'ok', 'data' => ['status' => 'succeeded']];
+    }
+
+    public function createPaymentSession(array $params): array
+    {
+        return ['success' => false, 'code' => 'not_supported'];
+    }
+
     private function success(array $params): array
     {
         return [

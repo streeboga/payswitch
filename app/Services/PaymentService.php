@@ -179,6 +179,79 @@ final readonly class PaymentService
         return $result['payment'];
     }
 
+    public function sync(string $paymentKey, int|string $merchantAccountId): PaymentIntent
+    {
+        $payment = $this->paymentRepository->findByKey($paymentKey, $merchantAccountId);
+
+        $syncableStatuses = [
+            PaymentStatus::RequiresCustomerAction,
+            PaymentStatus::Processing,
+        ];
+
+        if (! in_array($payment->status, $syncableStatuses, true)) {
+            throw new PaymentException('Payment is not in a syncable state', 'invalid_state', 'invalid_request_error', 400);
+        }
+
+        $lastAttempt = $this->paymentRepository->findLastAttemptWithTransaction($payment);
+        if (! $lastAttempt) {
+            throw new PaymentException('No transaction to sync', 'no_transaction', 'invalid_request_error', 400);
+        }
+
+        $mca = $this->merchantRepository->findConnectorByMerchantAndName($merchantAccountId, $lastAttempt->connector);
+        if (! $mca) {
+            throw new PaymentException('Connector not available', 'connector_unavailable', 'invalid_request_error', 502);
+        }
+
+        $connector = ConnectorFactory::resolve($mca);
+        $result = $connector->getPaymentStatus(['transaction_id' => $lastAttempt->connector_transaction_id]);
+
+        $pspStatus = $result['data']['status'] ?? null;
+        $newStatus = $this->mapSyncStatus($pspStatus);
+
+        $previousStatus = $payment->status->value;
+
+        if ($newStatus && $newStatus !== $payment->status) {
+            // Some terminal statuses (e.g. succeeded) may not be directly reachable
+            // from the current status. Transition through an intermediate status if needed.
+            if (! PaymentStateMachine::canTransition($payment->status, $newStatus)) {
+                $intermediate = PaymentStatus::Processing;
+                if (PaymentStateMachine::canTransition($payment->status, $intermediate)
+                    && PaymentStateMachine::canTransition($intermediate, $newStatus)) {
+                    $this->paymentRepository->update($payment, ['status' => $intermediate]);
+                    $payment->refresh();
+                } else {
+                    // Cannot reach the target status — skip update
+                    return $payment;
+                }
+            }
+
+            $updateData = ['status' => $newStatus];
+            if ($newStatus === PaymentStatus::Succeeded) {
+                $updateData['amount_received'] = $payment->amount;
+            }
+            $this->paymentRepository->update($payment, $updateData);
+            $payment->refresh();
+
+            $this->dispatchStatusChanged($payment, $previousStatus);
+        }
+
+        return $payment;
+    }
+
+    private function mapSyncStatus(?string $pspStatus): ?PaymentStatus
+    {
+        if (! $pspStatus) {
+            return null;
+        }
+
+        return match ($pspStatus) {
+            'succeeded', 'Completed' => PaymentStatus::Succeeded,
+            'canceled', 'cancelled', 'Declined' => PaymentStatus::Failed,
+            'waiting_for_capture', 'requires_capture', 'Authorized' => PaymentStatus::RequiresCapture,
+            default => null,
+        };
+    }
+
     private function dispatchStatusChanged(PaymentIntent $payment, string $previousStatus): void
     {
         try {

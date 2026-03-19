@@ -36,7 +36,10 @@ beforeEach(function () {
 
         public function __construct(?array $credentials = []) {}
 
-        public function getName(): string { return 'spy'; }
+        public function getName(): string
+        {
+            return 'spy';
+        }
 
         public function authorize(array $params): array
         {
@@ -90,6 +93,16 @@ beforeEach(function () {
         public function extractPaymentIdFromWebhook(array $payload): ?string
         {
             return null;
+        }
+
+        public function getPaymentStatus(array $params): array
+        {
+            return ['success' => true, 'transaction_id' => 'x', 'code' => 'ok', 'data' => ['status' => 'succeeded']];
+        }
+
+        public function createPaymentSession(array $params): array
+        {
+            return ['success' => false, 'code' => 'not_supported'];
         }
     };
 

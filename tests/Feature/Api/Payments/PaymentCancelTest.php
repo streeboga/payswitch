@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Testing\TestResponse;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -33,7 +32,9 @@ beforeEach(function () {
     $spyClass = new class([]) implements ConnectorInterface
     {
         public static bool $voidCalled = false;
+
         public static bool $refundCalled = false;
+
         public static ?array $voidParams = null;
 
         public function __construct(?array $credentials = [])
@@ -44,13 +45,16 @@ beforeEach(function () {
             self::$voidParams = null;
         }
 
-        public function getName(): string { return 'cancel_spy'; }
+        public function getName(): string
+        {
+            return 'cancel_spy';
+        }
 
         public function purchase(array $params): array
         {
             return [
                 'success' => true,
-                'transaction_id' => 'spy_ch_' . uniqid(),
+                'transaction_id' => 'spy_ch_'.uniqid(),
                 'message' => 'ok',
                 'code' => 'ok',
                 'data' => [],
@@ -61,7 +65,7 @@ beforeEach(function () {
         {
             return [
                 'success' => true,
-                'transaction_id' => 'spy_auth_' . uniqid(),
+                'transaction_id' => 'spy_auth_'.uniqid(),
                 'message' => 'ok',
                 'code' => 'ok',
                 'data' => [],
@@ -101,6 +105,16 @@ beforeEach(function () {
         public function extractPaymentIdFromWebhook(array $payload): ?string
         {
             return null;
+        }
+
+        public function getPaymentStatus(array $params): array
+        {
+            return ['success' => true, 'transaction_id' => $params['transaction_id'] ?? 'test', 'code' => 'ok', 'data' => ['status' => 'succeeded']];
+        }
+
+        public function createPaymentSession(array $params): array
+        {
+            return ['success' => false, 'code' => 'not_supported'];
         }
     };
 
@@ -182,16 +196,19 @@ test('cancel succeeds even when void throws exception', function () {
     {
         public function __construct(?array $credentials = []) {}
 
-        public function getName(): string { return 'throw_void'; }
+        public function getName(): string
+        {
+            return 'throw_void';
+        }
 
         public function purchase(array $params): array
         {
-            return ['success' => true, 'transaction_id' => 'tv_ch_' . uniqid(), 'message' => 'ok', 'code' => 'ok', 'data' => []];
+            return ['success' => true, 'transaction_id' => 'tv_ch_'.uniqid(), 'message' => 'ok', 'code' => 'ok', 'data' => []];
         }
 
         public function authorize(array $params): array
         {
-            return ['success' => true, 'transaction_id' => 'tv_auth_' . uniqid(), 'message' => 'ok', 'code' => 'ok', 'data' => []];
+            return ['success' => true, 'transaction_id' => 'tv_auth_'.uniqid(), 'message' => 'ok', 'code' => 'ok', 'data' => []];
         }
 
         public function capture(array $params): array
@@ -209,11 +226,30 @@ test('cancel succeeds even when void throws exception', function () {
             throw new RuntimeException('PSP void endpoint is down');
         }
 
-        public function verifyWebhookSignature(string $payload, array $headers): bool { return true; }
+        public function verifyWebhookSignature(string $payload, array $headers): bool
+        {
+            return true;
+        }
 
-        public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus { return null; }
+        public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
+        {
+            return null;
+        }
 
-        public function extractPaymentIdFromWebhook(array $payload): ?string { return null; }
+        public function extractPaymentIdFromWebhook(array $payload): ?string
+        {
+            return null;
+        }
+
+        public function getPaymentStatus(array $params): array
+        {
+            return ['success' => true, 'transaction_id' => 'x', 'code' => 'ok', 'data' => ['status' => 'succeeded']];
+        }
+
+        public function createPaymentSession(array $params): array
+        {
+            return ['success' => false, 'code' => 'not_supported'];
+        }
     };
 
     ConnectorFactory::register('throw_void', get_class($throwingVoidClass));

@@ -114,4 +114,22 @@ final class PaymentController extends Controller
 
         return (new PaymentIntentResource($payment))->toResponse($request);
     }
+
+    /**
+     * Sync a payment intent with the PSP.
+     *
+     * Polls the PSP for the current payment status and updates the local record.
+     * Only payments in `requires_customer_action` or `processing` state can be synced.
+     */
+    #[PathParameter('paymentKey', description: 'Payment intent public key', example: 'pi_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Payment synced')]
+    #[Response(400, description: 'Payment not in syncable state')]
+    #[Response(404, description: 'Payment not found')]
+    public function sync(string $paymentKey, Request $request): JsonResponse
+    {
+        $merchantAccountId = $request->attributes->get('merchant_id');
+        $payment = $this->paymentService->sync($paymentKey, $merchantAccountId);
+
+        return (new PaymentIntentResource($payment))->toResponse($request);
+    }
 }

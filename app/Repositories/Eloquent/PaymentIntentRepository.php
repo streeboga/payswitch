@@ -112,6 +112,12 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         return $payment->paymentAttempts()->where('status', 'succeeded')->latest()->first();
     }
 
+    public function findLastAttemptWithTransaction(PaymentIntent $payment): ?PaymentAttempt
+    {
+        /** @var PaymentAttempt|null */
+        return $payment->paymentAttempts()->whereNotNull('connector_transaction_id')->latest()->first();
+    }
+
     public function findPaymentMethodByKey(string $key, int|string $merchantAccountId): ?PaymentMethod
     {
         return PaymentMethod::where('key', $key)

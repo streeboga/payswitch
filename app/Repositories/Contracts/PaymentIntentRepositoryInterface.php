@@ -52,6 +52,8 @@ interface PaymentIntentRepositoryInterface
 
     public function findLastSuccessfulAttempt(PaymentIntent $payment): ?PaymentAttempt;
 
+    public function findLastAttemptWithTransaction(PaymentIntent $payment): ?PaymentAttempt;
+
     public function findPaymentMethodByKey(string $key, int|string $merchantAccountId): ?PaymentMethod;
 
     /**

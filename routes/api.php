@@ -202,6 +202,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::post('/payments/{paymentKey}/confirm', [PaymentController::class, 'confirm']);
         Route::post('/payments/{paymentKey}/capture', [PaymentController::class, 'capture']);
         Route::post('/payments/{paymentKey}/cancel', [PaymentController::class, 'cancel']);
+        Route::post('/payments/{paymentKey}/sync', [PaymentController::class, 'sync']);
 
         Route::post('/refunds', [RefundController::class, 'store']);
         Route::get('/refunds/{refundKey}', [RefundController::class, 'show']);
