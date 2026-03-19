@@ -97,12 +97,13 @@ jobs:
 
       - name: Seed Test Data
         run: php artisan db:seed --class=TestSeeder --force
-        continue-on-error: true
         env:
           DB_CONNECTION: sqlite
 
       - name: Build Frontend
         run: npm --prefix dashboard run build
+        env:
+          VITE_BACKEND_URL: http://localhost:8000
 
       - name: Start Laravel Server
         run: php artisan serve --port=8000 &

@@ -1,8 +1,20 @@
 import type { APIRequestContext } from '@playwright/test'
 
+async function getXsrfToken(request: APIRequestContext): Promise<string> {
+  const resp = await request.get('/sanctum/csrf-cookie')
+  const cookies = resp
+    .headersArray()
+    .filter((h) => h.name.toLowerCase() === 'set-cookie')
+    .map((h) => h.value)
+    .join('; ')
+  const match = cookies.match(/XSRF-TOKEN=([^;]+)/)
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
 export async function authenticateApi(request: APIRequestContext) {
-  await request.get('/sanctum/csrf-cookie')
+  const token = await getXsrfToken(request)
   const loginResp = await request.post('/login', {
+    headers: { 'X-XSRF-TOKEN': token },
     data: { email: 'test@example.com', password: 'password' },
   })
   if (!loginResp.ok()) {
