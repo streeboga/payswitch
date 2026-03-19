@@ -60,4 +60,23 @@ interface ConnectorInterface
      * @param  array<string, mixed>  $payload
      */
     public function extractPaymentIdFromWebhook(array $payload): ?string;
+
+    /**
+     * Query the PSP for the current status of a payment.
+     *
+     * @param  array<string, mixed>  $params  ['transaction_id' => 'psp_txn_id']
+     * @return array<string, mixed> ['success' => bool, 'transaction_id' => ..., 'code' => ..., 'data' => [...]]
+     */
+    public function getPaymentStatus(array $params): array;
+
+    /**
+     * Create a payment session on the PSP and return a redirect URL.
+     *
+     * Used for the redirect-based confirm flow where the merchant sends
+     * only `payment_method: 'card'` without raw card data.
+     *
+     * @param  array<string, mixed>  $params  Keys: amount, currency, payment_id, return_url, description, payment_method
+     * @return array<string, mixed> Keys: success, redirect_url, session_id, code, transaction_id, data
+     */
+    public function createPaymentSession(array $params): array;
 }

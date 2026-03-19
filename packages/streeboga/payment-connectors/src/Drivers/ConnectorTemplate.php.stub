@@ -272,6 +272,53 @@ final class ExamplePspConnector implements ConnectorInterface
             ?? ($payload['data']['object']['metadata']['payment_id'] ?? null);
     }
 
+    // ──────────────────────────────────────────────────
+    //  getPaymentStatus() — query PSP for current payment status
+    //
+    //  $params:
+    //    'transaction_id' => string, // PSP transaction ID
+    //
+    //  Return same format as purchase()/authorize().
+    //  data.status should contain the raw PSP status string.
+    // ──────────────────────────────────────────────────
+
+    public function getPaymentStatus(array $params): array
+    {
+        $txnId = $params['transaction_id'] ?? '';
+
+        return $this->makeRequest('GET', "/payments/{$txnId}", []);
+    }
+
+    // ──────────────────────────────────────────────────
+    //  createPaymentSession() — redirect-based confirm flow
+    //
+    //  Creates a payment session on the PSP and returns
+    //  a redirect URL for the customer to complete payment.
+    //
+    //  $params:
+    //    'amount'         => int,    // Amount in smallest currency unit
+    //    'currency'       => string, // ISO 4217
+    //    'payment_id'     => string, // Internal payment key (pay_xxx)
+    //    'return_url'     => string, // URL to redirect customer back to
+    //    'description'    => string, // Payment description
+    //    'payment_method' => string, // 'card', etc.
+    //
+    //  Return: ['success' => bool, 'redirect_url' => '...', 'session_id' => '...', 'code' => 'redirect', 'transaction_id' => '...']
+    // ──────────────────────────────────────────────────
+
+    public function createPaymentSession(array $params): array
+    {
+        // TODO: Implement for your PSP
+        // Typically creates a checkout/payment session and returns a redirect URL
+        return $this->makeRequest('POST', '/checkout/sessions', [
+            'amount' => $this->formatAmount($params['amount'] ?? 0, $params['currency'] ?? 'USD'),
+            'currency' => $params['currency'] ?? 'USD',
+            'return_url' => $params['return_url'] ?? '',
+            'description' => $params['description'] ?? '',
+            'metadata' => ['payment_id' => $params['payment_id'] ?? ''],
+        ]);
+    }
+
     // ══════════════════════════════════════════════════
     //  PRIVATE HELPERS
     // ══════════════════════════════════════════════════

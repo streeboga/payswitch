@@ -72,7 +72,7 @@ final class TestConnector implements ConnectorInterface
     {
         return [
             'success' => true,
-            'transaction_id' => 'test_void_' . Str::ulid(),
+            'transaction_id' => 'test_void_'.Str::ulid(),
             'message' => 'Void successful',
             'code' => 'ok',
         ];
@@ -96,6 +96,29 @@ final class TestConnector implements ConnectorInterface
     public function extractPaymentIdFromWebhook(array $payload): ?string
     {
         return $payload['payment_id'] ?? ($payload['data']['object']['metadata']['payment_id'] ?? null);
+    }
+
+    public function getPaymentStatus(array $params): array
+    {
+        return [
+            'success' => true,
+            'transaction_id' => $params['transaction_id'] ?? 'test_txn',
+            'message' => 'ok',
+            'code' => 'ok',
+            'data' => ['status' => 'succeeded'],
+        ];
+    }
+
+    public function createPaymentSession(array $params): array
+    {
+        return [
+            'success' => true,
+            'redirect_url' => 'https://test-psp.example.com/pay/'.($params['payment_id'] ?? 'test'),
+            'session_id' => 'sess_'.($params['payment_id'] ?? 'test'),
+            'code' => 'redirect',
+            'transaction_id' => 'txn_session_'.Str::random(8),
+            'data' => [],
+        ];
     }
 
     private function simulatePayment(array $params, bool $authorize = false): array

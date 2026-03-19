@@ -108,6 +108,33 @@ final class CloudPaymentsConnector implements ConnectorInterface
         return $payload['InvoiceId'] ?? ($payload['data']['InvoiceId'] ?? null);
     }
 
+    public function getPaymentStatus(array $params): array
+    {
+        return $this->makeRequest('/payments/find', [
+            'TransactionId' => $params['transaction_id'] ?? '',
+        ]);
+    }
+
+    public function createPaymentSession(array $params): array
+    {
+        // CloudPayments uses client-side widget, not server-side redirect.
+        // Return parameters needed to initialize the widget.
+        return [
+            'success' => true,
+            'redirect_url' => null,
+            'session_id' => $params['payment_id'] ?? '',
+            'code' => 'widget',
+            'transaction_id' => null,
+            'data' => [
+                'public_id' => $this->publicId,
+                'amount' => ($params['amount'] ?? 0) / 100,
+                'currency' => $params['currency'] ?? 'RUB',
+                'description' => $params['description'] ?? '',
+                'invoice_id' => $params['payment_id'] ?? '',
+            ],
+        ];
+    }
+
     private function makeRequest(string $endpoint, array $data): array
     {
         try {
