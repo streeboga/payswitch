@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  */
 class DisputeEvidence extends Model
 {
+    protected $table = 'dispute_evidences';
+
     protected $fillable = [
         'dispute_id',
         'type',
