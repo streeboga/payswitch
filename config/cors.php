@@ -8,7 +8,9 @@ return [
 
     'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
 
-    'allowed_origins_patterns' => [],
+    // Allow any origin for the public payment widget API.
+    // Sanctum's stateful domain check protects dashboard session auth independently.
+    'allowed_origins_patterns' => ['#.*#'],
 
     'allowed_headers' => ['*'],
 
