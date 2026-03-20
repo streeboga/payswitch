@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from '@tanstack/react-router'
+import { useParams, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL ?? ''
@@ -33,6 +33,7 @@ function formatAmount(amount: number, currency: string, locale: string): string 
 export function TestPspPage() {
   const { paymentKey } = useParams({ strict: false }) as { paymentKey: string }
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
 
   const [payment, setPayment] = useState<TestPspPayment | null>(null)
   const [result, setResult] = useState<TestPspResult | null>(null)
@@ -129,9 +130,17 @@ export function TestPspPage() {
               </a>
             )}
             {result.dashboard_url && (
-              <a href={result.dashboard_url} style={styles.linkSecondary}>
+              <button
+                type="button"
+                style={styles.linkSecondary}
+                onClick={() => {
+                  // SPA navigation — preserves auth session
+                  const path = new URL(result.dashboard_url!, window.location.origin).pathname
+                  navigate({ to: path })
+                }}
+              >
                 {t('testPsp.viewDashboard')}
-              </a>
+              </button>
             )}
           </div>
         </div>
