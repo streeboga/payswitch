@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Models\ApiKey;
+use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Support\IdGenerator;
@@ -13,6 +14,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
+    BusinessProfile::create(['merchant_account_id' => $this->merchant->id]);
 
     $this->rawKey = IdGenerator::apiKey('sandbox');
     ApiKey::create([

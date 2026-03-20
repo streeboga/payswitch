@@ -48,8 +48,11 @@ final readonly class PaymentService
 
         $expiry = $dto->session_expiry ?? (int) config('payswitch.payment.session_expiry', 900);
 
+        $businessProfileId = $this->resolveBusinessProfileId($dto->profile_id, $merchantAccountId);
+
         return $this->paymentRepository->create([
             'merchant_account_id' => $merchantAccountId,
+            'business_profile_id' => $businessProfileId,
             'amount' => $dto->amount,
             'currency' => strtoupper($dto->currency),
             'status' => PaymentStatus::RequiresPaymentMethod,
@@ -64,6 +67,25 @@ final readonly class PaymentService
             'expires_on' => now()->addSeconds($expiry),
             'amount_capturable' => $dto->amount,
         ]);
+    }
+
+    private function resolveBusinessProfileId(?string $profileKey, int|string $merchantAccountId): int
+    {
+        if ($profileKey) {
+            $profile = $this->merchantRepository->findProfileByKey($profileKey);
+            if ($profile->merchant_account_id !== (int) $merchantAccountId) {
+                throw new PaymentException('Business profile not found', 'profile_not_found', 'invalid_request_error', 400);
+            }
+
+            return $profile->id;
+        }
+
+        $defaultProfile = $this->merchantRepository->findProfileByMerchant($merchantAccountId);
+        if (! $defaultProfile) {
+            throw new PaymentException('No business profile configured for this merchant', 'no_profile', 'invalid_request_error', 400);
+        }
+
+        return $defaultProfile->id;
     }
 
     public function find(string $paymentKey, int|string $merchantAccountId): PaymentIntent
