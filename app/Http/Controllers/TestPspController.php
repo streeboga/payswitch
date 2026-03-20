@@ -64,9 +64,9 @@ final class TestPspController extends Controller
                 ]);
         }
 
-        $returnUrl = $payment->return_url ?? '/';
-        $separator = str_contains($returnUrl, '?') ? '&' : '?';
+        // Redirect to dashboard payment detail page
+        $dashboardUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/');
 
-        return redirect($returnUrl.$separator.'payment_id='.$payment->key.'&status='.$action);
+        return redirect($dashboardUrl.'/payments/'.$payment->key.'?status='.$action);
     }
 }
