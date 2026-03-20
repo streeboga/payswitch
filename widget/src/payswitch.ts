@@ -1,6 +1,5 @@
 import { PaymentApi } from './api';
 import { renderWidget, unmountWidget } from './ui/PaymentWidget';
-import './ui/styles.css';
 import type {
   PayswitchInstance,
   WidgetOptions,

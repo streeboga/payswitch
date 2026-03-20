@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 
 import type { ConnectorName, ConnectorAttributes } from '@/api/types'
+import { PaymentWidgetPreview } from '@/components/shared/payment-widget-preview'
 import {
   useConnector,
   useUpdateConnector,
@@ -369,6 +370,13 @@ function ConnectorDetailForm({
           </div>
         </CardContent>
       </Card>
+
+      {/* Widget Preview */}
+      <PaymentWidgetPreview
+        connectorName={connector.connector_name}
+        title={t('connectorDetail.widgetPreview', 'Widget Preview')}
+        description={t('connectorDetail.widgetPreviewDesc', 'Test the payment widget with this connector')}
+      />
 
       <Separator />
 

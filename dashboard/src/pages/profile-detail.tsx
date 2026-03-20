@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { ArrowLeft, FolderOpen, KeyRound } from 'lucide-react'
 
 import { useProfileDetail, useUpdateProfile } from '@/hooks/use-profiles'
+import { PaymentWidgetPreview } from '@/components/shared/payment-widget-preview'
 import { DateFormat } from '@/components/shared/date-format'
 import { CopyButton } from '@/components/shared/copy-button'
 import { ErrorState } from '@/components/shared/error-state'
@@ -217,6 +218,12 @@ export function ProfileDetailPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Widget Preview — all available payment methods for this profile */}
+      <PaymentWidgetPreview
+        title={t('profileDetail.widgetPreview', 'Payment Widget')}
+        description={t('profileDetail.widgetPreviewDesc', 'Preview the payment widget with all connectors for this profile')}
+      />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
