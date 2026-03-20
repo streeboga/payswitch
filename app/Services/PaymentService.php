@@ -104,7 +104,10 @@ final readonly class PaymentService
             ->getActiveConnectorsByMerchant($payment->merchant_account_id)
             ->where('business_profile_id', $payment->business_profile_id)
             ->whereNotNull('payment_methods_enabled')
-            ->flatMap(fn (MerchantConnectorAccount $mca): array => $mca->payment_methods_enabled ?? [])
+            ->flatMap(fn (MerchantConnectorAccount $mca): array => array_map(
+                fn (mixed $m): array => is_array($m) ? $m : ['payment_method' => $m],
+                $mca->payment_methods_enabled ?? [],
+            ))
             ->unique('payment_method')
             ->values();
     }
