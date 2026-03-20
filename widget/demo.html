@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Payswitch Widget Demo</title>
+  <meta charset="utf-8" />
+  <style>
+    body { font-family: sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
+    h2 { margin-bottom: 24px; }
+    #payment-element { margin: 20px 0; }
+    #pay-btn { padding: 12px 24px; background: #0066ff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; }
+    #pay-btn:hover { background: #0052cc; }
+    #pay-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #result { margin-top: 20px; padding: 16px; border-radius: 8px; display: none; }
+    #result.success { display: block; background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+    #result.error { display: block; background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+    #result.info { display: block; background: #eff6ff; border: 1px solid #93c5fd; color: #1e40af; }
+    .params { font-size: 12px; color: #666; margin-bottom: 16px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h2>Payswitch Widget Demo</h2>
+  <div class="params" id="params-display"></div>
+  <div id="payment-element"></div>
+  <button id="pay-btn" disabled>Pay</button>
+  <div id="result"></div>
+
+  <script type="module">
+    import { loadPayswitch } from './dist/payswitch.mjs';
+
+    const params = new URLSearchParams(location.search);
+    const clientSecret = params.get('clientSecret');
+    const publishableKey = params.get('publishableKey');
+    const backendUrl = params.get('backendUrl') || 'http://payswitch.test';
+
+    const paramsEl = document.getElementById('params-display');
+    paramsEl.textContent = `publishableKey: ${publishableKey || 'missing'} | backendUrl: ${backendUrl}`;
+
+    const resultEl = document.getElementById('result');
+    const payBtn = document.getElementById('pay-btn');
+
+    if (!clientSecret || !publishableKey) {
+      resultEl.textContent = 'Missing clientSecret or publishableKey in URL params. Usage: ?clientSecret=pi_xxx_secret_yyy&publishableKey=pk_xxx';
+      resultEl.className = 'error';
+    } else {
+      try {
+        const ps = await loadPayswitch(publishableKey, { customBackendUrl: backendUrl });
+        const widgets = ps.widgets({ clientSecret });
+        const payment = widgets.create('payment');
+
+        payment.mount('#payment-element');
+        payment.on('ready', () => {
+          payBtn.disabled = false;
+        });
+        payment.on('error', (data) => {
+          resultEl.textContent = `Widget error: ${data?.message || 'Unknown error'}`;
+          resultEl.className = 'error';
+        });
+
+        payBtn.addEventListener('click', async () => {
+          payBtn.disabled = true;
+          payBtn.textContent = 'Processing...';
+
+          const result = await ps.confirmPayment({
+            widgets,
+            confirmParams: { return_url: location.origin + location.pathname + '?status=complete' },
+            redirect: 'if_required',
+          });
+
+          if (result.status === 'requires_customer_action') {
+            resultEl.textContent = `Redirecting to payment provider: ${result.redirectUrl}`;
+            resultEl.className = 'info';
+            // In real flow: window.location.href = result.redirectUrl
+          } else if (result.status === 'succeeded') {
+            resultEl.textContent = 'Payment succeeded!';
+            resultEl.className = 'success';
+          } else {
+            resultEl.textContent = `Error: ${result.error?.message || 'Unknown'}`;
+            resultEl.className = 'error';
+          }
+
+          payBtn.disabled = false;
+          payBtn.textContent = 'Pay';
+        });
+      } catch (e) {
+        resultEl.textContent = `Init error: ${e.message}`;
+        resultEl.className = 'error';
+      }
+    }
+  </script>
+</body>
+</html>

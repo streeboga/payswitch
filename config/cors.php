@@ -6,7 +6,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 
@@ -16,6 +16,9 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    // Not needed: the dashboard uses Vite proxy in dev (same-origin)
+    // and shares a domain in production, so no cross-origin cookie sending.
+    // The payment widget uses api-key header auth, not cookies.
+    'supports_credentials' => false,
 
 ];

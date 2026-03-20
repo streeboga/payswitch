@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateAdminApiKey;
+use App\Http\Middleware\AuthenticateClientSecret;
 use App\Http\Middleware\AuthenticateSecretApiKey;
 use App\Http\Middleware\ForceJsonApiContentType;
 use App\Http\Middleware\HandleAppearance;
@@ -45,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.api_key' => ResolveApiKey::class,
             'auth.admin_api_key' => AuthenticateAdminApiKey::class,
             'auth.secret_api_key' => AuthenticateSecretApiKey::class,
+            'auth.client_secret' => AuthenticateClientSecret::class,
             'resolve.merchant' => ResolveMerchantContext::class,
         ]);
     })

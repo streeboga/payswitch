@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentMethodController;
+use App\Http\Controllers\Api\V1\PublicPaymentController;
 use App\Http\Controllers\Api\V1\RefundController;
 use App\Http\Controllers\Api\V1\WebhookReceiverController;
 use App\Http\Controllers\Auth\UserController;
@@ -196,11 +197,16 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::delete('/merchants/{merchantKey}/routing-rules/{ruleKey}', [Admin\RoutingRuleController::class, 'destroy']);
     });
 
+    // Public API — authenticated via publishable_key + client_secret
+    Route::middleware(['auth.api_key', 'auth.client_secret', 'throttle:payswitch-api'])->group(function () {
+        Route::get('/payments/{paymentKey}', [PublicPaymentController::class, 'show'])->name('api.v1.public.payments.show');
+        Route::post('/payments/{paymentKey}/confirm', [PublicPaymentController::class, 'confirm'])->name('api.v1.public.payments.confirm');
+        Route::get('/payments/{paymentKey}/payment-methods', [PublicPaymentController::class, 'paymentMethods'])->name('api.v1.public.payments.payment-methods');
+    });
+
     // Merchant API
     Route::middleware(['auth.api_key', 'auth.secret_api_key', 'throttle:payswitch-api'])->group(function () {
         Route::post('/payments', [PaymentController::class, 'store'])->name('api.v1.payments.store');
-        Route::get('/payments/{paymentKey}', [PaymentController::class, 'show'])->name('api.v1.payments.show');
-        Route::post('/payments/{paymentKey}/confirm', [PaymentController::class, 'confirm']);
         Route::post('/payments/{paymentKey}/capture', [PaymentController::class, 'capture']);
         Route::post('/payments/{paymentKey}/cancel', [PaymentController::class, 'cancel']);
         Route::post('/payments/{paymentKey}/sync', [PaymentController::class, 'sync']);
