@@ -41,6 +41,18 @@
 | 36 | **Merchant Detail** | Табы загружают все данные без фильтрации по мерчанту | Фильтрация child-ресурсов по merchant_id |
 | 37 | **TypeScript types** | Не хватает `merchants_count`, `profiles_count`, `connectors_count` в типах | Обновить интерфейсы |
 
+## HIGH — Payment Widget (2026-03-20)
+
+| # | Функционал | Статус | Детали |
+|---|-----------|--------|--------|
+| ~~38~~ | ~~Public API (publishable key + client_secret)~~ | **DONE** | `AuthenticateClientSecret` middleware, `PublicPaymentController` (show, confirm, paymentMethods) |
+| ~~39~~ | ~~@payswitch/js SDK~~ | **DONE** | `loadPayswitch()` → `widgets()` → `create('payment')` → `mount('#el')`. Preact UI, Vite library (ESM + UMD), 5 kB |
+| ~~40~~ | ~~Dashboard widget integration~~ | **DONE** | `WidgetPreview` на странице test-payment, dynamic import |
+| ~~41~~ | ~~CORS for widget~~ | **DONE** | `allowed_origins: ['*']`, `supports_credentials: false` |
+| 42 | **Widget theming/appearance** | Нужно | `AppearanceOptions` в типах есть, UI не использует |
+| 43 | **Widget i18n** | Нужно | `locale` в `WidgetOptions` есть, UI hardcoded EN |
+| 44 | **Hosted Checkout Page** | Нужно | Отдельная страница на нашем домене для мерчантов без фронтенда |
+
 ## MEDIUM — улучшения
 
 | # | Функционал | Что нужно |

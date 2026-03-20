@@ -61,7 +61,7 @@ cd dashboard && npm run build
 - **DTOs** (`app/DataTransferObjects/`) — Spatie data objects grouped by domain (Admin, Payment, Customer, Refund)
 - **Policies** (`app/Policies/`) — 20 authorization policies for RBAC (Admin, Operator, Viewer)
 - **Models** (`app/Models/`) — User, UserRole, UserPreference, AppNotification, Dispute, DisputeEvidence, SavedFilter
-- **Middleware** — AuthenticateAdminApiKey, AuthenticateSecretApiKey, ForceJsonApiContentType, ResolveApiKey, ResolveMerchantContext, HandleAppearance
+- **Middleware** — AuthenticateAdminApiKey, AuthenticateSecretApiKey, AuthenticateClientSecret, ForceJsonApiContentType, ResolveApiKey, ResolveMerchantContext, HandleAppearance
 - **Events** — PaymentStatusChanged → LogPaymentAudit, SendWebhookNotification
 - **Jobs** — CleanExpiredPaymentsJob, DeliverWebhookJob
 - **Enums** (`app/Enums/`) — ConnectorName, UserRole, PaymentAttemptStatus, DisputeStatus, etc.
@@ -69,7 +69,7 @@ cd dashboard && npm run build
 #### Routes
 
 - `routes/web.php` — Auth: login, logout, 2FA challenge
-- `routes/api.php` — `/api/v1/`: user endpoint, dashboard API (Sanctum), admin API (API key), merchant API (secret key), webhook receiver, health check
+- `routes/api.php` — `/api/v1/`: user endpoint, dashboard API (Sanctum), admin API (API key), public API (publishable key + client_secret), merchant API (secret key), webhook receiver, health check
 
 ### Frontend (TypeScript/React) — `/dashboard/`
 
@@ -82,9 +82,24 @@ See `dashboard/CLAUDE.md` for detailed frontend architecture.
 - **API** (`src/api/`) — ky HTTP client with Sanctum CSRF, JSON:API types, ~20 endpoint modules
 - **i18n** (`src/locales/`) — English + Russian translations via i18next
 
+### Payment Widget (`/widget/`)
+
+Embeddable JS SDK (`@payswitch/js`) for merchants to accept payments on their sites. Preact-based UI, Vite library mode (ESM + UMD).
+
+- **SDK** (`src/index.ts`) — `loadPayswitch(publishableKey, options)` entry point
+- **API Client** (`src/api.ts`) — fetch wrapper for Public API (publishable key + client_secret auth)
+- **Widget** (`src/payswitch.ts`) — `PayswitchInstance.widgets().create('payment').mount('#el')`
+- **UI** (`src/ui/`) — Preact payment method selector component
+- **Demo** (`demo.html`) — Test harness page
+
+```bash
+cd widget && npm install && npm run build   # Build SDK
+cd widget && npm run test                   # Vitest
+```
+
 ### Stack Integration
 
-Laravel serves JSON API. Dashboard SPA runs on Vite port 3000, proxies `/api` and `/sanctum` to Laravel port 8000. Authentication via Sanctum session cookies (not tokens).
+Laravel serves JSON API. Dashboard SPA runs on Vite port 3000, proxies `/api` and `/sanctum` to Laravel port 8000. Authentication via Sanctum session cookies (not tokens). Payment widget authenticates via publishable key + client_secret (no cookies).
 
 ## Tech Stack Details
 
@@ -107,6 +122,7 @@ Laravel serves JSON API. Dashboard SPA runs on Vite port 3000, proxies `/api` an
 - **RBAC** — UserRole (Admin, Operator, Viewer) per organization with weight-based authorization
 - **JSON:API v1.1** — All API responses follow JSON:API spec via `JsonApiResource`
 - **Event-Driven Webhooks** — Payment events → audit log + webhook delivery
+- **Public API** — Publishable key + client_secret auth for browser-side payment widget (no secret key exposure)
 
 ## Testing
 
