@@ -19,6 +19,10 @@
             "description": "Create, confirm, capture and cancel payment intents"
         },
         {
+            "name": "Payment Widget",
+            "description": "Public payment widget endpoints for retrieving, confirming payments and listing available payment methods"
+        },
+        {
             "name": "Customers",
             "description": "Customer CRUD operations"
         },
@@ -99,6 +103,10 @@
             "description": "Organization management for the dashboard"
         },
         {
+            "name": "Dashboard Merchants",
+            "description": "Merchant account management for the dashboard"
+        },
+        {
             "name": "Dashboard Business Profiles",
             "description": "Business profile management for the dashboard"
         },
@@ -150,13 +158,42 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/User"
+                                    "type": "object",
+                                    "properties": {
+                                        "": {
+                                            "type": "string"
+                                        },
+                                        "roles": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        null,
+                                        "roles"
+                                    ]
                                 }
                             }
                         }
                     },
                     "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": ""
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -203,123 +240,6 @@
                     },
                     "201": {
                         "description": "Payment intent created",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/payments/{paymentKey}": {
-            "get": {
-                "operationId": "v1.payments.show",
-                "description": "Retrieves the details of a payment intent that belongs to the authenticated merchant.",
-                "summary": "Get a payment intent",
-                "tags": [
-                    "Payments"
-                ],
-                "parameters": [
-                    {
-                        "name": "paymentKey",
-                        "in": "path",
-                        "required": true,
-                        "description": "Payment intent public key",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "example": "pi_01jd5x7k3m9p2q4r6s8t0v"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Payment intent details",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/PaymentIntentResource"
-                                        }
-                                    },
-                                    "required": [
-                                        "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Payment not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/payments/{paymentKey}/confirm": {
-            "post": {
-                "operationId": "payment.confirm",
-                "description": "Confirms a payment intent with the provided payment method and payment method data.",
-                "summary": "Confirm a payment intent",
-                "tags": [
-                    "Payments"
-                ],
-                "parameters": [
-                    {
-                        "name": "paymentKey",
-                        "in": "path",
-                        "required": true,
-                        "description": "Payment intent public key",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "example": "pi_01jd5x7k3m9p2q4r6s8t0v"
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ConfirmPaymentRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Payment intent confirmed",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/PaymentIntentResource"
-                                        }
-                                    },
-                                    "required": [
-                                        "data"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
-                    "404": {
-                        "description": "Payment not found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -437,6 +357,78 @@
                     },
                     "404": {
                         "description": "Payment not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payments/{paymentKey}/sync": {
+            "post": {
+                "operationId": "payment.sync",
+                "description": "Polls the PSP for the current payment status and updates the local record.\nOnly payments in `requires_customer_action` or `processing` state can be synced.",
+                "summary": "Sync a payment intent with the PSP",
+                "tags": [
+                    "Payments"
+                ],
+                "parameters": [
+                    {
+                        "name": "paymentKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Payment intent public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "pi_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment synced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PaymentIntentResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Payment not in syncable state",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Payment not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Connector unavailable",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -679,6 +671,267 @@
                     },
                     "404": {
                         "description": "Customer not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payments/{paymentKey}": {
+            "get": {
+                "operationId": "v1.public.payments.show",
+                "description": "Retrieves limited payment details for the payment widget. When called with a secret key,\nreturns the full payment intent resource instead.",
+                "summary": "Get a payment intent (public)",
+                "tags": [
+                    "Payment Widget"
+                ],
+                "parameters": [
+                    {
+                        "name": "paymentKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Payment intent public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "pi_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment intent details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PublicPaymentIntentResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PaymentIntentResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid or missing client_secret",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Payment not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payments/{paymentKey}/confirm": {
+            "post": {
+                "operationId": "v1.public.payments.confirm",
+                "description": "Confirms a payment with the selected payment method. Typically triggers a redirect flow\nfor customer authentication. When called with a secret key, returns the full resource.",
+                "summary": "Confirm a payment intent (public)",
+                "tags": [
+                    "Payment Widget"
+                ],
+                "parameters": [
+                    {
+                        "name": "paymentKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Payment intent public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "pi_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "payment_method": {
+                                        "type": "string"
+                                    },
+                                    "payment_method_data": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "connector": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "payment_method"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Payment intent confirmed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PublicPaymentIntentResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PaymentIntentResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "description": "Invalid or missing client_secret / expired session",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/payments/{paymentKey}/payment-methods": {
+            "get": {
+                "operationId": "v1.public.payments.payment-methods",
+                "description": "Returns the unique payment methods enabled across active connectors for the payment's\nbusiness profile. Used by the widget to render payment method options.",
+                "summary": "List available payment methods",
+                "tags": [
+                    "Payment Widget"
+                ],
+                "parameters": [
+                    {
+                        "name": "paymentKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Payment intent public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "pi_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Available payment methods",
+                        "content": {
+                            "application/vnd.api+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "type": {
+                                                        "type": "string",
+                                                        "const": "payment_methods"
+                                                    },
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "attributes": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "type",
+                                                    "id",
+                                                    "attributes"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid or missing client_secret",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Payment not found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1045,10 +1298,66 @@
         "/v1/dashboard/analytics/overview": {
             "get": {
                 "operationId": "analytics.overview",
-                "description": "Aggregated payment and refund totals for the selected period.\u26a0\ufe0f Cannot generate request documentation: Unknown named parameter $enum",
+                "description": "Aggregated payment and refund totals for the selected period.",
                 "summary": "Get analytics overview",
                 "tags": [
                     "Dashboard Analytics"
+                ],
+                "parameters": [
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "7d",
+                                "30d",
+                                "90d"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "filter[period]",
+                        "in": "query",
+                        "description": "Preset period (7d, 30d, 90d)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[from]",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "2026-01-01"
+                    },
+                    {
+                        "name": "filter[to]",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "2026-03-18"
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -1543,10 +1852,115 @@
         "/v1/dashboard/payments": {
             "get": {
                 "operationId": "dashboardPayment.index",
-                "description": "Retrieve a paginated list of payments for the current merchant.\nSupports filtering by status, currency, connector, amount range, date range, and free-text search.\u26a0\ufe0f Cannot generate request documentation: Unknown named parameter $enum",
+                "description": "Retrieve a paginated list of payments for the current merchant.\nSupports filtering by status, currency, connector, amount range, date range, and free-text search.",
                 "summary": "List payments",
                 "tags": [
                     "Dashboard Payments"
+                ],
+                "parameters": [
+                    {
+                        "name": "filter[status]",
+                        "in": "query",
+                        "description": "Filter by payment status",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "succeeded"
+                    },
+                    {
+                        "name": "filter[currency]",
+                        "in": "query",
+                        "description": "Filter by currency (ISO 4217)",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "USD"
+                    },
+                    {
+                        "name": "filter[connector]",
+                        "in": "query",
+                        "description": "Filter by connector name",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[capture_method]",
+                        "in": "query",
+                        "description": "Filter by capture method (automatic, manual)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[amount_min]",
+                        "in": "query",
+                        "description": "Minimum amount filter",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "filter[amount_max]",
+                        "in": "query",
+                        "description": "Maximum amount filter",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "filter[from]",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "2026-01-01"
+                    },
+                    {
+                        "name": "filter[to]",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "2026-03-18"
+                    },
+                    {
+                        "name": "filter[search]",
+                        "in": "query",
+                        "description": "Free-text search by key, description, error message",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Sort field (- for DESC)",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "-created_at"
+                    },
+                    {
+                        "name": "page[size]",
+                        "in": "query",
+                        "description": "Items per page (max 100)",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 20
+                    },
+                    {
+                        "name": "page[number]",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -2241,21 +2655,89 @@
                 "tags": [
                     "Dashboard Customers"
                 ],
+                "parameters": [
+                    {
+                        "name": "page[size]",
+                        "in": "query",
+                        "description": "Items per page (max 100)",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 20
+                    },
+                    {
+                        "name": "page[number]",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Customer list",
+                        "description": "Paginated customer list",
                         "content": {
                             "application/vnd.api+json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "array",
-                                            "items": {}
+                                            "type": "object",
+                                            "additionalProperties": {}
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": "string"
+                                                },
+                                                "last": {
+                                                    "type": "string"
+                                                },
+                                                "prev": {
+                                                    "type": "string"
+                                                },
+                                                "next": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "string"
+                                                },
+                                                "per_page": {
+                                                    "type": "string"
+                                                },
+                                                "total": {
+                                                    "type": "string"
+                                                },
+                                                "last_page": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "per_page",
+                                                "total",
+                                                "last_page"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "links",
+                                        "meta"
                                     ]
                                 }
                             },
@@ -2341,6 +2823,14 @@
                 ],
                 "parameters": [
                     {
+                        "name": "include",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "default": ""
+                        }
+                    },
+                    {
                         "name": "customerKey",
                         "in": "path",
                         "required": true,
@@ -2355,17 +2845,378 @@
                     "200": {
                         "description": "Customer details",
                         "content": {
-                            "application/json": {
+                            "application/vnd.api+json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/CustomerResource"
+                                            "type": "object",
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "const": "customers"
+                                                },
+                                                "id": {
+                                                    "type": "string"
+                                                },
+                                                "attributes": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "name": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "email": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "phone": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "phone_country_code": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "description": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "metadata": {
+                                                            "type": [
+                                                                "array",
+                                                                "null"
+                                                            ],
+                                                            "items": {}
+                                                        },
+                                                        "default_payment_method_id": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "created_at": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "name",
+                                                        "email",
+                                                        "phone",
+                                                        "phone_country_code",
+                                                        "description",
+                                                        "metadata",
+                                                        "default_payment_method_id",
+                                                        "created_at"
+                                                    ]
+                                                },
+                                                "relationships": {
+                                                    "type": "string"
+                                                },
+                                                "links": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "self": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "self"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "type",
+                                                "id",
+                                                "attributes",
+                                                "relationships",
+                                                "links"
+                                            ]
+                                        },
+                                        "included": {
+                                            "type": "array",
+                                            "items": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "type": {
+                                                                "type": "string",
+                                                                "const": "payment-methods"
+                                                            },
+                                                            "id": {
+                                                                "type": "string"
+                                                            },
+                                                            "attributes": {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "type": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "card_last4": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "card_brand": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "card_exp_month": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "card_exp_year": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "card_holder_name": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "connector_name": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "is_default": {
+                                                                        "type": "boolean"
+                                                                    },
+                                                                    "metadata": {
+                                                                        "type": [
+                                                                            "array",
+                                                                            "null"
+                                                                        ],
+                                                                        "items": {}
+                                                                    },
+                                                                    "created_at": {
+                                                                        "type": "string"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "type",
+                                                                    "card_last4",
+                                                                    "card_brand",
+                                                                    "card_exp_month",
+                                                                    "card_exp_year",
+                                                                    "card_holder_name",
+                                                                    "connector_name",
+                                                                    "is_default",
+                                                                    "metadata",
+                                                                    "created_at"
+                                                                ]
+                                                            },
+                                                            "relationships": {
+                                                                "type": "string"
+                                                            },
+                                                            "links": {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "self": {
+                                                                        "type": "string"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "self"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "type",
+                                                            "id",
+                                                            "attributes",
+                                                            "relationships",
+                                                            "links"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "type": {
+                                                                "type": "string",
+                                                                "const": "payments"
+                                                            },
+                                                            "id": {
+                                                                "type": "string"
+                                                            },
+                                                            "attributes": {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "status": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "amount": {
+                                                                        "type": "integer"
+                                                                    },
+                                                                    "net_amount": {
+                                                                        "type": [
+                                                                            "integer",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "amount_capturable": {
+                                                                        "type": [
+                                                                            "integer",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "amount_received": {
+                                                                        "type": [
+                                                                            "integer",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "currency": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "client_secret": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "capture_method": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "authentication_type": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "customer_id": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "description": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "return_url": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "metadata": {
+                                                                        "type": [
+                                                                            "array",
+                                                                            "null"
+                                                                        ],
+                                                                        "items": {}
+                                                                    },
+                                                                    "connector": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "attempt_count": {
+                                                                        "type": "integer"
+                                                                    },
+                                                                    "error_code": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "error_message": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "cancellation_reason": {
+                                                                        "type": [
+                                                                            "string",
+                                                                            "null"
+                                                                        ]
+                                                                    },
+                                                                    "session_expiry": {
+                                                                        "type": "integer"
+                                                                    },
+                                                                    "created_at": {
+                                                                        "type": "string"
+                                                                    },
+                                                                    "expires_on": {
+                                                                        "type": "string"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "status",
+                                                                    "amount",
+                                                                    "net_amount",
+                                                                    "amount_capturable",
+                                                                    "amount_received",
+                                                                    "currency",
+                                                                    "client_secret",
+                                                                    "capture_method",
+                                                                    "authentication_type",
+                                                                    "customer_id",
+                                                                    "description",
+                                                                    "return_url",
+                                                                    "metadata",
+                                                                    "connector",
+                                                                    "attempt_count",
+                                                                    "error_code",
+                                                                    "error_message",
+                                                                    "cancellation_reason",
+                                                                    "session_expiry",
+                                                                    "created_at",
+                                                                    "expires_on"
+                                                                ]
+                                                            },
+                                                            "relationships": {
+                                                                "type": "string"
+                                                            },
+                                                            "links": {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "self": {
+                                                                        "type": "string"
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "self"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "type",
+                                                            "id",
+                                                            "attributes",
+                                                            "relationships",
+                                                            "links"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "included"
                                     ]
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
                                 }
                             }
                         }
@@ -2889,6 +3740,76 @@
                 }
             }
         },
+        "/v1/dashboard/connectors/{connectorKey}/test": {
+            "post": {
+                "operationId": "dashboardConnector.testConnection",
+                "description": "Verify that the connector credentials are valid by testing the connection to the PSP.",
+                "summary": "Test connector connection",
+                "tags": [
+                    "Dashboard Connectors"
+                ],
+                "parameters": [
+                    {
+                        "name": "connectorKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Connector public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "mca_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Connection test result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "success": {
+                                                    "type": "boolean"
+                                                },
+                                                "message": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "success",
+                                                "message"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "description": "Connector not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/merchants/{merchantKey}/connectors": {
             "post": {
                 "operationId": "connector.store",
@@ -3194,21 +4115,89 @@
                 "tags": [
                     "Dashboard Routing Rules"
                 ],
+                "parameters": [
+                    {
+                        "name": "page[size]",
+                        "in": "query",
+                        "description": "Items per page (max 100)",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 20
+                    },
+                    {
+                        "name": "page[number]",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "Routing rule list",
+                        "description": "Paginated routing rule list",
                         "content": {
                             "application/vnd.api+json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "array",
-                                            "items": {}
+                                            "type": "object",
+                                            "additionalProperties": {}
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": "string"
+                                                },
+                                                "last": {
+                                                    "type": "string"
+                                                },
+                                                "prev": {
+                                                    "type": "string"
+                                                },
+                                                "next": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "string"
+                                                },
+                                                "per_page": {
+                                                    "type": "string"
+                                                },
+                                                "total": {
+                                                    "type": "string"
+                                                },
+                                                "last_page": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "per_page",
+                                                "total",
+                                                "last_page"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "links",
+                                        "meta"
                                     ]
                                 }
                             },
@@ -3764,21 +4753,89 @@
                 "tags": [
                     "Dashboard API Keys"
                 ],
+                "parameters": [
+                    {
+                        "name": "page[size]",
+                        "in": "query",
+                        "description": "Items per page (max 100)",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 20
+                    },
+                    {
+                        "name": "page[number]",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "API key list",
+                        "description": "Paginated API key list",
                         "content": {
                             "application/vnd.api+json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "array",
-                                            "items": {}
+                                            "type": "object",
+                                            "additionalProperties": {}
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": "string"
+                                                },
+                                                "last": {
+                                                    "type": "string"
+                                                },
+                                                "prev": {
+                                                    "type": "string"
+                                                },
+                                                "next": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "string"
+                                                },
+                                                "per_page": {
+                                                    "type": "string"
+                                                },
+                                                "total": {
+                                                    "type": "string"
+                                                },
+                                                "last_page": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "per_page",
+                                                "total",
+                                                "last_page"
+                                            ]
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "links",
+                                        "meta"
                                     ]
                                 }
                             },
@@ -3824,10 +4881,14 @@
                                     "properties": {
                                         "data": {
                                             "$ref": "#/components/schemas/ApiKeyResource"
+                                        },
+                                        "api_key": {
+                                            "type": "string"
                                         }
                                     },
                                     "required": [
-                                        "data"
+                                        "data",
+                                        "api_key"
                                     ]
                                 }
                             }
@@ -3907,10 +4968,46 @@
         "/v1/dashboard/webhook-events": {
             "get": {
                 "operationId": "dashboardWebhookEvent.index",
-                "description": "Retrieve webhook events for the current merchant with optional filters.\u26a0\ufe0f Cannot generate request documentation: Unknown named parameter $enum",
+                "description": "Retrieve webhook events for the current merchant with optional filters.",
                 "summary": "List webhook events",
                 "tags": [
                     "Dashboard Webhook Events"
+                ],
+                "parameters": [
+                    {
+                        "name": "filter[status]",
+                        "in": "query",
+                        "description": "Filter by delivery status (delivered, failed, pending)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[event_type]",
+                        "in": "query",
+                        "description": "Filter by event type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page[size]",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 20
+                    },
+                    {
+                        "name": "page[number]",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -4145,10 +5242,45 @@
         "/v1/dashboard/event-logs": {
             "get": {
                 "operationId": "eventLog.index",
-                "description": "Combined timeline of webhook deliveries and payment status changes.\u26a0\ufe0f Cannot generate request documentation: Unknown named parameter $enum",
+                "description": "Combined timeline of webhook deliveries and payment status changes.",
                 "summary": "List event logs",
                 "tags": [
                     "Dashboard Event Logs"
+                ],
+                "parameters": [
+                    {
+                        "name": "filter[type]",
+                        "in": "query",
+                        "description": "Event type filter (webhook, status_change)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[from]",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[to]",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page[size]",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 20
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -4269,6 +5401,60 @@
                         "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
+            },
+            "post": {
+                "operationId": "dashboardOrganization.store",
+                "description": "Create a new organization.",
+                "summary": "Create organization",
+                "tags": [
+                    "Dashboard Organizations"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreDashboardOrganizationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`OrganizationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/OrganizationResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "201": {
+                        "description": "Organization created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/v1/dashboard/organizations/{orgKey}": {
@@ -4309,6 +5495,123 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "description": "Organization not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "dashboardOrganization.update",
+                "description": "Update an existing organization.",
+                "summary": "Update organization",
+                "tags": [
+                    "Dashboard Organizations"
+                ],
+                "parameters": [
+                    {
+                        "name": "orgKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Organization public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "org_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateDashboardOrganizationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Organization updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/OrganizationResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "Organization not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "dashboardOrganization.destroy",
+                "description": "Delete an organization and all its merchants, profiles, and related data.",
+                "summary": "Delete organization",
+                "tags": [
+                    "Dashboard Organizations"
+                ],
+                "parameters": [
+                    {
+                        "name": "orgKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Organization public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "org_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Organization deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
@@ -4658,6 +5961,319 @@
                         }
                     }
                 }
+            },
+            "delete": {
+                "operationId": "dashboardBusinessProfile.destroy",
+                "description": "Delete a business profile.",
+                "summary": "Delete business profile",
+                "tags": [
+                    "Dashboard Business Profiles"
+                ],
+                "parameters": [
+                    {
+                        "name": "profileKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Business profile public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "bp_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Profile deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "description": "Profile not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/dashboard/merchants": {
+            "get": {
+                "operationId": "dashboardMerchant.index",
+                "description": "Retrieve all merchant accounts accessible to the current user.",
+                "summary": "List merchants",
+                "tags": [
+                    "Dashboard Merchants"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Merchant list",
+                        "content": {
+                            "application/vnd.api+json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {}
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            },
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "dashboardMerchant.store",
+                "description": "Create a new merchant account under an organization.",
+                "summary": "Create merchant",
+                "tags": [
+                    "Dashboard Merchants"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreDashboardMerchantRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`MerchantAccountResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/MerchantAccountResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "201": {
+                        "description": "Merchant created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/dashboard/merchants/{merchantKey}": {
+            "get": {
+                "operationId": "dashboardMerchant.show",
+                "description": "Retrieve a single merchant account.",
+                "summary": "Get merchant",
+                "tags": [
+                    "Dashboard Merchants"
+                ],
+                "parameters": [
+                    {
+                        "name": "merchantKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Merchant public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "merchant_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Merchant details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/MerchantAccountResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "description": "Merchant not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "dashboardMerchant.update",
+                "description": "Update an existing merchant account.",
+                "summary": "Update merchant",
+                "tags": [
+                    "Dashboard Merchants"
+                ],
+                "parameters": [
+                    {
+                        "name": "merchantKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Merchant public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "merchant_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateDashboardMerchantRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Merchant updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/MerchantAccountResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "Merchant not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "dashboardMerchant.destroy",
+                "description": "Delete a merchant account and all its profiles, API keys, and connectors.",
+                "summary": "Delete merchant",
+                "tags": [
+                    "Dashboard Merchants"
+                ],
+                "parameters": [
+                    {
+                        "name": "merchantKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Merchant public key",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "example": "merchant_01jd5x7k3m9p2q4r6s8t0v"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Merchant deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "description": "Merchant not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/v1/webhooks/{merchantKey}/{mcaKey}": {
@@ -4705,10 +6321,61 @@
         "/v1/dashboard/audit-log": {
             "get": {
                 "operationId": "auditLog.index",
-                "description": "Paginated list of audit log entries with optional filters.\u26a0\ufe0f Cannot generate request documentation: Unknown named parameter $enum",
+                "description": "Paginated list of audit log entries with optional filters.",
                 "summary": "List audit log entries",
                 "tags": [
                     "Dashboard Audit Log"
+                ],
+                "parameters": [
+                    {
+                        "name": "filter[causer_id]",
+                        "in": "query",
+                        "description": "Filter by user ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "filter[event]",
+                        "in": "query",
+                        "description": "Filter by event type (created, updated, deleted)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[subject_type]",
+                        "in": "query",
+                        "description": "Filter by resource type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[from]",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[to]",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page[size]",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 20
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -4882,10 +6549,37 @@
         "/v1/dashboard/notifications": {
             "get": {
                 "operationId": "notification.index",
-                "description": "Retrieve notifications for the authenticated user.\u26a0\ufe0f Cannot generate request documentation: Unknown named parameter $enum",
+                "description": "Retrieve notifications for the authenticated user.",
                 "summary": "List notifications",
                 "tags": [
                     "Dashboard Notifications"
+                ],
+                "parameters": [
+                    {
+                        "name": "filter[type]",
+                        "in": "query",
+                        "description": "Filter by notification type",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[read]",
+                        "in": "query",
+                        "description": "Filter by read status (true, false)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page[size]",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 20
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -5379,10 +7073,29 @@
         "/v1/dashboard/connectors/{connectorKey}/health": {
             "get": {
                 "operationId": "connectorHealth.health",
-                "description": "Current health metrics for a connector based on recent payment attempts.\u26a0\ufe0f Cannot generate request documentation: Unknown named parameter $enum",
+                "description": "Current health metrics for a connector based on recent payment attempts.",
                 "summary": "Get connector health snapshot",
                 "tags": [
                     "Dashboard Connector Health"
+                ],
+                "parameters": [
+                    {
+                        "name": "connectorKey",
+                        "in": "path",
+                        "required": true,
+                        "description": "Connector public key",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "filter[period]",
+                        "in": "query",
+                        "description": "Time period (24h, 7d, 30d)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -5899,8 +7612,8 @@
                         "const": "1"
                     },
                     "attributes": {
-                        "type": "array",
-                        "items": {}
+                        "type": "object",
+                        "additionalProperties": {}
                     },
                     "relationships": {
                         "type": "string"
@@ -5938,9 +7651,21 @@
                         "type": "object",
                         "properties": {
                             "name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "type": {
                                 "type": "string"
                             },
                             "key_prefix": {
+                                "type": "string"
+                            },
+                            "expires_at": {
+                                "type": "string"
+                            },
+                            "revoked_at": {
                                 "type": "string"
                             },
                             "created_at": {
@@ -5952,7 +7677,10 @@
                         },
                         "required": [
                             "name",
+                            "type",
                             "key_prefix",
+                            "expires_at",
+                            "revoked_at",
                             "created_at",
                             "api_key"
                         ]
@@ -5980,6 +7708,15 @@
                     "links"
                 ],
                 "title": "ApiKeyResource"
+            },
+            "ApiKeyType": {
+                "type": "string",
+                "enum": [
+                    "admin",
+                    "secret",
+                    "publishable"
+                ],
+                "title": "ApiKeyType"
             },
             "AppNotificationResource": {
                 "type": "object",
@@ -6076,10 +7813,42 @@
                                 "type": "string"
                             },
                             "webhook_url": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "payment_response_hash_key": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "connectors_count": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "integer",
+                                        "enum": [
+                                            0
+                                        ]
+                                    }
+                                ]
+                            },
+                            "routing_rules_count": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "integer",
+                                        "enum": [
+                                            0
+                                        ]
+                                    }
+                                ]
                             },
                             "created_at": {
                                 "type": "string"
@@ -6089,6 +7858,8 @@
                             "merchant_id",
                             "webhook_url",
                             "payment_response_hash_key",
+                            "connectors_count",
+                            "routing_rules_count",
                             "created_at"
                         ]
                     },
@@ -6128,31 +7899,6 @@
                     "amount_to_capture"
                 ],
                 "title": "CapturePaymentRequest"
-            },
-            "ConfirmPaymentRequest": {
-                "type": "object",
-                "properties": {
-                    "payment_method": {
-                        "type": "string"
-                    },
-                    "connector": {
-                        "type": "string"
-                    },
-                    "payment_method_id": {
-                        "type": "string"
-                    },
-                    "payment_method_data": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "required": [
-                    "payment_method",
-                    "payment_method_data"
-                ],
-                "title": "ConfirmPaymentRequest"
             },
             "ConnectorHealthResource": {
                 "type": "object",
@@ -6240,13 +7986,26 @@
                             "connector_type": {
                                 "type": "string"
                             },
+                            "connector_account_details": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            },
                             "payment_methods_enabled": {
-                                "type": "string"
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {}
                             },
                             "test_mode": {
-                                "type": "string"
+                                "type": "boolean"
                             },
                             "disabled": {
+                                "type": "boolean"
+                            },
+                            "webhook_url": {
                                 "type": "string"
                             },
                             "created_at": {
@@ -6256,9 +8015,11 @@
                         "required": [
                             "connector_name",
                             "connector_type",
+                            "connector_account_details",
                             "payment_methods_enabled",
                             "test_mode",
                             "disabled",
+                            "webhook_url",
                             "created_at"
                         ]
                     },
@@ -6300,25 +8061,47 @@
                         "type": "object",
                         "properties": {
                             "name": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "email": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "phone": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "phone_country_code": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "description": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "metadata": {
-                                "type": "string"
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {}
                             },
                             "default_payment_method_id": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "created_at": {
                                 "type": "string"
@@ -6376,10 +8159,16 @@
                                 "type": "string"
                             },
                             "file_path": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "text_content": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "created_at": {
                                 "type": "string"
@@ -6525,6 +8314,32 @@
                             "organization_id": {
                                 "type": "string"
                             },
+                            "profiles_count": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "integer",
+                                        "enum": [
+                                            0
+                                        ]
+                                    }
+                                ]
+                            },
+                            "connectors_count": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "integer",
+                                        "enum": [
+                                            0
+                                        ]
+                                    }
+                                ]
+                            },
                             "created_at": {
                                 "type": "string"
                             }
@@ -6533,6 +8348,8 @@
                             "name",
                             "publishable_key",
                             "organization_id",
+                            "profiles_count",
+                            "connectors_count",
                             "created_at"
                         ]
                     },
@@ -6576,12 +8393,26 @@
                             "name": {
                                 "type": "string"
                             },
+                            "merchants_count": {
+                                "anyOf": [
+                                    {
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "integer",
+                                        "enum": [
+                                            0
+                                        ]
+                                    }
+                                ]
+                            },
                             "created_at": {
                                 "type": "string"
                             }
                         },
                         "required": [
                             "name",
+                            "merchants_count",
                             "created_at"
                         ]
                     },
@@ -6626,16 +8457,25 @@
                                 "type": "string"
                             },
                             "amount": {
-                                "type": "string"
+                                "type": "integer"
                             },
                             "net_amount": {
-                                "type": "string"
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
                             },
                             "amount_capturable": {
-                                "type": "string"
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
                             },
                             "amount_received": {
-                                "type": "string"
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
                             },
                             "currency": {
                                 "type": "string"
@@ -6650,34 +8490,59 @@
                                 "type": "string"
                             },
                             "customer_id": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "description": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "return_url": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "metadata": {
-                                "type": "string"
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {}
                             },
                             "connector": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "attempt_count": {
-                                "type": "string"
+                                "type": "integer"
                             },
                             "error_code": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "error_message": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "cancellation_reason": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "session_expiry": {
-                                "type": "string"
+                                "type": "integer"
                             },
                             "created_at": {
                                 "type": "string"
@@ -6751,28 +8616,47 @@
                                 "type": "string"
                             },
                             "card_last4": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "card_brand": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "card_exp_month": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "card_exp_year": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "card_holder_name": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "connector_name": {
                                 "type": "string"
                             },
                             "is_default": {
-                                "type": "string"
+                                "type": "boolean"
                             },
                             "metadata": {
-                                "type": "string"
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {}
                             },
                             "created_at": {
                                 "type": "string"
@@ -6815,6 +8699,74 @@
                 ],
                 "title": "PaymentMethodResource"
             },
+            "PublicPaymentIntentResource": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "const": "payments"
+                    },
+                    "id": {
+                        "type": "string"
+                    },
+                    "attributes": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string"
+                            },
+                            "amount": {
+                                "type": "integer"
+                            },
+                            "currency": {
+                                "type": "string"
+                            },
+                            "description": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "metadata": {
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {}
+                            }
+                        },
+                        "required": [
+                            "status",
+                            "amount",
+                            "currency",
+                            "description",
+                            "metadata"
+                        ]
+                    },
+                    "relationships": {
+                        "type": "string"
+                    },
+                    "links": {
+                        "type": "object",
+                        "properties": {
+                            "self": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "self"
+                        ]
+                    }
+                },
+                "required": [
+                    "type",
+                    "id",
+                    "attributes",
+                    "relationships",
+                    "links"
+                ],
+                "title": "PublicPaymentIntentResource"
+            },
             "RefundResource": {
                 "type": "object",
                 "properties": {
@@ -6832,7 +8784,7 @@
                                 "type": "string"
                             },
                             "amount": {
-                                "type": "string"
+                                "type": "integer"
                             },
                             "currency": {
                                 "type": "string"
@@ -6841,19 +8793,35 @@
                                 "type": "string"
                             },
                             "reason": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "connector": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "error_code": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "error_message": {
-                                "type": "string"
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "metadata": {
-                                "type": "string"
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {}
                             },
                             "created_at": {
                                 "type": "string"
@@ -6910,19 +8878,26 @@
                         "type": "object",
                         "properties": {
                             "type": {
-                                "type": "string"
+                                "$ref": "#/components/schemas/RoutingRuleType"
                             },
                             "name": {
                                 "type": "string"
                             },
                             "rules": {
-                                "type": "string"
+                                "type": "array",
+                                "items": {}
                             },
                             "active": {
-                                "type": "string"
+                                "type": "boolean"
                             },
                             "priority": {
-                                "type": "string"
+                                "type": "integer"
+                            },
+                            "business_profile_id": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
                             },
                             "created_at": {
                                 "type": "string"
@@ -6934,6 +8909,7 @@
                             "rules",
                             "active",
                             "priority",
+                            "business_profile_id",
                             "created_at"
                         ]
                     },
@@ -7158,6 +9134,9 @@
                     "name": {
                         "type": "string",
                         "maxLength": 255
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/ApiKeyType"
                     }
                 },
                 "required": [
@@ -7243,6 +9222,36 @@
                     }
                 },
                 "title": "StoreDashboardCustomerRequest"
+            },
+            "StoreDashboardMerchantRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "organization_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "organization_id"
+                ],
+                "title": "StoreDashboardMerchantRequest"
+            },
+            "StoreDashboardOrganizationRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "title": "StoreDashboardOrganizationRequest"
             },
             "StoreDashboardRoutingRuleRequest": {
                 "type": "object",
@@ -7568,6 +9577,13 @@
                         "items": {
                             "type": "string"
                         }
+                    },
+                    "connector_name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string",
+                        "maxLength": 500
                     }
                 },
                 "required": [
@@ -7766,6 +9782,32 @@
                 },
                 "title": "UpdateDashboardCustomerRequest"
             },
+            "UpdateDashboardMerchantRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "title": "UpdateDashboardMerchantRequest"
+            },
+            "UpdateDashboardOrganizationRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "title": "UpdateDashboardOrganizationRequest"
+            },
             "UpdateDashboardRoutingRuleRequest": {
                 "type": "object",
                 "properties": {
@@ -7877,58 +9919,6 @@
                 ],
                 "title": "UpdateUserRoleRequest"
             },
-            "User": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "email": {
-                        "type": "string"
-                    },
-                    "email_verified_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "created_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "updated_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "two_factor_confirmed_at": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "format": "date-time"
-                    }
-                },
-                "required": [
-                    "id",
-                    "name",
-                    "email",
-                    "email_verified_at",
-                    "created_at",
-                    "updated_at",
-                    "two_factor_confirmed_at"
-                ],
-                "title": "User"
-            },
             "UserPreferenceResource": {
                 "type": "object",
                 "properties": {
@@ -8025,14 +10015,24 @@
                             "user_id": {
                                 "type": "integer"
                             },
-                            "user_name": {
+                            "name": {
                                 "type": "string"
                             },
-                            "user_email": {
+                            "email": {
                                 "type": "string"
                             },
                             "role": {
                                 "type": "string"
+                            },
+                            "two_factor_enabled": {
+                                "type": "boolean"
+                            },
+                            "last_login_at": {
+                                "type": "null"
+                            },
+                            "status": {
+                                "type": "string",
+                                "const": "active"
                             },
                             "created_at": {
                                 "type": "string"
@@ -8040,9 +10040,12 @@
                         },
                         "required": [
                             "user_id",
-                            "user_name",
-                            "user_email",
+                            "name",
+                            "email",
                             "role",
+                            "two_factor_enabled",
+                            "last_login_at",
+                            "status",
                             "created_at"
                         ]
                     },
@@ -8146,6 +10149,7 @@
             "tags": [
                 "Authentication",
                 "Payments",
+                "Payment Widget",
                 "Customers",
                 "Refunds",
                 "Payment Methods",
@@ -8160,6 +10164,7 @@
                 "Dashboard Test Payments",
                 "Dashboard Event Logs",
                 "Dashboard Organizations",
+                "Dashboard Merchants",
                 "Dashboard Business Profiles",
                 "Webhooks",
                 "Dashboard Audit Log",
