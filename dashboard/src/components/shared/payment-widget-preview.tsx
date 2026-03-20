@@ -21,9 +21,11 @@ import { extractAttributes } from '@/api/types'
 function WidgetMount({
   clientSecret,
   publishableKey,
+  locale,
 }: {
   clientSecret: string
   publishableKey: string
+  locale: string
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -37,7 +39,7 @@ function WidgetMount({
       const { loadPayswitch } = await import('@payswitch/js')
       if (destroyed) return
       const ps = await loadPayswitch(publishableKey, { customBackendUrl: '' })
-      const widgets = ps.widgets({ clientSecret })
+      const widgets = ps.widgets({ clientSecret, locale })
       const w = widgets.create('payment')
       widget = w
       w.mount(containerRef.current!)
@@ -48,7 +50,7 @@ function WidgetMount({
       destroyed = true
       widget?.destroy()
     }
-  }, [clientSecret, publishableKey])
+  }, [clientSecret, publishableKey, locale])
 
   return <div ref={containerRef} />
 }
@@ -66,7 +68,7 @@ export function PaymentWidgetPreview({
   title,
   description,
 }: PaymentWidgetPreviewProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const merchantKey = useContextStore((s) => s.currentMerchantKey)
   const { data: merchant } = useMerchantDetail(merchantKey ?? '')
   const [clientSecret, setClientSecret] = useState<string | null>(null)
@@ -153,6 +155,7 @@ export function PaymentWidgetPreview({
           <WidgetMount
             clientSecret={clientSecret}
             publishableKey={publishableKey}
+            locale={i18n.language}
           />
         )}
       </CardContent>

@@ -401,7 +401,9 @@
     "setupStripe": "1. Open Dashboard → Developers → Webhooks in Stripe\n2. Click «Add endpoint»\n3. Paste the Webhook URL above\n4. Select events: payment_intent.succeeded, payment_intent.payment_failed, payment_intent.canceled\n5. Copy the Signing Secret and paste into the API Secret field",
     "setupCloudpayments": "1. Open CloudPayments Dashboard → Site Settings\n2. In «Notifications» (Pay, Fail, Confirm) set the Webhook URL\n3. Format: CloudPayments\n4. HTTP method: POST\n5. Encoding: UTF-8",
     "setupTest": "Test connector requires no additional setup.",
-    "credentialsSaved": "Credentials saved. Leave fields empty to keep current values."
+    "credentialsSaved": "Credentials saved. Leave fields empty to keep current values.",
+    "widgetPreview": "Widget Preview",
+    "widgetPreviewDesc": "Test the payment widget with this connector"
   },
   "connectorHealth": {
     "uptime": "Uptime",
@@ -735,7 +737,9 @@
     "connectorsDesc": "Connector management is available on a separate page.",
     "routingSection": "Routing rules",
     "routingLink": "Go to routing",
-    "routingDesc": "Routing rule management is available on a separate page."
+    "routingDesc": "Routing rule management is available on a separate page.",
+    "widgetPreview": "Payment Widget",
+    "widgetPreviewDesc": "Preview the payment widget with all connectors for this profile"
   },
   "auditLog": {
     "title": "Audit Log",
@@ -965,5 +969,11 @@
     "viewDashboard": "View in Dashboard",
     "loading": "Loading payment...",
     "notFound": "Payment not found"
+  },
+  "widget": {
+    "preview": "Payment Widget Preview",
+    "reset": "Reset",
+    "createTestPayment": "Create a test payment to preview the checkout widget",
+    "launchPreview": "Launch Preview"
   }
 }
