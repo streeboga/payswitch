@@ -132,6 +132,7 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
 
     // Test payments (Story 14-2)
     Route::post('/test-payments', [TestPaymentController::class, 'store']);
+    Route::post('/test-payments/create-only', [TestPaymentController::class, 'createOnly']);
 
     // Event logs (Story 14-3)
     Route::get('/event-logs', [EventLogController::class, 'index']);

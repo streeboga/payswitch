@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\DataTransferObjects\Payment\CreatePaymentData;
 use App\Http\Requests\Dashboard\StoreTestPaymentRequest;
 use App\Http\Resources\PaymentIntentResource;
+use App\Services\PaymentService;
 use App\Services\TestPaymentService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 #[Group('Dashboard Test Payments', description: 'Create test payments for development', weight: 17)]
@@ -18,6 +21,7 @@ final class TestPaymentController extends Controller
 {
     public function __construct(
         private readonly TestPaymentService $testPaymentService,
+        private readonly PaymentService $paymentService,
     ) {}
 
     /**
@@ -38,6 +42,38 @@ final class TestPaymentController extends Controller
             $validated,
             $merchantId,
         );
+
+        return (new PaymentIntentResource($payment))
+            ->withStatus(201)
+            ->toResponse($request);
+    }
+
+    /**
+     * Create payment without confirming
+     *
+     * Creates a payment intent and returns client_secret for widget preview.
+     * Does not confirm or charge — the widget handles the checkout flow.
+     */
+    #[Response(201, description: 'Payment created')]
+    #[Response(422, description: 'Validation error')]
+    public function createOnly(Request $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('test-payment.create', [$merchantId]);
+
+        $request->validate([
+            'amount' => ['required', 'integer', 'min:100'],
+            'currency' => ['required', 'string', 'size:3'],
+            'connector_name' => ['sometimes', 'string'],
+        ]);
+
+        $dto = CreatePaymentData::from([
+            'amount' => $request->integer('amount'),
+            'currency' => $request->string('currency')->toString(),
+            'return_url' => url('/'),
+        ]);
+
+        $payment = $this->paymentService->create($dto, $merchantId);
 
         return (new PaymentIntentResource($payment))
             ->withStatus(201)

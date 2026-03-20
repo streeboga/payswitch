@@ -24,13 +24,23 @@ class PaymentWidgetImpl implements PaymentWidget {
   private listeners: Map<WidgetEvent, Set<WidgetEventHandler>> = new Map();
   private selectedMethod: string | null = null;
   private methods: PaymentMethodInfo[] = [];
+  private payment: PaymentIntentResponse | null = null;
+  private confirming = false;
+  private result: { status: string; redirectUrl?: string; error?: string } | null = null;
   private destroyed = false;
+  private parentInstance: PayswitchInstance | null = null;
+  private parentWidgets: WidgetCollection | null = null;
 
   constructor(
     private api: PaymentApi,
     private clientSecret: string,
     private _options?: Record<string, unknown>,
   ) {}
+
+  setParent(instance: PayswitchInstance, widgets: WidgetCollection): void {
+    this.parentInstance = instance;
+    this.parentWidgets = widgets;
+  }
 
   mount(selector: string | HTMLElement): void {
     if (this.destroyed) throw new Error('Widget has been destroyed');
@@ -46,10 +56,14 @@ class PaymentWidgetImpl implements PaymentWidget {
 
     const paymentKey = extractPaymentKey(this.clientSecret);
 
-    this.api
-      .getPaymentMethods(paymentKey, this.clientSecret)
-      .then((methods) => {
+    // Load payment info and methods in parallel
+    Promise.all([
+      this.api.getPayment(paymentKey, this.clientSecret),
+      this.api.getPaymentMethods(paymentKey, this.clientSecret),
+    ])
+      .then(([payment, methods]) => {
         if (this.destroyed || !this.container) return;
+        this.payment = payment;
         this.methods = methods;
         if (methods.length > 0) {
           this.selectedMethod = methods[0].payment_method;
@@ -92,9 +106,44 @@ class PaymentWidgetImpl implements PaymentWidget {
     return this.selectedMethod;
   }
 
+  private async handlePay(): Promise<void> {
+    if (!this.parentInstance || !this.parentWidgets || !this.selectedMethod) return;
+
+    this.confirming = true;
+    this.render();
+
+    const result = await this.parentInstance.confirmPayment({
+      widgets: this.parentWidgets,
+      confirmParams: { return_url: window.location.href },
+      redirect: 'if_required', // Don't auto-redirect, show result in widget
+    });
+
+    this.confirming = false;
+
+    if (result.status === 'requires_customer_action') {
+      this.result = { status: 'requires_customer_action', redirectUrl: result.redirectUrl };
+      this.render();
+      this.emit('redirect', { url: result.redirectUrl });
+      // Auto-redirect after brief delay
+      setTimeout(() => {
+        if (result.status === 'requires_customer_action') {
+          window.location.href = result.redirectUrl;
+        }
+      }, 2000);
+    } else if (result.status === 'succeeded') {
+      this.result = { status: 'succeeded' };
+      this.render();
+    } else if (result.status === 'error') {
+      this.result = { status: 'error', error: result.error.message };
+      this.render();
+      this.emit('error', result.error);
+    }
+  }
+
   private render(overrides?: { loading?: boolean; error?: string | null }): void {
     if (!this.container) return;
     renderWidget(this.container, {
+      payment: this.payment,
       methods: this.methods,
       selectedMethod: this.selectedMethod,
       onMethodChange: (method) => {
@@ -102,6 +151,9 @@ class PaymentWidgetImpl implements PaymentWidget {
         this.render();
         this.emit('change', { paymentMethod: method });
       },
+      onPay: () => this.handlePay(),
+      confirming: this.confirming,
+      result: this.result,
       loading: overrides?.loading,
       error: overrides?.error,
     });
@@ -117,14 +169,22 @@ class PaymentWidgetImpl implements PaymentWidget {
 
 class WidgetCollectionImpl implements WidgetCollection {
   private elements: Map<string, PaymentWidgetImpl> = new Map();
+  private parentInstance: PayswitchInstance | null = null;
 
   constructor(
     private api: PaymentApi,
     private options: WidgetOptions,
   ) {}
 
+  setParent(instance: PayswitchInstance): void {
+    this.parentInstance = instance;
+  }
+
   create(type: 'payment', options?: Record<string, unknown>): PaymentWidget {
     const widget = new PaymentWidgetImpl(this.api, this.options.clientSecret, options);
+    if (this.parentInstance) {
+      widget.setParent(this.parentInstance, this);
+    }
     this.elements.set(type, widget);
     return widget;
   }
@@ -153,9 +213,11 @@ export function createPayswitchInstance(
 ): PayswitchInstance {
   const api = new PaymentApi(baseUrl, publishableKey);
 
-  return {
+  const instance: PayswitchInstance = {
     widgets(options: WidgetOptions): WidgetCollection {
-      return new WidgetCollectionImpl(api, options);
+      const collection = new WidgetCollectionImpl(api, options);
+      collection.setParent(instance);
+      return collection;
     },
 
     async confirmPayment(params: ConfirmPaymentParams): Promise<ConfirmPaymentResult> {
@@ -177,10 +239,7 @@ export function createPayswitchInstance(
           payment_method: selectedMethod,
         });
 
-        if (
-          result.status === 'requires_customer_action' &&
-          result.metadata?.redirect_url
-        ) {
+        if (result.status === 'requires_customer_action' && result.metadata?.redirect_url) {
           const redirectUrl = result.metadata.redirect_url;
 
           if (params.redirect !== 'if_required') {
@@ -214,4 +273,6 @@ export function createPayswitchInstance(
       return api.getPayment(paymentKey, clientSecret);
     },
   };
+
+  return instance;
 }

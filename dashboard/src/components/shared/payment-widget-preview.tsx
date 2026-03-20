@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Loader2, Play } from 'lucide-react'
+import { Loader2, Play, RotateCcw } from 'lucide-react'
 
-import { useCreateTestPayment } from '@/hooks/use-test-payment'
 import { useMerchantDetail } from '@/hooks/use-merchants'
 import { useContextStore } from '@/stores/context'
 import { Button } from '@/components/ui/button'
@@ -13,6 +12,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { api } from '@/api/client'
+import type { PaymentIntentAttributes } from '@/api/types'
+import { extractAttributes } from '@/api/types'
 
 // ─── Widget Mount ────────────────────────────────────────────
 
@@ -54,11 +56,8 @@ function WidgetMount({
 // ─── Payment Widget Preview ──────────────────────────────────
 
 interface PaymentWidgetPreviewProps {
-  /** Force a specific connector (for connector detail page) */
   connectorName?: string
-  /** Title override */
   title?: string
-  /** Description override */
   description?: string
 }
 
@@ -70,39 +69,60 @@ export function PaymentWidgetPreview({
   const { t } = useTranslation()
   const merchantKey = useContextStore((s) => s.currentMerchantKey)
   const { data: merchant } = useMerchantDetail(merchantKey ?? '')
-  const mutation = useCreateTestPayment()
   const [clientSecret, setClientSecret] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const publishableKey = merchant?.publishable_key ?? ''
 
-  const handleCreatePayment = () => {
-    mutation.mutate(
-      {
-        amount: 10000,
-        currency: 'RUB',
-        payment_method: 'card',
-        card_number: '4242424242424242',
-        card_exp_month: '12',
-        card_exp_year: '30',
-        card_cvc: '123',
-        capture_method: 'automatic',
-        ...(connectorName ? { connector_name: connectorName } : {}),
-      },
-      {
-        onSuccess: (data) => {
-          setClientSecret(data.client_secret ?? null)
-        },
-      },
-    )
+  const handleCreatePayment = async () => {
+    setCreating(true)
+    setError(null)
+    try {
+      const doc = await api
+        .post('dashboard/test-payments/create-only', {
+          json: {
+            amount: 10000,
+            currency: 'RUB',
+            ...(connectorName ? { connector_name: connectorName } : {}),
+          },
+        })
+        .json<{
+          data: { type: string; id: string; attributes: PaymentIntentAttributes }
+        }>()
+      const payment = extractAttributes(doc.data)
+      setClientSecret(payment.client_secret ?? null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create payment')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleReset = () => {
+    setClientSecret(null)
+    setError(null)
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          {title ?? t('widget.preview', 'Payment Widget Preview')}
-        </CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>
+              {title ?? t('widget.preview', 'Payment Widget Preview')}
+            </CardTitle>
+            {description && (
+              <CardDescription>{description}</CardDescription>
+            )}
+          </div>
+          {clientSecret && (
+            <Button onClick={handleReset} variant="ghost" size="sm">
+              <RotateCcw className="mr-1 h-4 w-4" />
+              {t('widget.reset', 'Reset')}
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {!clientSecret ? (
@@ -110,25 +130,23 @@ export function PaymentWidgetPreview({
             <p className="text-muted-foreground text-sm">
               {t(
                 'widget.createTestPayment',
-                'Create a test payment to preview the widget',
+                'Create a test payment to preview the full checkout widget',
               )}
             </p>
             <Button
               onClick={handleCreatePayment}
-              disabled={mutation.isPending || !publishableKey}
+              disabled={creating || !publishableKey}
               variant="outline"
             >
-              {mutation.isPending ? (
+              {creating ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Play className="mr-2 h-4 w-4" />
               )}
               {t('widget.launchPreview', 'Launch Preview')}
             </Button>
-            {mutation.isError && (
-              <p className="text-destructive text-sm">
-                {mutation.error?.message ?? 'Error creating payment'}
-              </p>
+            {error && (
+              <p className="text-destructive text-sm">{error}</p>
             )}
           </div>
         ) : (
