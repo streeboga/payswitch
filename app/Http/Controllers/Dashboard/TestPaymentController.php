@@ -70,7 +70,7 @@ final class TestPaymentController extends Controller
         $dto = CreatePaymentData::from([
             'amount' => $request->integer('amount'),
             'currency' => $request->string('currency')->toString(),
-            'return_url' => url('/'),
+            'return_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/').'/payments',
         ]);
 
         $payment = $this->paymentService->create($dto, $merchantId);
