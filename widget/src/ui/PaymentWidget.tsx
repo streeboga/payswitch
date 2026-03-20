@@ -1,5 +1,6 @@
 import { h, render as preactRender } from 'preact';
 import type { PaymentMethodInfo, PaymentIntentResponse, WidgetTranslations, WidgetData } from '../types';
+import { getMethodDisplayName } from '../i18n';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -284,7 +285,7 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
                   ? <img src={m.icon_url} alt="" width="20" height="20" style={{ display: 'block' }} />
                   : <span dangerouslySetInnerHTML={{ __html: GENERIC_PAYMENT_ICON }} />}
               </span>
-              <span style={s.label}>{m.display_name ?? m.payment_method}</span>
+              <span style={s.label}>{m.display_name ?? getMethodDisplayName(m.payment_method, locale)}</span>
               {sel && <span style={s.checkmark}>{'\u2713'}</span>}
             </label>
           );
