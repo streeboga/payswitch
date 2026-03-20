@@ -1,4 +1,5 @@
 import { PaymentApi } from './api';
+import { getTranslations } from './i18n';
 import { renderWidget, unmountWidget } from './ui/PaymentWidget';
 import type {
   PayswitchInstance,
@@ -9,6 +10,7 @@ import type {
   ConfirmPaymentResult,
   PaymentIntentResponse,
   PaymentMethodInfo,
+  WidgetTranslations,
   WidgetEvent,
   WidgetEventHandler,
 } from './types';
@@ -26,16 +28,23 @@ class PaymentWidgetImpl implements PaymentWidget {
   private methods: PaymentMethodInfo[] = [];
   private payment: PaymentIntentResponse | null = null;
   private confirming = false;
-  private result: { status: string; redirectUrl?: string; error?: string } | null = null;
+  private result: { status: string; redirectUrl?: string; error?: string; widgetData?: import('./types').WidgetData } | null = null;
   private destroyed = false;
   private parentInstance: PayswitchInstance | null = null;
   private parentWidgets: WidgetCollection | null = null;
+  private locale: string | undefined;
+  private t: WidgetTranslations;
 
   constructor(
     private api: PaymentApi,
     private clientSecret: string,
+    locale: string | undefined,
+    translations: Partial<WidgetTranslations> | undefined,
     private _options?: Record<string, unknown>,
-  ) {}
+  ) {
+    this.locale = locale;
+    this.t = getTranslations(locale, translations);
+  }
 
   setParent(instance: PayswitchInstance, widgets: WidgetCollection): void {
     this.parentInstance = instance;
@@ -59,7 +68,7 @@ class PaymentWidgetImpl implements PaymentWidget {
     // Load payment info and methods in parallel
     Promise.all([
       this.api.getPayment(paymentKey, this.clientSecret),
-      this.api.getPaymentMethods(paymentKey, this.clientSecret),
+      this.api.getPaymentMethods(paymentKey, this.clientSecret, this.locale),
     ])
       .then(([payment, methods]) => {
         if (this.destroyed || !this.container) return;
@@ -120,7 +129,11 @@ class PaymentWidgetImpl implements PaymentWidget {
 
     this.confirming = false;
 
-    if (result.status === 'requires_customer_action') {
+    if (result.status === 'requires_widget') {
+      this.result = { status: 'requires_widget', widgetData: result.widgetData };
+      this.render();
+      this.emit('change', { status: 'requires_widget', widgetData: result.widgetData });
+    } else if (result.status === 'requires_customer_action') {
       this.result = { status: 'requires_customer_action', redirectUrl: result.redirectUrl };
       this.render();
       this.emit('redirect', { url: result.redirectUrl });
@@ -156,6 +169,8 @@ class PaymentWidgetImpl implements PaymentWidget {
       result: this.result,
       loading: overrides?.loading,
       error: overrides?.error,
+      t: this.t,
+      locale: this.locale,
     });
   }
 
@@ -181,7 +196,7 @@ class WidgetCollectionImpl implements WidgetCollection {
   }
 
   create(type: 'payment', options?: Record<string, unknown>): PaymentWidget {
-    const widget = new PaymentWidgetImpl(this.api, this.options.clientSecret, options);
+    const widget = new PaymentWidgetImpl(this.api, this.options.clientSecret, this.options.locale, this.options.translations, options);
     if (this.parentInstance) {
       widget.setParent(this.parentInstance, this);
     }
@@ -239,14 +254,20 @@ export function createPayswitchInstance(
           payment_method: selectedMethod,
         });
 
-        if (result.status === 'requires_customer_action' && result.metadata?.redirect_url) {
-          const redirectUrl = result.metadata.redirect_url;
-
-          if (params.redirect !== 'if_required') {
-            window.location.href = redirectUrl;
+        if (result.status === 'requires_customer_action') {
+          // Embedded PSP widget mode
+          if (result.metadata?.widget_data) {
+            return { status: 'requires_widget', widgetData: result.metadata.widget_data };
           }
 
-          return { status: 'requires_customer_action', redirectUrl };
+          // Redirect mode
+          const redirectUrl = result.metadata?.redirect_url;
+          if (redirectUrl) {
+            if (params.redirect !== 'if_required') {
+              window.location.href = redirectUrl;
+            }
+            return { status: 'requires_customer_action', redirectUrl };
+          }
         }
 
         if (result.status === 'succeeded') {

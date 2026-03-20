@@ -97,6 +97,9 @@ const ConnectorHealthPage = lazy(() =>
 const UsersPage = lazy(() =>
   import('@/pages/users').then((m) => ({ default: m.UsersPage })),
 )
+const TestPspPage = lazy(() =>
+  import('@/pages/test-psp').then((m) => ({ default: m.TestPspPage })),
+)
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -355,6 +358,13 @@ const usersRoute = createRoute({
   beforeLoad: requireAdmin,
 })
 
+const testPspRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/test-psp/$paymentKey',
+  component: TestPspPage,
+  // Public route — no auth required (PSP simulator)
+})
+
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
@@ -393,6 +403,7 @@ const routeTree = rootRoute.addChildren([
   connectorHealthRoute,
   usersRoute,
   settingsRoute,
+  testPspRoute,
 ])
 
 export const router = createRouter({ routeTree })

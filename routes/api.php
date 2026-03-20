@@ -28,6 +28,7 @@ use App\Http\Controllers\Dashboard\SavedFilterController;
 use App\Http\Controllers\Dashboard\TestPaymentController;
 use App\Http\Controllers\Dashboard\UserRoleController;
 use App\Http\Controllers\Dashboard\UserSettingsController;
+use App\Http\Controllers\TestPspController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -154,6 +155,12 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     Route::post('/users/roles', [UserRoleController::class, 'store']);
     Route::patch('/users/roles/{roleId}', [UserRoleController::class, 'update']);
     Route::delete('/users/roles/{roleId}', [UserRoleController::class, 'destroy']);
+});
+
+// Test PSP simulator — no auth, no middleware
+Route::prefix('v1')->group(function () {
+    Route::get('/test-psp/{paymentKey}', [TestPspController::class, 'show']);
+    Route::post('/test-psp/{paymentKey}/complete', [TestPspController::class, 'complete']);
 });
 
 Route::prefix('v1')->middleware('json-api')->group(function () {

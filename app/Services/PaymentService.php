@@ -98,16 +98,42 @@ final readonly class PaymentService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function getAvailablePaymentMethods(PaymentIntent $payment): Collection
+    public function getAvailablePaymentMethods(PaymentIntent $payment, ?string $locale = null): Collection
     {
+        $locale ??= 'en';
+
         return $this->merchantRepository
             ->getActiveConnectorsByMerchant($payment->merchant_account_id)
             ->where('business_profile_id', $payment->business_profile_id)
             ->whereNotNull('payment_methods_enabled')
-            ->flatMap(fn (MerchantConnectorAccount $mca): array => array_map(
-                fn (mixed $m): array => is_array($m) ? $m : ['payment_method' => $m],
-                $mca->payment_methods_enabled ?? [],
-            ))
+            ->flatMap(function (MerchantConnectorAccount $mca) use ($locale): array {
+                $displayConfig = $mca->display_config['payment_methods'] ?? [];
+                $displayByMethod = collect($displayConfig)->keyBy('method');
+
+                return array_map(
+                    function (mixed $m) use ($displayByMethod, $locale, $mca): array {
+                        $base = is_array($m) ? $m : ['payment_method' => $m];
+                        $method = $base['payment_method'];
+                        $display = $displayByMethod->get($method);
+
+                        if ($display) {
+                            if (isset($display['display_name'])) {
+                                $base['display_name'] = is_array($display['display_name'])
+                                    ? ($display['display_name'][$locale] ?? $display['display_name']['en'] ?? null)
+                                    : $display['display_name'];
+                            }
+                            if (isset($display['icon_url'])) {
+                                $base['icon_url'] = $display['icon_url'];
+                            }
+                        }
+
+                        $base['mode'] = $mca->display_config['widget_mode'] ?? 'redirect';
+
+                        return $base;
+                    },
+                    $mca->payment_methods_enabled ?? [],
+                );
+            })
             ->unique('payment_method')
             ->values();
     }

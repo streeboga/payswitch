@@ -950,5 +950,20 @@
     "failedToday": "Failed today",
     "requiresCapture": "Requires capture",
     "undeliveredWebhooks": "Undelivered webhooks"
+  },
+  "testPsp": {
+    "title": "Test Payment",
+    "logo": "PaySwitch",
+    "amountLabel": "Amount",
+    "approve": "Approve Payment",
+    "decline": "Decline Payment",
+    "hintApprove": "Simulate successful payment",
+    "hintDecline": "Simulate declined payment",
+    "titleSuccess": "Payment Succeeded",
+    "titleFail": "Payment Failed",
+    "returnStore": "Return to Store",
+    "viewDashboard": "View in Dashboard",
+    "loading": "Loading payment...",
+    "notFound": "Payment not found"
   }
 }

@@ -13,6 +13,17 @@ export interface WidgetOptions {
   clientSecret: string;
   appearance?: AppearanceOptions;
   locale?: string;
+  translations?: Partial<WidgetTranslations>;
+}
+
+export interface WidgetTranslations {
+  pay: string;
+  payAmount: string;
+  processing: string;
+  noMethods: string;
+  redirecting: string;
+  paymentSucceeded: string;
+  error: string;
 }
 
 export interface WidgetCollection {
@@ -41,6 +52,7 @@ export interface ConfirmPaymentParams {
 export type ConfirmPaymentResult =
   | { status: 'succeeded'; paymentIntent: PaymentIntentResponse }
   | { status: 'requires_customer_action'; redirectUrl: string }
+  | { status: 'requires_widget'; widgetData: WidgetData }
   | { status: 'error'; error: { type: string; message: string } };
 
 export interface PaymentIntentResponse {
@@ -51,11 +63,20 @@ export interface PaymentIntentResponse {
   metadata?: {
     redirect_url?: string;
     redirect_method?: string;
+    widget_data?: WidgetData;
   };
+}
+
+export interface WidgetData {
+  script_url: string;
+  params: Record<string, string>;
 }
 
 export interface PaymentMethodInfo {
   payment_method: string;
+  display_name?: string;
+  icon_url?: string;
+  mode?: 'redirect' | 'widget' | 'inline';
 }
 
 export interface AppearanceOptions {

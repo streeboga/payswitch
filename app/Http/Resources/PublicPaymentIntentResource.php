@@ -39,6 +39,7 @@ final class PublicPaymentIntentResource extends JsonApiResource
         return array_intersect_key($metadata, array_flip([
             'redirect_url',
             'redirect_method',
+            'widget_data',
         ]));
     }
 }

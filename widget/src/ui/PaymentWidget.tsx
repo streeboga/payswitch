@@ -1,6 +1,5 @@
 import { h, render as preactRender } from 'preact';
-import { useState } from 'preact/hooks';
-import type { PaymentMethodInfo, PaymentIntentResponse } from '../types';
+import type { PaymentMethodInfo, PaymentIntentResponse, WidgetTranslations, WidgetData } from '../types';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -11,30 +10,16 @@ interface PaymentWidgetProps {
   onMethodChange: (method: string) => void;
   onPay: () => void;
   confirming?: boolean;
-  result?: { status: string; redirectUrl?: string; error?: string } | null;
+  result?: { status: string; redirectUrl?: string; error?: string; widgetData?: WidgetData } | null;
   loading?: boolean;
   error?: string | null;
+  t: WidgetTranslations;
+  locale?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────
 
-const METHOD_ICONS: Record<string, string> = {
-  card: '\u{1F4B3}',
-  bank_transfer: '\u{1F3E6}',
-  sbp: '\u{1F4F1}',
-  qr_code: '\u{1F4F7}',
-  apple_pay: '\uF8FF',
-  google_pay: 'G',
-};
-
-const METHOD_LABELS: Record<string, string> = {
-  card: 'Bank Card',
-  bank_transfer: 'Bank Transfer',
-  sbp: 'SBP',
-  qr_code: 'QR Code',
-  apple_pay: 'Apple Pay',
-  google_pay: 'Google Pay',
-};
+const GENERIC_PAYMENT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
 
 // ─── Styles ──────────────────────────────────────────────────
 
@@ -160,9 +145,9 @@ function injectKeyframes(): void {
   document.head.appendChild(el);
 }
 
-function formatAmount(amount: number, currency: string): string {
+function formatAmount(amount: number, currency: string, locale?: string): string {
   try {
-    return new Intl.NumberFormat('ru-RU', {
+    return new Intl.NumberFormat(locale ?? 'en', {
       style: 'currency',
       currency,
       minimumFractionDigits: 2,
@@ -172,10 +157,28 @@ function formatAmount(amount: number, currency: string): string {
   }
 }
 
+// ─── Embedded PSP Widget ─────────────────────────────────────
+
+function EmbeddedPspWidget({ widgetData }: { widgetData: WidgetData }) {
+  const containerRef = (el: HTMLDivElement | null) => {
+    if (!el || el.dataset.loaded) return;
+    el.dataset.loaded = '1';
+
+    const script = document.createElement('script');
+    script.src = widgetData.script_url;
+    for (const [key, value] of Object.entries(widgetData.params)) {
+      script.dataset[key] = value;
+    }
+    el.appendChild(script);
+  };
+
+  return <div ref={containerRef} style={{ minHeight: '200px' }} />;
+}
+
 // ─── Component ───────────────────────────────────────────────
 
 function PaymentWidgetUI(props: PaymentWidgetProps) {
-  const { payment, methods, selectedMethod, onMethodChange, onPay, confirming, result, loading, error } = props;
+  const { payment, methods, selectedMethod, onMethodChange, onPay, confirming, result, loading, error, t, locale } = props;
 
   injectKeyframes();
 
@@ -203,11 +206,18 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
       return (
         <div style={s.widget}>
           <div style={s.redirect}>
-            <div style={{ marginBottom: '8px', fontWeight: 600 }}>Redirecting to payment provider...</div>
+            <div style={{ marginBottom: '8px', fontWeight: 600 }}>{t.redirecting}</div>
             <a href={result.redirectUrl} style={{ color: '#0066ff', wordBreak: 'break-all' as const }}>
               {result.redirectUrl}
             </a>
           </div>
+        </div>
+      );
+    }
+    if (result.status === 'requires_widget' && result.widgetData) {
+      return (
+        <div style={s.widget}>
+          <EmbeddedPspWidget widgetData={result.widgetData} />
         </div>
       );
     }
@@ -216,7 +226,7 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
         <div style={s.widget}>
           <div style={s.success}>
             <div style={{ fontSize: '32px', marginBottom: '8px' }}>{'\u2705'}</div>
-            <div style={{ fontWeight: 600 }}>Payment Succeeded</div>
+            <div style={{ fontWeight: 600 }}>{t.paymentSucceeded}</div>
           </div>
         </div>
       );
@@ -234,7 +244,7 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
   if (methods.length === 0) {
     return (
       <div style={s.widget}>
-        <div style={s.center}>No payment methods available</div>
+        <div style={s.center}>{t.noMethods}</div>
       </div>
     );
   }
@@ -245,7 +255,7 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
       {/* Amount header */}
       {payment && (
         <div style={s.header}>
-          <span style={s.amount}>{formatAmount(payment.amount, payment.currency)}</span>
+          <span style={s.amount}>{formatAmount(payment.amount, payment.currency, locale)}</span>
           <span style={s.currency}>{payment.currency}</span>
         </div>
       )}
@@ -269,8 +279,12 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
                 onChange={() => onMethodChange(m.payment_method)}
                 style={s.hidden}
               />
-              <span style={s.icon}>{METHOD_ICONS[m.payment_method] ?? '\u{1F4B0}'}</span>
-              <span style={s.label}>{METHOD_LABELS[m.payment_method] ?? m.payment_method}</span>
+              <span style={s.icon}>
+                {m.icon_url
+                  ? <img src={m.icon_url} alt="" width="20" height="20" style={{ display: 'block' }} />
+                  : <span dangerouslySetInnerHTML={{ __html: GENERIC_PAYMENT_ICON }} />}
+              </span>
+              <span style={s.label}>{m.display_name ?? m.payment_method}</span>
               {sel && <span style={s.checkmark}>{'\u2713'}</span>}
             </label>
           );
@@ -287,10 +301,10 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
         onMouseLeave={(e) => { if (!confirming) (e.currentTarget as HTMLElement).style.backgroundColor = '#0066ff'; }}
       >
         {confirming
-          ? (<><span style={s.spinnerInline} />Processing...</>)
+          ? (<><span style={s.spinnerInline} />{t.processing}</>)
           : payment
-            ? `Pay ${formatAmount(payment.amount, payment.currency)}`
-            : 'Pay'}
+            ? t.payAmount.replace('{amount}', formatAmount(payment.amount, payment.currency, locale))
+            : t.pay}
       </button>
     </div>
   );

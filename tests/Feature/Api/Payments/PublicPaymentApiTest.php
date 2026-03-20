@@ -90,6 +90,67 @@ test('payment methods returns enabled methods in JSON:API format', function () {
     expect($methods[0]['attributes']['payment_method'])->toBe('card');
 });
 
+test('payment methods include display_config data when set', function () {
+    MerchantConnectorAccount::query()->update([
+        'display_config' => [
+            'payment_methods' => [
+                [
+                    'method' => 'card',
+                    'display_name' => ['ru' => 'Банковская карта', 'en' => 'Bank Card'],
+                    'icon_url' => 'https://cdn.example.com/card.svg',
+                    'enabled' => true,
+                ],
+            ],
+            'widget_mode' => 'redirect',
+        ],
+    ]);
+
+    $response = $this->getJson(
+        '/api/v1/payments/'.$this->payment->key.'/payment-methods?client_secret='.$this->payment->client_secret.'&locale=ru',
+        publicHeaders($this->merchant),
+    );
+
+    $response->assertOk();
+    $attrs = $response->json('data.0.attributes');
+    expect($attrs['display_name'])->toBe('Банковская карта');
+    expect($attrs['icon_url'])->toBe('https://cdn.example.com/card.svg');
+    expect($attrs['mode'])->toBe('redirect');
+});
+
+test('payment methods fallback to en when locale not found', function () {
+    MerchantConnectorAccount::query()->update([
+        'display_config' => [
+            'payment_methods' => [
+                [
+                    'method' => 'card',
+                    'display_name' => ['en' => 'Bank Card'],
+                ],
+            ],
+        ],
+    ]);
+
+    $response = $this->getJson(
+        '/api/v1/payments/'.$this->payment->key.'/payment-methods?client_secret='.$this->payment->client_secret.'&locale=fr',
+        publicHeaders($this->merchant),
+    );
+
+    $response->assertOk();
+    expect($response->json('data.0.attributes.display_name'))->toBe('Bank Card');
+});
+
+test('payment methods work without display_config', function () {
+    $response = $this->getJson(
+        '/api/v1/payments/'.$this->payment->key.'/payment-methods?client_secret='.$this->payment->client_secret,
+        publicHeaders($this->merchant),
+    );
+
+    $response->assertOk();
+    $attrs = $response->json('data.0.attributes');
+    expect($attrs['payment_method'])->toBe('card');
+    expect($attrs)->not->toHaveKey('display_name');
+    expect($attrs['mode'])->toBe('redirect');
+});
+
 test('payment methods returns empty when no active connectors', function () {
     MerchantConnectorAccount::query()->update(['disabled' => true]);
 

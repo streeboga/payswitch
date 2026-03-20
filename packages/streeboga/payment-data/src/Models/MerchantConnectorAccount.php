@@ -18,6 +18,7 @@ use Streeboga\PaymentData\Support\IdGenerator;
  * @property string $connector_type
  * @property array<string, mixed> $connector_account_details
  * @property array<string, mixed>|null $payment_methods_enabled
+ * @property array<string, mixed>|null $display_config
  * @property bool $test_mode
  * @property bool $disabled
  * @property Carbon $created_at
@@ -32,6 +33,7 @@ class MerchantConnectorAccount extends Model
         'connector_type',
         'connector_account_details',
         'payment_methods_enabled',
+        'display_config',
         'test_mode',
         'disabled',
     ];
@@ -41,6 +43,7 @@ class MerchantConnectorAccount extends Model
         return [
             'connector_account_details' => 'encrypted:array',
             'payment_methods_enabled' => 'array',
+            'display_config' => 'array',
             'test_mode' => 'boolean',
             'disabled' => 'boolean',
         ];

@@ -95,7 +95,8 @@ final class PublicPaymentController extends Controller
         $payment = $request->attributes->get('payment_intent')
             ?? $this->paymentService->find($paymentKey, $request->attributes->get('merchant_id'));
 
-        $methods = $this->paymentService->getAvailablePaymentMethods($payment);
+        $locale = $request->query('locale');
+        $methods = $this->paymentService->getAvailablePaymentMethods($payment, $locale);
 
         return response()->json([
             'data' => $methods->map(fn (array $method): array => [

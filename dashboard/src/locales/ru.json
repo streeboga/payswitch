@@ -950,5 +950,20 @@
     "failedToday": "Неуспешные за сегодня",
     "requiresCapture": "Требуют capture",
     "undeliveredWebhooks": "Недоставленные вебхуки"
+  },
+  "testPsp": {
+    "title": "Тестовый платёж",
+    "logo": "PaySwitch",
+    "amountLabel": "Сумма",
+    "approve": "Подтвердить оплату",
+    "decline": "Отклонить оплату",
+    "hintApprove": "Симулировать успешный платёж",
+    "hintDecline": "Симулировать отклонённый платёж",
+    "titleSuccess": "Оплата прошла успешно",
+    "titleFail": "Оплата отклонена",
+    "returnStore": "Вернуться в магазин",
+    "viewDashboard": "Посмотреть в панели",
+    "loading": "Загрузка платежа...",
+    "notFound": "Платёж не найден"
   }
 }

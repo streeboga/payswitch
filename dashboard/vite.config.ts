@@ -68,7 +68,6 @@ export default defineConfig({
       '/login': methodProxy(['POST']),
       '/logout': methodProxy(['POST']),
       '/two-factor-challenge': methodProxy(['POST']),
-      '/test-psp': proxyOpts,
     },
   },
 })

@@ -10,6 +10,7 @@ export type {
   ConfirmPaymentParams,
   ConfirmPaymentResult,
   PaymentIntentResponse,
+  WidgetTranslations,
 } from './types';
 
 const DEFAULT_URLS: Record<string, string> = {

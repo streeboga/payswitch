@@ -4,33 +4,44 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
 
 /**
- * Simulates a PSP hosted payment page for the Test connector.
- * Flow: payment page → approve/decline → result page → return to merchant.
+ * JSON API for the Test PSP simulator.
+ * The React SPA at /test-psp/{paymentKey} consumes these endpoints.
  */
 final class TestPspController extends Controller
 {
-    public function show(string $paymentKey): View
+    public function show(string $paymentKey): JsonResponse
     {
         $payment = PaymentIntent::where('key', $paymentKey)->firstOrFail();
 
-        return view('test-psp', [
-            'payment' => $payment,
-            'amount' => number_format($payment->amount / 100, 2, '.', ' '),
-            'currency' => $payment->currency,
-            'step' => 'checkout',
+        return response()->json([
+            'data' => [
+                'type' => 'test_psp_payment',
+                'id' => $payment->key,
+                'attributes' => [
+                    'amount' => $payment->amount,
+                    'currency' => $payment->currency,
+                    'status' => $payment->status->value,
+                    'description' => $payment->description,
+                    'return_url' => $payment->return_url,
+                ],
+            ],
         ]);
     }
 
-    public function complete(string $paymentKey, Request $request): View
+    public function complete(string $paymentKey, Request $request): JsonResponse
     {
-        $action = $request->input('action', 'approve');
+        $request->validate([
+            'action' => ['required', 'in:approve,decline'],
+        ]);
+
+        $action = $request->input('action');
         $payment = PaymentIntent::where('key', $paymentKey)->firstOrFail();
 
         if ($action === 'approve') {
@@ -65,16 +76,21 @@ final class TestPspController extends Controller
             $returnUrl .= $separator.'payment_id='.$payment->key.'&status='.($action === 'approve' ? 'success' : 'failed');
         }
 
-        $dashboardUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/');
+        $dashboardUrl = rtrim((string) config('app.frontend_url', 'http://localhost:3000'), '/');
 
-        return view('test-psp', [
-            'payment' => $payment,
-            'amount' => number_format($payment->amount / 100, 2, '.', ' '),
-            'currency' => $payment->currency,
-            'step' => 'result',
-            'success' => $action === 'approve',
-            'returnUrl' => $returnUrl,
-            'dashboardUrl' => $dashboardUrl.'/payments/'.$payment->key,
+        return response()->json([
+            'data' => [
+                'type' => 'test_psp_payment',
+                'id' => $payment->key,
+                'attributes' => [
+                    'amount' => $payment->amount,
+                    'currency' => $payment->currency,
+                    'status' => $payment->status->value,
+                    'success' => $action === 'approve',
+                    'return_url' => $returnUrl,
+                    'dashboard_url' => $dashboardUrl.'/payments/'.$payment->key,
+                ],
+            ],
         ]);
     }
 }
