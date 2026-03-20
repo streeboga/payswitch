@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Models\PaymentIntent;
+use Streeboga\PaymentData\Support\IdGenerator;
 
 uses(RefreshDatabase::class);
 
@@ -70,17 +72,22 @@ test('public show rejects without client_secret', function () {
 
 // --- paymentMethods() ---
 
-test('payment methods returns enabled methods for the profile', function () {
+test('payment methods returns enabled methods in JSON:API format', function () {
     $response = $this->getJson(
         '/api/v1/payments/'.$this->payment->key.'/payment-methods?client_secret='.$this->payment->client_secret,
         publicHeaders($this->merchant),
     );
 
-    $response->assertOk();
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'application/vnd.api+json');
+
     $methods = $response->json('data');
     expect($methods)->toBeArray();
     expect($methods)->not->toBeEmpty();
-    expect($methods[0])->toHaveKey('payment_method', 'card');
+    expect($methods[0])->toHaveKeys(['type', 'id', 'attributes']);
+    expect($methods[0]['type'])->toBe('payment_methods');
+    expect($methods[0]['id'])->toBe('card');
+    expect($methods[0]['attributes']['payment_method'])->toBe('card');
 });
 
 test('payment methods returns empty when no active connectors', function () {
@@ -141,4 +148,59 @@ test('public confirm rejects expired session', function () {
     );
 
     $response->assertStatus(403);
+});
+
+// --- Secret key regression tests ---
+
+function secretHeaders($rawKey): array
+{
+    return ['api-key' => $rawKey];
+}
+
+test('secret key show returns full payment intent resource', function () {
+    $rawKey = IdGenerator::apiKey('sandbox');
+    ApiKey::create([
+        'merchant_account_id' => $this->merchant->id,
+        'key_hash' => hash('sha256', $rawKey),
+        'key_prefix' => substr($rawKey, 0, 20),
+        'name' => 'Secret',
+    ]);
+
+    $response = $this->getJson(
+        '/api/v1/payments/'.$this->payment->key,
+        secretHeaders($rawKey),
+    );
+
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'application/vnd.api+json')
+        ->assertJsonPath('data.type', 'payments')
+        ->assertJsonPath('data.id', $this->payment->key);
+
+    $attrs = $response->json('data.attributes');
+    expect($attrs)->toHaveKeys(['status', 'amount', 'currency', 'client_secret']);
+});
+
+test('secret key confirm returns full payment intent resource', function () {
+    $rawKey = IdGenerator::apiKey('sandbox');
+    ApiKey::create([
+        'merchant_account_id' => $this->merchant->id,
+        'key_hash' => hash('sha256', $rawKey),
+        'key_prefix' => substr($rawKey, 0, 20),
+        'name' => 'Secret',
+    ]);
+
+    $response = $this->postJson(
+        '/api/v1/payments/'.$this->payment->key.'/confirm',
+        ['payment_method' => 'card'],
+        secretHeaders($rawKey),
+    );
+
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'application/vnd.api+json')
+        ->assertJsonPath('data.type', 'payments')
+        ->assertJsonPath('data.id', $this->payment->key);
+
+    $attrs = $response->json('data.attributes');
+    expect($attrs)->toHaveKeys(['status', 'amount', 'currency', 'client_secret']);
+    expect($attrs['status'])->toBe('requires_customer_action');
 });

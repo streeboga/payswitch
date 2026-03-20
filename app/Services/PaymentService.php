@@ -10,12 +10,14 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Exceptions\InvalidStateTransitionException;
 use Streeboga\PaymentData\Exceptions\PaymentException;
+use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
@@ -67,6 +69,22 @@ final readonly class PaymentService
     public function find(string $paymentKey, int|string $merchantAccountId): PaymentIntent
     {
         return $this->paymentRepository->findByKey($paymentKey, $merchantAccountId);
+    }
+
+    /**
+     * Get unique payment methods available for a payment's business profile.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function getAvailablePaymentMethods(PaymentIntent $payment): Collection
+    {
+        return $this->merchantRepository
+            ->getActiveConnectorsByMerchant($payment->merchant_account_id)
+            ->where('business_profile_id', $payment->business_profile_id)
+            ->whereNotNull('payment_methods_enabled')
+            ->flatMap(fn (MerchantConnectorAccount $mca): array => $mca->payment_methods_enabled ?? [])
+            ->unique('payment_method')
+            ->values();
     }
 
     public function confirm(string $paymentKey, ConfirmPaymentData $dto, int|string $merchantAccountId): PaymentIntent
