@@ -15,7 +15,10 @@ export class PaymentApi {
   async getPaymentMethods(paymentKey: string, clientSecret: string): Promise<PaymentMethodInfo[]> {
     const url = `${this.baseUrl}/api/v1/payments/${paymentKey}/payment-methods?client_secret=${encodeURIComponent(clientSecret)}`;
     const res = await this.request(url, { method: 'GET' });
-    return res.data;
+    // Response is JSON:API: [{type, id, attributes: {payment_method}}] or plain [{payment_method}]
+    return (res.data as any[]).map((item: any) =>
+      item.attributes ? item.attributes : item,
+    );
   }
 
   async confirmPayment(
