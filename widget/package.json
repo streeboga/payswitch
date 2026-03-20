@@ -5,10 +5,10 @@
   "type": "module",
   "main": "dist/payswitch.js",
   "module": "dist/payswitch.mjs",
-  "types": "dist/payswitch.d.ts",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/payswitch.d.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/payswitch.mjs",
       "require": "./dist/payswitch.js"
     }

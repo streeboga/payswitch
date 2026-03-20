@@ -334,9 +334,9 @@ function WidgetPreview({ clientSecret, publishableKey }: WidgetPreviewProps) {
     let widget: { mount(el: HTMLElement): void; destroy(): void } | undefined
 
     const init = async () => {
-      const { createPayswitchInstance } = await import('@payswitch/js')
+      const { loadPayswitch } = await import('@payswitch/js')
       if (destroyed) return
-      const ps = createPayswitchInstance(publishableKey, '')
+      const ps = await loadPayswitch(publishableKey, { customBackendUrl: '' })
       const widgets = ps.widgets({ clientSecret })
       widget = widgets.create('payment')
       widget.mount(containerRef.current!)
