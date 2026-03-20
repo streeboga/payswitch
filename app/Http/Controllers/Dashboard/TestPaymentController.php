@@ -67,13 +67,18 @@ final class TestPaymentController extends Controller
             'connector_name' => ['sometimes', 'string'],
         ]);
 
+        $frontendUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/');
+
         $dto = CreatePaymentData::from([
             'amount' => $request->integer('amount'),
             'currency' => $request->string('currency')->toString(),
-            'return_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/').'/payments',
+            'return_url' => $frontendUrl.'/payments',
         ]);
 
         $payment = $this->paymentService->create($dto, $merchantId);
+
+        // Update return_url with actual payment key so test-psp redirects to payment detail
+        $payment->update(['return_url' => $frontendUrl.'/payments/'.$payment->key]);
 
         return (new PaymentIntentResource($payment))
             ->withStatus(201)
