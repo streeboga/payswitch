@@ -119,7 +119,7 @@ test('public confirm triggers redirect flow', function () {
 
     $metadata = $response->json('data.attributes.metadata');
     expect($metadata)->toHaveKey('redirect_url');
-    expect($metadata['redirect_url'])->toContain('https://test-psp.example.com/pay/');
+    expect($metadata['redirect_url'])->toContain('/test-psp/');
 });
 
 test('public confirm rejects with invalid client_secret', function () {

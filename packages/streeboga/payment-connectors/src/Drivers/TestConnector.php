@@ -113,7 +113,7 @@ final class TestConnector implements ConnectorInterface
     {
         return [
             'success' => true,
-            'redirect_url' => 'https://test-psp.example.com/pay/'.($params['payment_id'] ?? 'test'),
+            'redirect_url' => rtrim(config('app.url', ''), '/').'/test-psp/'.($params['payment_id'] ?? 'test'),
             'session_id' => 'sess_'.($params['payment_id'] ?? 'test'),
             'code' => 'redirect',
             'transaction_id' => 'txn_session_'.Str::random(8),

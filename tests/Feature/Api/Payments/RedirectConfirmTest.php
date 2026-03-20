@@ -68,7 +68,7 @@ test('confirm without card data returns redirect_url and requires_customer_actio
     // Verify metadata contains redirect_url
     $metadata = $response->json('data.attributes.metadata');
     expect($metadata)->toHaveKey('redirect_url');
-    expect($metadata['redirect_url'])->toContain('https://test-psp.example.com/pay/');
+    expect($metadata['redirect_url'])->toContain('/test-psp/');
     expect($metadata)->toHaveKey('session_id');
     expect($metadata)->toHaveKey('redirect_method', 'GET');
 });
@@ -133,7 +133,7 @@ test('redirect confirm with empty payment_method_data triggers redirect flow', f
         ->assertJsonPath('data.attributes.status', 'requires_customer_action');
 
     $metadata = $response->json('data.attributes.metadata');
-    expect($metadata['redirect_url'])->toContain('https://test-psp.example.com/pay/');
+    expect($metadata['redirect_url'])->toContain('/test-psp/');
 });
 
 test('redirect confirm on expired payment returns error', function () {
