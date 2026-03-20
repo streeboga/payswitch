@@ -14,13 +14,17 @@ const METHOD_ICONS: Record<string, string> = {
   bank_transfer: '\u{1F3E6}',
   sbp: '\u{1F4F1}',
   qr_code: '\u{1F4F7}',
+  apple_pay: '\u{F8FF}',
+  google_pay: 'G',
 };
 
 const METHOD_LABELS: Record<string, string> = {
   card: 'Bank Card',
   bank_transfer: 'Bank Transfer',
-  sbp: 'SBP (\u0421\u0411\u041F)',
+  sbp: 'SBP',
   qr_code: 'QR Code',
+  apple_pay: 'Apple Pay',
+  google_pay: 'Google Pay',
 };
 
 function PaymentWidgetUI({ methods, selectedMethod, onMethodChange, loading, error }: PaymentWidgetProps) {
