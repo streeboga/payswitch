@@ -60,7 +60,7 @@ final readonly class WebhookReceiverService
 
         Log::info("Incoming webhook from {$mca->connector_name}", [
             'mca_key' => $mcaKey,
-            'payload_type' => $payload['type'] ?? 'unknown',
+            'payload_type' => $payload['type'] ?? ($payload['Status'] ?? 'unknown'),
         ]);
 
         try {
