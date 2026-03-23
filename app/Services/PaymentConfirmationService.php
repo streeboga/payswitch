@@ -10,6 +10,7 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentConnectors\ConnectorFactory;
+use Streeboga\PaymentConnectors\PaymentSessionResult;
 use Streeboga\PaymentData\Enums\AuthenticationType;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -87,7 +88,7 @@ final readonly class PaymentConfirmationService
             $isRedirectFlow = empty($dto->payment_method_data) && empty($token);
 
             if ($isRedirectFlow) {
-                $result = $this->executeRedirectFlow($payment, $mca, $connectorParams);
+                $result = $this->executeSessionFlow($payment, $mca, $connectorParams);
 
                 if ($result !== null) {
                     $payment->refresh();
@@ -176,12 +177,14 @@ final readonly class PaymentConfirmationService
     }
 
     /**
-     * Execute the redirect-based confirm flow by creating a PSP payment session.
+     * Execute the session-based confirm flow by creating a PSP payment session.
+     *
+     * Handles both new PaymentSessionResult objects and legacy array returns.
      *
      * @param  array<string, mixed>  $connectorParams
      * @return array<string, mixed>|null The result array on success, or null if no redirect URL was returned.
      */
-    private function executeRedirectFlow(PaymentIntent $payment, MerchantConnectorAccount $mca, array $connectorParams): ?array
+    private function executeSessionFlow(PaymentIntent $payment, MerchantConnectorAccount $mca, array $connectorParams): ?array
     {
         $connector = ConnectorFactory::resolve($mca);
 
@@ -205,6 +208,52 @@ final readonly class PaymentConfirmationService
             );
         }
 
+        // Handle new PaymentSessionResult type
+        if ($result instanceof PaymentSessionResult) {
+            return $this->handleSessionResult($payment, $mca, $result);
+        }
+
+        // Legacy array format — existing behavior unchanged
+        return $this->handleLegacySessionResult($payment, $mca, $result);
+    }
+
+    /**
+     * Handle a new-style PaymentSessionResult from a connector.
+     *
+     * Stores all session result data in payment metadata and creates an attempt.
+     *
+     * @return array<string, mixed>
+     */
+    private function handleSessionResult(PaymentIntent $payment, MerchantConnectorAccount $mca, PaymentSessionResult $result): array
+    {
+        $metadata = array_merge($payment->metadata ?? [], $result->toArray());
+
+        PaymentStateMachine::assertTransition($payment->status, PaymentStatus::RequiresCustomerAction);
+        $this->paymentRepository->update($payment, [
+            'status' => PaymentStatus::RequiresCustomerAction,
+            'connector' => $mca->connector_name,
+            'metadata' => $metadata,
+        ]);
+
+        $this->paymentRepository->createAttempt($payment, [
+            'connector' => $mca->connector_name,
+            'connector_transaction_id' => $result->toArray()['transaction_id'] ?? null,
+            'status' => PaymentAttemptStatus::RequiresAction->value,
+            'amount' => $payment->amount,
+        ]);
+        $this->paymentRepository->incrementAttemptCount($payment);
+
+        return $result->toArray();
+    }
+
+    /**
+     * Handle a legacy array result from an existing connector.
+     *
+     * @param  array<string, mixed>  $result
+     * @return array<string, mixed>|null
+     */
+    private function handleLegacySessionResult(PaymentIntent $payment, MerchantConnectorAccount $mca, array $result): ?array
+    {
         $redirectUrl = $result['redirect_url'] ?? null;
         $code = $result['code'] ?? null;
 
