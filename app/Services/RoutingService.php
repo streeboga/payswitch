@@ -31,7 +31,16 @@ final readonly class RoutingService
     {
         // 1. Explicit connector (highest priority)
         if ($explicitConnector) {
-            $mca = $this->merchantRepository->findActiveConnectorByMerchantAndName($merchantAccountId, $explicitConnector);
+            // Support both connector_name ("cloudpayments") and connector_key ("mca_xxx")
+            if (str_starts_with($explicitConnector, 'mca_')) {
+                $mca = $this->merchantRepository->findConnectorByMerchantAndKeyOrNull($merchantAccountId, $explicitConnector);
+                // Ensure not disabled
+                if ($mca && $mca->disabled) {
+                    $mca = null;
+                }
+            } else {
+                $mca = $this->merchantRepository->findActiveConnectorByMerchantAndName($merchantAccountId, $explicitConnector);
+            }
 
             if ($mca) {
                 return $mca;
