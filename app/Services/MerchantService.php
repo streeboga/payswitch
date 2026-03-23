@@ -87,6 +87,7 @@ final readonly class MerchantService
 
         return $this->merchantRepository->createBusinessProfile([
             'merchant_account_id' => $merchant->id,
+            'name' => $dto->name ?? '',
             'webhook_url' => $dto->webhook_url,
         ]);
     }

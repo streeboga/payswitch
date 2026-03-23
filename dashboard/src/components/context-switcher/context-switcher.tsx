@@ -167,7 +167,7 @@ export function ContextSwitcher() {
             disabled={orgsLoading || organizations.length === 0}
           >
             <SelectTrigger
-              className="h-8 text-xs"
+              className="h-8 w-full min-w-0 text-xs"
               data-testid="org-select"
               aria-label={t('contextSwitcher.orgLabel')}
             >
@@ -176,7 +176,7 @@ export function ContextSwitcher() {
             <SelectContent>
               {organizations.map((org) => (
                 <SelectItem key={org.key} value={org.key} className="text-xs">
-                  {org.name}
+                  <span className="truncate">{org.name}</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -194,7 +194,7 @@ export function ContextSwitcher() {
             disabled={!currentOrgKey || merchantsLoading || merchants.length === 0}
           >
             <SelectTrigger
-              className="h-8 text-xs"
+              className="h-8 w-full min-w-0 text-xs"
               data-testid="merchant-select"
               aria-label={t('contextSwitcher.merchantLabel')}
             >
@@ -203,7 +203,7 @@ export function ContextSwitcher() {
             <SelectContent>
               {merchants.map((merchant) => (
                 <SelectItem key={merchant.key} value={merchant.key} className="text-xs">
-                  {merchant.name}
+                  <span className="truncate">{merchant.name}</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -221,7 +221,7 @@ export function ContextSwitcher() {
             disabled={!currentMerchantKey || profilesLoading}
           >
             <SelectTrigger
-              className="h-8 text-xs"
+              className="h-8 w-full min-w-0 text-xs"
               data-testid="profile-select"
               aria-label={t('contextSwitcher.profileLabel')}
             >
@@ -233,7 +233,7 @@ export function ContextSwitcher() {
               </SelectItem>
               {profiles.map((profile) => (
                 <SelectItem key={profile.key} value={profile.key} className="text-xs">
-                  {profile.name}
+                  <span className="truncate">{profile.name}</span>
                 </SelectItem>
               ))}
             </SelectContent>

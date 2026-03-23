@@ -14,6 +14,7 @@ use Streeboga\PaymentData\Support\IdGenerator;
 /**
  * @property int $id
  * @property string $key
+ * @property string $name
  * @property int $merchant_account_id
  * @property string|null $webhook_url
  * @property string|null $payment_response_hash_key
@@ -28,6 +29,7 @@ class BusinessProfile extends Model
 {
     protected $fillable = [
         'merchant_account_id',
+        'name',
         'webhook_url',
         'payment_response_hash_key',
         'metadata',

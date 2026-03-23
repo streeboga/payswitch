@@ -10,6 +10,7 @@ final class CreateBusinessProfileData extends Data
 {
     public function __construct(
         public readonly string $merchant_id,
+        public readonly ?string $name = null,
         public readonly ?string $webhook_url = null,
     ) {}
 }

@@ -79,6 +79,7 @@ class DatabaseSeeder extends Seeder
         // Business profile with webhook
         $profile = BusinessProfile::create([
             'merchant_account_id' => $merchant->id,
+            'name' => 'Default',
             'webhook_url' => 'https://'.str_replace(' ', '-', strtolower($merchantName)).'.example.com/webhooks',
         ]);
 

@@ -37,10 +37,11 @@ final readonly class BusinessProfileService
         return $this->merchantRepository->findProfileByKey($profileKey);
     }
 
-    public function create(int|string $merchantId, ?string $webhookUrl): BusinessProfile
+    public function create(int|string $merchantId, ?string $name, ?string $webhookUrl): BusinessProfile
     {
         return $this->merchantRepository->createBusinessProfile([
             'merchant_account_id' => $merchantId,
+            'name' => $name ?? '',
             'webhook_url' => $webhookUrl,
         ]);
     }

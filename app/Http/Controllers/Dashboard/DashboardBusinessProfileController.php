@@ -86,6 +86,7 @@ final class DashboardBusinessProfileController extends Controller
 
         $profile = $this->businessProfileService->create(
             $merchantId,
+            $validated['name'] ?? null,
             $validated['webhook_url'] ?? null,
         );
 

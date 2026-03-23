@@ -17,6 +17,7 @@ final class UpdateDashboardBusinessProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name' => 'sometimes|string|max:255',
             'webhook_url' => 'sometimes|nullable|url|max:2048',
         ];
     }

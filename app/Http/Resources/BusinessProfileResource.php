@@ -21,6 +21,7 @@ final class BusinessProfileResource extends JsonApiResource
     public function toAttributes(Request $request): array
     {
         return [
+            'name' => $this->name,
             'merchant_id' => $this->merchantAccount->key,
             'webhook_url' => $this->webhook_url,
             'payment_response_hash_key' => $this->payment_response_hash_key,
