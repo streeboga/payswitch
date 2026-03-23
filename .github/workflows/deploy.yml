@@ -24,7 +24,10 @@ jobs:
 
             composer install --no-dev --optimize-autoloader --no-interaction
 
-            cd dashboard
+            cd widget
+            npm ci
+            npm run build
+            cd ../dashboard
             npm ci
             npm run build
             cd ..
