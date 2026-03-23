@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Streeboga\PaymentConnectors\Drivers;
 
 use Illuminate\Support\Str;
+use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Enums\SessionResultType;
 
 /**
  * Test/mock connector that simulates PSP responses.
@@ -21,6 +23,17 @@ use Streeboga\PaymentData\Enums\PaymentStatus;
 final class TestConnector implements ConnectorInterface
 {
     public function __construct(?array $credentials = []) {}
+
+    public static function capabilities(): ConnectorCapabilities
+    {
+        // TODO: Task 3 — implement real capabilities
+        return new ConnectorCapabilities(
+            defaultDisplayName: ['en' => 'Test', 'ru' => 'Тест'],
+            logoPath: '/images/connectors/test.svg',
+            directMethods: [],
+            fallbackSessionType: SessionResultType::ServerRedirect,
+        );
+    }
 
     public function getName(): string
     {

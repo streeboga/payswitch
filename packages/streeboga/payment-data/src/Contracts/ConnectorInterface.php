@@ -4,10 +4,16 @@ declare(strict_types=1);
 
 namespace Streeboga\PaymentData\Contracts;
 
+use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 
 interface ConnectorInterface
 {
+    /**
+     * Return the static capabilities descriptor for this connector.
+     */
+    public static function capabilities(): ConnectorCapabilities;
+
     /**
      * @param  array<string, mixed>  $params
      * @return array<string, mixed>
