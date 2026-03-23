@@ -29,6 +29,8 @@ jobs:
             npm run build
             cd ../dashboard
             npm ci
+            rm -rf node_modules/@payswitch/js
+            cp -r ../widget node_modules/@payswitch/js
             VITE_BACKEND_URL=https://psapi.gnzs.pro npm run build
             cd ..
 
