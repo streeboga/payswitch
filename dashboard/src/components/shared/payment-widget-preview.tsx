@@ -114,9 +114,7 @@ export function PaymentWidgetPreview({
             <CardTitle>
               {title ?? t('widget.preview', 'Payment Widget Preview')}
             </CardTitle>
-            {description && (
-              <CardDescription>{description}</CardDescription>
-            )}
+            {description && <CardDescription>{description}</CardDescription>}
           </div>
           {clientSecret && (
             <Button onClick={handleReset} variant="ghost" size="sm">
@@ -147,9 +145,7 @@ export function PaymentWidgetPreview({
               )}
               {t('widget.launchPreview', 'Launch Preview')}
             </Button>
-            {error && (
-              <p className="text-destructive text-sm">{error}</p>
-            )}
+            {error && <p className="text-destructive text-sm">{error}</p>}
           </div>
         ) : (
           <WidgetMount

@@ -5,8 +5,12 @@ declare(strict_types=1);
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentConnectors\Drivers\CloudPaymentsConnector;
+use Streeboga\PaymentConnectors\Drivers\RbsConnector;
+use Streeboga\PaymentConnectors\Drivers\RobokassaConnector;
 use Streeboga\PaymentConnectors\Drivers\StripeConnector;
+use Streeboga\PaymentConnectors\Drivers\TBankConnector;
 use Streeboga\PaymentConnectors\Drivers\TestConnector;
+use Streeboga\PaymentConnectors\Drivers\TochkaConnector;
 use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\SessionResultType;
@@ -17,7 +21,11 @@ test('all connectors return ConnectorCapabilities instance', function () {
     expect(YooKassaConnector::capabilities())->toBeInstanceOf(ConnectorCapabilities::class)
         ->and(CloudPaymentsConnector::capabilities())->toBeInstanceOf(ConnectorCapabilities::class)
         ->and(StripeConnector::capabilities())->toBeInstanceOf(ConnectorCapabilities::class)
-        ->and(TestConnector::capabilities())->toBeInstanceOf(ConnectorCapabilities::class);
+        ->and(TestConnector::capabilities())->toBeInstanceOf(ConnectorCapabilities::class)
+        ->and(RbsConnector::capabilities())->toBeInstanceOf(ConnectorCapabilities::class)
+        ->and(TBankConnector::capabilities())->toBeInstanceOf(ConnectorCapabilities::class)
+        ->and(RobokassaConnector::capabilities())->toBeInstanceOf(ConnectorCapabilities::class)
+        ->and(TochkaConnector::capabilities())->toBeInstanceOf(ConnectorCapabilities::class);
 });
 
 // 2. All have 'en' key in displayName
@@ -149,4 +157,48 @@ test('Test connector has correct display name and logo', function () {
     expect($caps->defaultDisplayName['ru'])->toBe('Тестовый')
         ->and($caps->defaultDisplayName['en'])->toBe('Test')
         ->and($caps->logoPath)->toBe('/logos/test.svg');
+});
+
+// --- New connectors ---
+
+test('RBS supports SBP QR inline but no direct card', function () {
+    $caps = RbsConnector::capabilities();
+
+    expect($caps->supportsDirectMethod('card'))->toBeFalse()
+        ->and($caps->supportsDirectMethod('sbp'))->toBeTrue()
+        ->and($caps->getDirectMethod('sbp')->sessionType)->toBe(SessionResultType::QrInline)
+        ->and($caps->fallbackSessionType)->toBe(SessionResultType::ServerRedirect)
+        ->and($caps->amountUnit)->toBe(AmountUnit::Kopecks);
+});
+
+test('TBank supports SBP QR inline but no direct card', function () {
+    $caps = TBankConnector::capabilities();
+
+    expect($caps->supportsDirectMethod('card'))->toBeFalse()
+        ->and($caps->supportsDirectMethod('sbp'))->toBeTrue()
+        ->and($caps->getDirectMethod('sbp')->sessionType)->toBe(SessionResultType::QrInline)
+        ->and($caps->fallbackSessionType)->toBe(SessionResultType::ServerRedirect)
+        ->and($caps->amountUnit)->toBe(AmountUnit::Kopecks);
+});
+
+test('Robokassa supports direct card and sbp via form redirect', function () {
+    $caps = RobokassaConnector::capabilities();
+
+    expect($caps->supportsDirectMethod('card'))->toBeTrue()
+        ->and($caps->supportsDirectMethod('sbp'))->toBeTrue()
+        ->and($caps->getDirectMethod('card')->sessionType)->toBe(SessionResultType::FormRedirect)
+        ->and($caps->getDirectMethod('sbp')->sessionType)->toBe(SessionResultType::FormRedirect)
+        ->and($caps->fallbackSessionType)->toBe(SessionResultType::FormRedirect)
+        ->and($caps->amountUnit)->toBe(AmountUnit::Rubles);
+});
+
+test('Tochka supports direct card and sbp via server redirect', function () {
+    $caps = TochkaConnector::capabilities();
+
+    expect($caps->supportsDirectMethod('card'))->toBeTrue()
+        ->and($caps->supportsDirectMethod('sbp'))->toBeTrue()
+        ->and($caps->getDirectMethod('card')->sessionType)->toBe(SessionResultType::ServerRedirect)
+        ->and($caps->getDirectMethod('sbp')->sessionType)->toBe(SessionResultType::ServerRedirect)
+        ->and($caps->fallbackSessionType)->toBe(SessionResultType::ServerRedirect)
+        ->and($caps->amountUnit)->toBe(AmountUnit::Rubles);
 });

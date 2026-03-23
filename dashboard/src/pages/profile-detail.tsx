@@ -222,7 +222,10 @@ export function ProfileDetailPage() {
       {/* Widget Preview — all available payment methods for this profile */}
       <PaymentWidgetPreview
         title={t('profileDetail.widgetPreview', 'Payment Widget')}
-        description={t('profileDetail.widgetPreviewDesc', 'Preview the payment widget with all connectors for this profile')}
+        description={t(
+          'profileDetail.widgetPreviewDesc',
+          'Preview the payment widget with all connectors for this profile',
+        )}
       />
 
       <Card>

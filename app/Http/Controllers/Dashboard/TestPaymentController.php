@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
-use App\Http\Controllers\Controller;
 use App\DataTransferObjects\Payment\CreatePaymentData;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\StoreTestPaymentRequest;
 use App\Http\Resources\PaymentIntentResource;
 use App\Services\PaymentService;
