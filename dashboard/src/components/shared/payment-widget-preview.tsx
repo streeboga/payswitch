@@ -38,7 +38,7 @@ function WidgetMount({
     const init = async () => {
       const { loadPayswitch } = await import('@payswitch/js')
       if (destroyed) return
-      const ps = await loadPayswitch(publishableKey, { customBackendUrl: '' })
+      const ps = await loadPayswitch(publishableKey, { customBackendUrl: import.meta.env.VITE_BACKEND_URL ?? '' })
       const widgets = ps.widgets({ clientSecret, locale })
       const w = widgets.create('payment')
       widget = w
