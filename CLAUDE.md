@@ -49,7 +49,7 @@ cd dashboard && npm run build
 #### Internal Packages (`packages/`)
 
 - **streeboga/payment-data** — Core domain: models, enums, state machine, migrations, contracts (see `packages/streeboga/payment-data/CLAUDE.md`)
-- **streeboga/payment-connectors** — PSP integrations: Stripe, CloudPayments, YooKassa, Test (see `packages/streeboga/payment-connectors/CLAUDE.md`)
+- **streeboga/payment-connectors** — PSP integrations: 9 connectors (Stripe, CloudPayments, YooKassa, Sberbank, Alfa-Bank, T-Bank, Robokassa, Tochka, Test). Config-driven factory, 4 integration types (redirect, form_redirect, widget, qr_inline). See `packages/streeboga/payment-connectors/CLAUDE.md` and `CONNECTOR_SDK.md`
 - **scramble** — Custom API documentation generator with JSON:API v1.1 support
 
 #### Application Layer (`app/`)
