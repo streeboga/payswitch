@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentMethodController;
 use App\Http\Controllers\Api\V1\PublicPaymentController;
+use App\Http\Controllers\Api\V1\PublicPaymentStatusController;
 use App\Http\Controllers\Api\V1\RefundController;
 use App\Http\Controllers\Api\V1\WebhookReceiverController;
 use App\Http\Controllers\Auth\UserController;
@@ -210,6 +211,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('/payments/{paymentKey}', [PublicPaymentController::class, 'show'])->name('api.v1.public.payments.show');
         Route::post('/payments/{paymentKey}/confirm', [PublicPaymentController::class, 'confirm'])->name('api.v1.public.payments.confirm');
         Route::get('/payments/{paymentKey}/payment-methods', [PublicPaymentController::class, 'paymentMethods'])->name('api.v1.public.payments.payment-methods');
+        Route::get('/payments/{paymentKey}/status', PublicPaymentStatusController::class)->name('api.v1.public.payments.status');
     });
 
     // Merchant API
