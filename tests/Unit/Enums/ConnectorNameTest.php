@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use App\Enums\ConnectorName;
 
-test('all 7 connector names exist', function () {
-    expect(ConnectorName::cases())->toHaveCount(7);
+test('all 8 connector names exist', function () {
+    expect(ConnectorName::cases())->toHaveCount(8);
 });
 
 test('YooKassa case exists', function () {
@@ -31,7 +31,7 @@ test('all cases have icons', function () {
 });
 
 test('values returns all string values', function () {
-    expect(ConnectorName::values())->toBe(['stripe', 'cloudpayments', 'yookassa', 'sberbank', 'alfabank', 'tbank', 'test']);
+    expect(ConnectorName::values())->toBe(['stripe', 'cloudpayments', 'yookassa', 'sberbank', 'alfabank', 'tbank', 'robokassa', 'test']);
 });
 
 test('options returns label map', function () {
