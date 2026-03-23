@@ -15,6 +15,7 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
     case YooKassa = 'yookassa';
     case Sberbank = 'sberbank';
     case AlfaBank = 'alfabank';
+    case TBank = 'tbank';
     case Test = 'test';
 
     public function getLabel(): string
@@ -25,6 +26,7 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
             self::YooKassa => 'ЮKassa',
             self::Sberbank => 'Сбербанк',
             self::AlfaBank => 'Альфа-Банк',
+            self::TBank => 'Т-Банк',
             self::Test => 'Тестовый',
         };
     }
@@ -37,6 +39,7 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
             self::YooKassa => 'success',
             self::Sberbank => 'success',
             self::AlfaBank => 'danger',
+            self::TBank => 'warning',
             self::Test => 'gray',
         };
     }
@@ -49,6 +52,7 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
             self::YooKassa => 'heroicon-o-currency-dollar',
             self::Sberbank => 'heroicon-o-building-library',
             self::AlfaBank => 'heroicon-o-building-office-2',
+            self::TBank => 'heroicon-o-banknotes',
             self::Test => 'heroicon-o-beaker',
         };
     }
