@@ -110,6 +110,8 @@ final class RobokassaConnector implements ConnectorInterface
         if ($method === 'card') {
             $formParams['IncCurrLabel'] = 'BankCardPSR';
         } elseif ($method === 'sbp') {
+            // NOTE: 'SBP' is the commonly used label; verify with real merchant
+            // credentials via Robokassa GetCurrencies API. Some docs use 'SBPPSR'.
             $formParams['IncCurrLabel'] = 'SBP';
         }
 
@@ -196,10 +198,13 @@ final class RobokassaConnector implements ConnectorInterface
 
     /**
      * Generate a numeric InvId from a payment ID string.
+     *
+     * Uses SHA-256 truncated to 8 hex chars (32-bit) for better distribution
+     * than crc32. Deterministic for retries on the same payment_id.
      */
     private function generateInvId(string $paymentId): int
     {
-        return abs(crc32($paymentId));
+        return hexdec(substr(hash('sha256', $paymentId), 0, 8));
     }
 
     /**

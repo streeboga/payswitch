@@ -398,9 +398,12 @@ test('mapPaymentStatusToInternal maps all T-Bank statuses', function () {
         ->and($connector->mapPaymentStatusToInternal('AUTHORIZED'))->toBe(PaymentStatus::RequiresCapture)
         ->and($connector->mapPaymentStatusToInternal('CONFIRMED'))->toBe(PaymentStatus::Succeeded)
         ->and($connector->mapPaymentStatusToInternal('REVERSED'))->toBe(PaymentStatus::Cancelled)
+        ->and($connector->mapPaymentStatusToInternal('CANCELED'))->toBe(PaymentStatus::Cancelled)
         ->and($connector->mapPaymentStatusToInternal('REFUNDED'))->toBeNull()
         ->and($connector->mapPaymentStatusToInternal('PARTIAL_REFUNDED'))->toBeNull()
         ->and($connector->mapPaymentStatusToInternal('REJECTED'))->toBe(PaymentStatus::Failed)
+        ->and($connector->mapPaymentStatusToInternal('AUTH_FAIL'))->toBe(PaymentStatus::Failed)
+        ->and($connector->mapPaymentStatusToInternal('DEADLINE_EXPIRED'))->toBe(PaymentStatus::Failed)
         ->and($connector->mapPaymentStatusToInternal('UNKNOWN'))->toBeNull();
 });
 
@@ -590,6 +593,41 @@ test('testConnection returns failure on auth error', function () {
 
     expect($result['success'])->toBeFalse()
         ->and($result['message'])->toBe('Ошибка авторизации');
+});
+
+// --- Token generation with nested objects ---
+
+test('verifyWebhookSignature ignores nested objects in token generation', function () {
+    $connector = tbankConnector();
+
+    // Webhook payload with nested Receipt and DATA objects — these must be
+    // excluded from token generation per T-Bank docs.
+    $scalarParams = [
+        'TerminalKey' => 'TinkoffBankTest',
+        'OrderId' => 'pay_receipt',
+        'Success' => true,
+        'Status' => 'CONFIRMED',
+        'PaymentId' => 5550001,
+        'ErrorCode' => '0',
+        'Amount' => 50000,
+    ];
+
+    // Generate expected token from scalar fields only
+    $tokenParams = $scalarParams;
+    $tokenParams['Password'] = 'test_password';
+    ksort($tokenParams);
+    $values = implode('', array_values(array_map('strval', $tokenParams)));
+    $expectedToken = hash('sha256', $values);
+
+    // Add nested objects AFTER computing the token — they should be ignored
+    $params = $scalarParams;
+    $params['Receipt'] = ['Items' => [['Name' => 'Test', 'Price' => 50000]]];
+    $params['DATA'] = ['Phone' => '+79001234567'];
+    $params['Token'] = $expectedToken;
+
+    $payload = json_encode($params);
+
+    expect($connector->verifyWebhookSignature($payload, []))->toBeTrue();
 });
 
 // --- Error handling ---

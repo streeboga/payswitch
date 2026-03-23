@@ -17,7 +17,9 @@ use Streeboga\PaymentData\Enums\SessionResultType;
  * Tochka Bank acquiring connector.
  *
  * API docs: https://enter.tochka.com/doc/openapi
+ * Base URL: https://enter.tochka.com/uapi
  * All amounts are in rubles (decimal). Auth via Bearer JWT token.
+ * All request bodies are wrapped in {"Data": {...}}, responses read from response["Data"].
  */
 final class TochkaConnector implements ConnectorInterface
 {
@@ -32,7 +34,7 @@ final class TochkaConnector implements ConnectorInterface
     {
         $this->token = $credentials['token'] ?? '';
         $this->customerCode = $credentials['customer_code'] ?? '';
-        $this->baseUrl = $credentials['base_url'] ?? 'https://enter.tochka.com/api';
+        $this->baseUrl = $credentials['base_url'] ?? 'https://enter.tochka.com/uapi';
     }
 
     public static function capabilities(): ConnectorCapabilities
@@ -91,27 +93,27 @@ final class TochkaConnector implements ConnectorInterface
     {
         $paymentId = $params['transaction_id'] ?? '';
 
-        $body = [];
-        if (! empty($params['amount'])) {
-            $body['amount'] = $this->formatAmount($params['amount']);
-        }
+        $body = [
+            'amount' => $this->formatAmount($params['amount'] ?? 0),
+        ];
 
         return $this->makeRequest(
             'POST',
-            "/acquiring/v1.0/payments/{$paymentId}/cancel",
+            "/acquiring/v1.0/payments/{$paymentId}/refund",
             $body,
         );
     }
 
     public function void(array $params): array
     {
-        $paymentId = $params['transaction_id'] ?? '';
-
-        return $this->makeRequest(
-            'POST',
-            "/acquiring/v1.0/payments/{$paymentId}/cancel",
-            [],
-        );
+        // Tochka has no cancel/void endpoint
+        return [
+            'success' => false,
+            'transaction_id' => null,
+            'message' => 'Void/cancel not supported by Tochka — use refund instead',
+            'code' => 'not_supported',
+            'data' => [],
+        ];
     }
 
     public function getPaymentStatus(array $params): array
@@ -140,11 +142,9 @@ final class TochkaConnector implements ConnectorInterface
                 $body['failRedirectUrl'] = $params['fail_url'];
             }
 
-            // Direct method selection
-            $method = $params['payment_method'] ?? null;
-            if (in_array($method, ['card', 'sbp', 'tinkoff', 'dolyame'], true)) {
-                $body['paymentMode'] = $method;
-            }
+            // paymentMode must be an array; default to ['card'] when no method specified
+            $method = $params['payment_method'] ?? 'card';
+            $body['paymentMode'] = [$method];
 
             // Pre-authorization for two-step flow
             if (! empty($params['pre_authorization'])) {
@@ -161,12 +161,12 @@ final class TochkaConnector implements ConnectorInterface
                 ];
             }
 
-            $paymentUrl = $result['data']['paymentUrl'] ?? $result['data']['url'] ?? '';
-            $transactionId = $result['data']['paymentId'] ?? $result['data']['id'] ?? null;
+            $paymentLink = $result['data']['paymentLink'] ?? '';
+            $operationId = $result['data']['operationId'] ?? null;
 
             return PaymentSessionResult::serverRedirect(
-                url: $paymentUrl,
-                transactionId: $transactionId ? (string) $transactionId : null,
+                url: $paymentLink,
+                transactionId: $operationId ? (string) $operationId : null,
             );
         } catch (\Throwable $e) {
             return [
@@ -203,9 +203,14 @@ final class TochkaConnector implements ConnectorInterface
     public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
     {
         return match ($rawStatus) {
+            'CREATED' => PaymentStatus::Processing,
             'AUTHORIZED' => PaymentStatus::RequiresCapture,
             'APPROVED' => PaymentStatus::Succeeded,
+            'EXPIRED' => PaymentStatus::Failed,
             'REFUNDED' => null,
+            'ON-REFUND' => null,
+            'REFUNDED_PARTIALLY' => null,
+            'WAIT_FULL_PAYMENT' => PaymentStatus::Processing,
             default => null,
         };
     }
@@ -248,6 +253,9 @@ final class TochkaConnector implements ConnectorInterface
     /**
      * Send an HTTP request to the Tochka API.
      *
+     * All request bodies are wrapped in {"Data": {...}}.
+     * All responses are unwrapped from the "Data" envelope.
+     *
      * @param  array<string, mixed>  $data
      * @return array{success: bool, transaction_id: ?string, message: ?string, code: ?string, data: array<string, mixed>}
      */
@@ -262,15 +270,18 @@ final class TochkaConnector implements ConnectorInterface
 
             $response = match (strtoupper($method)) {
                 'GET' => $request->get($url, $data),
-                default => $request->post($url, $data),
+                default => $request->post($url, ['Data' => $data]),
             };
 
-            $body = $response->json() ?? [];
+            $rawBody = $response->json() ?? [];
+
+            // Unwrap the Data envelope
+            $body = $rawBody['Data'] ?? $rawBody;
 
             if (! $response->successful()) {
                 return [
                     'success' => false,
-                    'transaction_id' => $body['paymentId'] ?? $body['id'] ?? null,
+                    'transaction_id' => $body['operationId'] ?? null,
                     'message' => $body['message'] ?? $body['error'] ?? 'Tochka error (HTTP '.$response->status().')',
                     'code' => (string) ($body['code'] ?? $response->status()),
                     'data' => $body,
@@ -279,7 +290,7 @@ final class TochkaConnector implements ConnectorInterface
 
             return [
                 'success' => true,
-                'transaction_id' => isset($body['paymentId']) ? (string) $body['paymentId'] : ($body['id'] ?? null),
+                'transaction_id' => isset($body['operationId']) ? (string) $body['operationId'] : null,
                 'message' => $body['message'] ?? 'ok',
                 'code' => 'ok',
                 'data' => $body,

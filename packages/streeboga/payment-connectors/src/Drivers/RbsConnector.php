@@ -53,7 +53,7 @@ final class RbsConnector implements ConnectorInterface
     public function purchase(array $params): array
     {
         $result = $this->makeRequest('register.do', [
-            'orderNumber' => $params['payment_id'] ?? '',
+            'orderNumber' => $this->truncateOrderNumber($params['payment_id'] ?? ''),
             'amount' => $this->formatAmount($params['amount'] ?? 0),
             'currency' => $this->mapCurrencyCode($params['currency'] ?? 'RUB'),
             'returnUrl' => $params['return_url'] ?? '',
@@ -79,7 +79,7 @@ final class RbsConnector implements ConnectorInterface
     public function authorize(array $params): array
     {
         $result = $this->makeRequest('registerPreAuth.do', [
-            'orderNumber' => $params['payment_id'] ?? '',
+            'orderNumber' => $this->truncateOrderNumber($params['payment_id'] ?? ''),
             'amount' => $this->formatAmount($params['amount'] ?? 0),
             'currency' => $this->mapCurrencyCode($params['currency'] ?? 'RUB'),
             'returnUrl' => $params['return_url'] ?? '',
@@ -160,7 +160,7 @@ final class RbsConnector implements ConnectorInterface
         try {
             // Step 1: Register the order
             $registerResult = $this->makeRequest('register.do', [
-                'orderNumber' => $params['payment_id'] ?? '',
+                'orderNumber' => $this->truncateOrderNumber($params['payment_id'] ?? ''),
                 'amount' => $this->formatAmount($params['amount'] ?? 0),
                 'currency' => $this->mapCurrencyCode($params['currency'] ?? 'RUB'),
                 'returnUrl' => $params['return_url'] ?? '',
@@ -289,6 +289,17 @@ final class RbsConnector implements ConnectorInterface
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * RBS orderNumber is limited to 32 characters.
+     * Strip hyphens first (common in ULIDs/UUIDs) to preserve more meaningful chars.
+     */
+    private function truncateOrderNumber(string $orderNumber): string
+    {
+        $stripped = str_replace('-', '', $orderNumber);
+
+        return mb_substr($stripped, 0, 32);
+    }
 
     /**
      * @return array<string, string>

@@ -547,3 +547,51 @@ test('testConnection returns failure on auth error', function () {
     expect($result['success'])->toBeFalse()
         ->and($result['message'])->toBe('Access denied');
 });
+
+// --- orderNumber truncation ---
+
+test('orderNumber is truncated to 32 characters with hyphens stripped', function () {
+    Http::fake([
+        '3dsec.sberbank.ru/*' => Http::response([
+            'orderId' => 'order-trunc',
+            'formUrl' => 'https://3dsec.sberbank.ru/payment/merchants/pay.html?mdOrder=order-trunc',
+        ]),
+    ]);
+
+    $connector = rbsConnector();
+    // UUID-style: 36 chars with hyphens, 32 without
+    $connector->purchase([
+        'payment_id' => '01234567-89ab-cdef-0123-456789abcdef',
+        'amount' => 10000,
+        'return_url' => 'https://merchant.com/return',
+    ]);
+
+    Http::assertSent(function ($request) {
+        $orderNumber = $request['orderNumber'];
+
+        // Hyphens stripped: "0123456789abcdef0123456789abcdef" (32 chars)
+        return strlen($orderNumber) === 32
+            && ! str_contains($orderNumber, '-');
+    });
+});
+
+test('short orderNumber passes through unchanged', function () {
+    Http::fake([
+        '3dsec.sberbank.ru/*' => Http::response([
+            'orderId' => 'order-short',
+            'formUrl' => 'https://3dsec.sberbank.ru/payment/merchants/pay.html?mdOrder=order-short',
+        ]),
+    ]);
+
+    $connector = rbsConnector();
+    $connector->purchase([
+        'payment_id' => 'pay_123',
+        'amount' => 10000,
+        'return_url' => 'https://merchant.com/return',
+    ]);
+
+    Http::assertSent(function ($request) {
+        // No hyphens in "pay_123", so it passes through as-is
+        return $request['orderNumber'] === 'pay_123';
+    });
+});

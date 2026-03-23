@@ -274,6 +274,10 @@ final class TBankConnector implements ConnectorInterface
     {
         $params['Password'] = $this->credentials['password'] ?? '';
 
+        // Filter out non-scalar values (arrays/objects like Receipt, DATA)
+        // — they must not participate in token generation per T-Bank docs.
+        $params = array_filter($params, fn ($value) => is_scalar($value));
+
         ksort($params);
 
         $values = implode('', array_values(array_map('strval', $params)));
@@ -304,9 +308,12 @@ final class TBankConnector implements ConnectorInterface
             'AUTHORIZED' => PaymentStatus::RequiresCapture,
             'CONFIRMED' => PaymentStatus::Succeeded,
             'REVERSED' => PaymentStatus::Cancelled,
+            'CANCELED' => PaymentStatus::Cancelled,
             'REFUNDED' => null,
             'PARTIAL_REFUNDED' => null,
             'REJECTED' => PaymentStatus::Failed,
+            'AUTH_FAIL' => PaymentStatus::Failed,
+            'DEADLINE_EXPIRED' => PaymentStatus::Failed,
             default => null,
         };
     }

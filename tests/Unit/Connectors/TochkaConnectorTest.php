@@ -20,7 +20,7 @@ function tochkaCredentials(array $overrides = []): array
     return array_merge([
         'token' => 'test_jwt_token',
         'customer_code' => 'cust_123',
-        'base_url' => 'https://enter.tochka.com/api',
+        'base_url' => 'https://enter.tochka.com/uapi',
     ], $overrides);
 }
 
@@ -78,11 +78,13 @@ test('authorize returns not_supported', function () {
 
 // --- createPaymentSession ---
 
-test('createPaymentSession sends correct JSON body with Bearer auth', function () {
+test('createPaymentSession sends Data-wrapped JSON body with Bearer auth', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_001',
-            'paymentUrl' => 'https://enter.tochka.com/pay/pmt_001',
+            'Data' => [
+                'operationId' => 'op_001',
+                'paymentLink' => 'https://enter.tochka.com/pay/op_001',
+            ],
         ]),
     ]);
 
@@ -97,27 +99,31 @@ test('createPaymentSession sends correct JSON body with Bearer auth', function (
 
     expect($result)->toBeInstanceOf(PaymentSessionResult::class)
         ->and($result->type)->toBe(SessionResultType::ServerRedirect)
-        ->and($result->toArray()['url'])->toBe('https://enter.tochka.com/pay/pmt_001')
-        ->and($result->toArray()['transaction_id'])->toBe('pmt_001');
+        ->and($result->toArray()['url'])->toBe('https://enter.tochka.com/pay/op_001')
+        ->and($result->toArray()['transaction_id'])->toBe('op_001');
 
     Http::assertSent(function ($request) {
         $body = $request->data();
 
         return str_contains($request->url(), '/acquiring/v1.0/payments')
             && $request->hasHeader('Authorization', 'Bearer test_jwt_token')
-            && $body['amount'] === '1500.00'
-            && $body['customerCode'] === 'cust_123'
-            && $body['purpose'] === 'Order #123'
-            && $body['redirectUrl'] === 'https://merchant.com/success'
-            && $body['paymentLinkId'] === 'pay_session_001';
+            && isset($body['Data'])
+            && $body['Data']['amount'] === '1500.00'
+            && $body['Data']['customerCode'] === 'cust_123'
+            && $body['Data']['purpose'] === 'Order #123'
+            && $body['Data']['redirectUrl'] === 'https://merchant.com/success'
+            && $body['Data']['paymentLinkId'] === 'pay_session_001'
+            && $body['Data']['paymentMode'] === ['card']; // default
     });
 });
 
-test('createPaymentSession sets paymentMode for card', function () {
+test('createPaymentSession sets paymentMode as array for card', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_002',
-            'paymentUrl' => 'https://enter.tochka.com/pay/pmt_002',
+            'Data' => [
+                'operationId' => 'op_002',
+                'paymentLink' => 'https://enter.tochka.com/pay/op_002',
+            ],
         ]),
     ]);
 
@@ -132,15 +138,17 @@ test('createPaymentSession sets paymentMode for card', function () {
     Http::assertSent(function ($request) {
         $body = $request->data();
 
-        return $body['paymentMode'] === 'card';
+        return $body['Data']['paymentMode'] === ['card'];
     });
 });
 
-test('createPaymentSession sets paymentMode for sbp', function () {
+test('createPaymentSession sets paymentMode as array for sbp', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_003',
-            'paymentUrl' => 'https://enter.tochka.com/pay/pmt_003',
+            'Data' => [
+                'operationId' => 'op_003',
+                'paymentLink' => 'https://enter.tochka.com/pay/op_003',
+            ],
         ]),
     ]);
 
@@ -155,15 +163,17 @@ test('createPaymentSession sets paymentMode for sbp', function () {
     Http::assertSent(function ($request) {
         $body = $request->data();
 
-        return $body['paymentMode'] === 'sbp';
+        return $body['Data']['paymentMode'] === ['sbp'];
     });
 });
 
 test('createPaymentSession sets preAuthorization for authorize flow', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_004',
-            'paymentUrl' => 'https://enter.tochka.com/pay/pmt_004',
+            'Data' => [
+                'operationId' => 'op_004',
+                'paymentLink' => 'https://enter.tochka.com/pay/op_004',
+            ],
         ]),
     ]);
 
@@ -178,15 +188,17 @@ test('createPaymentSession sets preAuthorization for authorize flow', function (
     Http::assertSent(function ($request) {
         $body = $request->data();
 
-        return $body['preAuthorization'] === true;
+        return $body['Data']['preAuthorization'] === true;
     });
 });
 
 test('createPaymentSession returns error when API fails', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'message' => 'Invalid customer code',
-            'code' => 'VALIDATION_ERROR',
+            'Data' => [
+                'message' => 'Invalid customer code',
+                'code' => 'VALIDATION_ERROR',
+            ],
         ], 400),
     ]);
 
@@ -221,23 +233,25 @@ test('createPaymentSession returns error on exception', function () {
 
 // --- capture ---
 
-test('capture calls correct endpoint with transaction_id', function () {
+test('capture calls correct endpoint with Data wrapper', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_005',
-            'status' => 'APPROVED',
+            'Data' => [
+                'operationId' => 'op_005',
+                'status' => 'APPROVED',
+            ],
         ]),
     ]);
 
     $connector = tochkaConnector();
     $result = $connector->capture([
-        'transaction_id' => 'pmt_005',
+        'transaction_id' => 'op_005',
     ]);
 
     expect($result['success'])->toBeTrue();
 
     Http::assertSent(function ($request) {
-        return str_contains($request->url(), '/acquiring/v1.0/payments/pmt_005/capture')
+        return str_contains($request->url(), '/acquiring/v1.0/payments/op_005/capture')
             && $request->method() === 'POST'
             && $request->hasHeader('Authorization', 'Bearer test_jwt_token');
     });
@@ -245,17 +259,19 @@ test('capture calls correct endpoint with transaction_id', function () {
 
 // --- refund ---
 
-test('refund calls cancel endpoint with amount for partial refund', function () {
+test('refund calls refund endpoint with required amount', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_006',
-            'status' => 'REFUNDED',
+            'Data' => [
+                'operationId' => 'op_006',
+                'status' => 'REFUNDED',
+            ],
         ]),
     ]);
 
     $connector = tochkaConnector();
     $result = $connector->refund([
-        'transaction_id' => 'pmt_006',
+        'transaction_id' => 'op_006',
         'amount' => 50000, // 500.00 RUB partial refund
     ]);
 
@@ -264,22 +280,24 @@ test('refund calls cancel endpoint with amount for partial refund', function () 
     Http::assertSent(function ($request) {
         $body = $request->data();
 
-        return str_contains($request->url(), '/acquiring/v1.0/payments/pmt_006/cancel')
-            && $body['amount'] === '500.00';
+        return str_contains($request->url(), '/acquiring/v1.0/payments/op_006/refund')
+            && $body['Data']['amount'] === '500.00';
     });
 });
 
-test('refund calls cancel endpoint without amount for full refund', function () {
+test('refund sends zero amount when not provided', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_007',
-            'status' => 'REFUNDED',
+            'Data' => [
+                'operationId' => 'op_007',
+                'status' => 'REFUNDED',
+            ],
         ]),
     ]);
 
     $connector = tochkaConnector();
     $result = $connector->refund([
-        'transaction_id' => 'pmt_007',
+        'transaction_id' => 'op_007',
     ]);
 
     expect($result['success'])->toBeTrue();
@@ -287,54 +305,46 @@ test('refund calls cancel endpoint without amount for full refund', function () 
     Http::assertSent(function ($request) {
         $body = $request->data();
 
-        return str_contains($request->url(), '/acquiring/v1.0/payments/pmt_007/cancel')
-            && ! isset($body['amount']);
+        return str_contains($request->url(), '/acquiring/v1.0/payments/op_007/refund')
+            && $body['Data']['amount'] === '0.00';
     });
 });
 
 // --- void ---
 
-test('void calls cancel endpoint without amount', function () {
-    Http::fake([
-        'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_008',
-        ]),
-    ]);
-
+test('void returns not_supported', function () {
     $connector = tochkaConnector();
     $result = $connector->void([
-        'transaction_id' => 'pmt_008',
+        'transaction_id' => 'op_008',
     ]);
 
-    expect($result['success'])->toBeTrue();
-
-    Http::assertSent(function ($request) {
-        return str_contains($request->url(), '/acquiring/v1.0/payments/pmt_008/cancel')
-            && $request->method() === 'POST';
-    });
+    expect($result['success'])->toBeFalse()
+        ->and($result['code'])->toBe('not_supported');
 });
 
 // --- getPaymentStatus ---
 
-test('getPaymentStatus calls GET and returns mapped status', function () {
+test('getPaymentStatus calls GET and returns data from Data envelope', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_009',
-            'status' => 'APPROVED',
-            'amount' => 1500.00,
+            'Data' => [
+                'operationId' => 'op_009',
+                'status' => 'APPROVED',
+                'amount' => 1500.00,
+            ],
         ]),
     ]);
 
     $connector = tochkaConnector();
     $result = $connector->getPaymentStatus([
-        'transaction_id' => 'pmt_009',
+        'transaction_id' => 'op_009',
     ]);
 
     expect($result['success'])->toBeTrue()
         ->and($result['data']['status'])->toBe('APPROVED');
 
     Http::assertSent(function ($request) {
-        return str_contains($request->url(), '/acquiring/v1.0/payments/pmt_009')
+        return str_contains($request->url(), '/acquiring/v1.0/payments/op_009')
             && $request->method() === 'GET';
     });
 });
@@ -344,8 +354,10 @@ test('getPaymentStatus calls GET and returns mapped status', function () {
 test('amount formatted as rubles from kopecks', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_010',
-            'paymentUrl' => 'https://enter.tochka.com/pay/pmt_010',
+            'Data' => [
+                'operationId' => 'op_010',
+                'paymentLink' => 'https://enter.tochka.com/pay/op_010',
+            ],
         ]),
     ]);
 
@@ -359,15 +371,17 @@ test('amount formatted as rubles from kopecks', function () {
     Http::assertSent(function ($request) {
         $body = $request->data();
 
-        return $body['amount'] === '100.50';
+        return $body['Data']['amount'] === '100.50';
     });
 });
 
 test('amount zero formatted correctly', function () {
     Http::fake([
         'enter.tochka.com/*' => Http::response([
-            'paymentId' => 'pmt_011',
-            'paymentUrl' => 'https://enter.tochka.com/pay/pmt_011',
+            'Data' => [
+                'operationId' => 'op_011',
+                'paymentLink' => 'https://enter.tochka.com/pay/op_011',
+            ],
         ]),
     ]);
 
@@ -381,7 +395,7 @@ test('amount zero formatted correctly', function () {
     Http::assertSent(function ($request) {
         $body = $request->data();
 
-        return $body['amount'] === '0.00';
+        return $body['Data']['amount'] === '0.00';
     });
 });
 
@@ -390,9 +404,14 @@ test('amount zero formatted correctly', function () {
 test('mapPaymentStatusToInternal maps all Tochka statuses', function () {
     $connector = tochkaConnector();
 
-    expect($connector->mapPaymentStatusToInternal('AUTHORIZED'))->toBe(PaymentStatus::RequiresCapture)
+    expect($connector->mapPaymentStatusToInternal('CREATED'))->toBe(PaymentStatus::Processing)
+        ->and($connector->mapPaymentStatusToInternal('AUTHORIZED'))->toBe(PaymentStatus::RequiresCapture)
         ->and($connector->mapPaymentStatusToInternal('APPROVED'))->toBe(PaymentStatus::Succeeded)
+        ->and($connector->mapPaymentStatusToInternal('EXPIRED'))->toBe(PaymentStatus::Failed)
         ->and($connector->mapPaymentStatusToInternal('REFUNDED'))->toBeNull()
+        ->and($connector->mapPaymentStatusToInternal('ON-REFUND'))->toBeNull()
+        ->and($connector->mapPaymentStatusToInternal('REFUNDED_PARTIALLY'))->toBeNull()
+        ->and($connector->mapPaymentStatusToInternal('WAIT_FULL_PAYMENT'))->toBe(PaymentStatus::Processing)
         ->and($connector->mapPaymentStatusToInternal('UNKNOWN'))->toBeNull();
 });
 
@@ -411,7 +430,7 @@ test('extractPaymentIdFromWebhook extracts paymentLinkId', function () {
 
     $paymentId = $connector->extractPaymentIdFromWebhook([
         'eventType' => 'acquiringInternetPayment',
-        'paymentId' => 'pmt_tochka_001',
+        'operationId' => 'op_tochka_001',
         'paymentLinkId' => 'pay_01ABC',
         'status' => 'APPROVED',
     ]);
@@ -424,7 +443,7 @@ test('extractPaymentIdFromWebhook returns null when paymentLinkId missing', func
 
     $paymentId = $connector->extractPaymentIdFromWebhook([
         'eventType' => 'acquiringInternetPayment',
-        'paymentId' => 'pmt_tochka_001',
+        'operationId' => 'op_tochka_001',
     ]);
 
     expect($paymentId)->toBeNull();
@@ -446,12 +465,35 @@ test('webhook fixture matches expected format', function () {
 
     expect($fixture)
         ->toHaveKey('eventType')
-        ->toHaveKey('paymentId')
         ->toHaveKey('paymentLinkId')
         ->toHaveKey('status')
         ->toHaveKey('amount')
         ->and($fixture['eventType'])->toBe('acquiringInternetPayment')
         ->and($fixture['status'])->toBe('APPROVED');
+});
+
+// --- Base URL ---
+
+test('default base URL uses uapi prefix', function () {
+    $connector = new TochkaConnector([
+        'token' => 'test',
+        'customer_code' => 'cust',
+    ]);
+
+    Http::fake([
+        'enter.tochka.com/*' => Http::response([
+            'Data' => [
+                'operationId' => 'op_url',
+                'status' => 'APPROVED',
+            ],
+        ]),
+    ]);
+
+    $connector->getPaymentStatus(['transaction_id' => 'op_url']);
+
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), 'enter.tochka.com/uapi/acquiring');
+    });
 });
 
 // --- testConnection ---
@@ -519,7 +561,7 @@ test('connector error on network failure returns proper structure', function () 
 
     $connector = tochkaConnector();
     $result = $connector->capture([
-        'transaction_id' => 'pmt_fail',
+        'transaction_id' => 'op_fail',
     ]);
 
     expect($result['success'])->toBeFalse()
