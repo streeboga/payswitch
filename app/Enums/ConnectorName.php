@@ -13,6 +13,8 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
     case Stripe = 'stripe';
     case CloudPayments = 'cloudpayments';
     case YooKassa = 'yookassa';
+    case Sberbank = 'sberbank';
+    case AlfaBank = 'alfabank';
     case Test = 'test';
 
     public function getLabel(): string
@@ -21,6 +23,8 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
             self::Stripe => 'Stripe',
             self::CloudPayments => 'CloudPayments',
             self::YooKassa => 'ЮKassa',
+            self::Sberbank => 'Сбербанк',
+            self::AlfaBank => 'Альфа-Банк',
             self::Test => 'Тестовый',
         };
     }
@@ -31,6 +35,8 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
             self::Stripe => 'primary',
             self::CloudPayments => 'info',
             self::YooKassa => 'success',
+            self::Sberbank => 'success',
+            self::AlfaBank => 'danger',
             self::Test => 'gray',
         };
     }
@@ -41,6 +47,8 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
             self::Stripe => 'heroicon-o-credit-card',
             self::CloudPayments => 'heroicon-o-cloud',
             self::YooKassa => 'heroicon-o-currency-dollar',
+            self::Sberbank => 'heroicon-o-building-library',
+            self::AlfaBank => 'heroicon-o-building-office-2',
             self::Test => 'heroicon-o-beaker',
         };
     }

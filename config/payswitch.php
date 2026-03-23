@@ -1,6 +1,7 @@
 <?php
 
 use Streeboga\PaymentConnectors\Drivers\CloudPaymentsConnector;
+use Streeboga\PaymentConnectors\Drivers\RbsConnector;
 use Streeboga\PaymentConnectors\Drivers\StripeConnector;
 use Streeboga\PaymentConnectors\Drivers\TestConnector;
 use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
@@ -24,6 +25,8 @@ return [
         'stripe' => StripeConnector::class,
         'cloudpayments' => CloudPaymentsConnector::class,
         'yookassa' => YooKassaConnector::class,
+        'sberbank' => RbsConnector::class,
+        'alfabank' => RbsConnector::class,
         'test' => TestConnector::class,
     ],
 
