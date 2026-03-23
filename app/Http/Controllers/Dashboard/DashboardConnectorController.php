@@ -125,7 +125,12 @@ final class DashboardConnectorController extends Controller
         $merchantKey = $request->attributes->get('merchant_key');
         $result = $this->connectorService->testConnection($merchantKey, $connectorKey);
 
-        return response()->json(['data' => $result]);
+        return response()->json([
+            'data' => [
+                'type' => 'connection_test',
+                'attributes' => $result,
+            ],
+        ], 200, ['Content-Type' => 'application/vnd.api+json']);
     }
 
     /**
@@ -143,7 +148,13 @@ final class DashboardConnectorController extends Controller
         $merchantKey = $request->attributes->get('merchant_key');
         $capabilities = $this->connectorService->getCapabilities($merchantKey, $connectorKey);
 
-        return response()->json(['data' => $capabilities]);
+        return response()->json([
+            'data' => [
+                'type' => 'connector_capabilities',
+                'id' => $connectorKey,
+                'attributes' => $capabilities,
+            ],
+        ], 200, ['Content-Type' => 'application/vnd.api+json']);
     }
 
     /**

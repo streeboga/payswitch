@@ -36,12 +36,18 @@ test('capabilities endpoint returns data for stripe connector', function () {
         ->getJson("/api/v1/dashboard/connectors/{$mca->key}/capabilities", $this->headers);
 
     $response->assertOk()
+        ->assertJsonPath('data.type', 'connector_capabilities')
+        ->assertJsonPath('data.id', $mca->key)
         ->assertJsonStructure(['data' => [
-            'display_name',
-            'logo_path',
-            'direct_methods',
-            'fallback_session_type',
-            'amount_unit',
+            'type',
+            'id',
+            'attributes' => [
+                'display_name',
+                'logo_path',
+                'direct_methods',
+                'fallback_session_type',
+                'amount_unit',
+            ],
         ]]);
 });
 
@@ -60,11 +66,12 @@ test('capabilities endpoint returns correct data for yookassa connector', functi
         ->getJson("/api/v1/dashboard/connectors/{$mca->key}/capabilities", $this->headers);
 
     $response->assertOk()
-        ->assertJsonPath('data.display_name.ru', 'ЮKassa')
-        ->assertJsonPath('data.display_name.en', 'YooKassa')
-        ->assertJsonPath('data.fallback_session_type', 'redirect')
-        ->assertJsonPath('data.amount_unit', 'rubles')
-        ->assertJsonPath('data.direct_methods', ['card', 'sbp']);
+        ->assertJsonPath('data.type', 'connector_capabilities')
+        ->assertJsonPath('data.attributes.display_name.ru', 'ЮKassa')
+        ->assertJsonPath('data.attributes.display_name.en', 'YooKassa')
+        ->assertJsonPath('data.attributes.fallback_session_type', 'redirect')
+        ->assertJsonPath('data.attributes.amount_unit', 'rubles')
+        ->assertJsonPath('data.attributes.direct_methods', ['card', 'sbp']);
 });
 
 test('capabilities endpoint requires authentication', function () {
@@ -98,5 +105,6 @@ test('capabilities endpoint returns empty for unknown connector driver', functio
         ->getJson("/api/v1/dashboard/connectors/{$mca->key}/capabilities", $this->headers);
 
     $response->assertOk()
-        ->assertJsonPath('data', []);
+        ->assertJsonPath('data.type', 'connector_capabilities')
+        ->assertJsonPath('data.attributes', []);
 });

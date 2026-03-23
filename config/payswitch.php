@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Streeboga\PaymentConnectors\Drivers\CloudPaymentsConnector;
 use Streeboga\PaymentConnectors\Drivers\RbsConnector;
 use Streeboga\PaymentConnectors\Drivers\RobokassaConnector;

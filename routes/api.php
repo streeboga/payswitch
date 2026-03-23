@@ -212,7 +212,9 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('/payments/{paymentKey}', [PublicPaymentController::class, 'show'])->name('api.v1.public.payments.show');
         Route::post('/payments/{paymentKey}/confirm', [PublicPaymentController::class, 'confirm'])->name('api.v1.public.payments.confirm');
         Route::get('/payments/{paymentKey}/payment-methods', [PublicPaymentController::class, 'paymentMethods'])->name('api.v1.public.payments.payment-methods');
-        Route::get('/payments/{paymentKey}/status', PublicPaymentStatusController::class)->name('api.v1.public.payments.status');
+        Route::get('/payments/{paymentKey}/status', PublicPaymentStatusController::class)
+            ->middleware('throttle:20,1') // QR polling: 20 req/min per IP
+            ->name('api.v1.public.payments.status');
     });
 
     // Merchant API

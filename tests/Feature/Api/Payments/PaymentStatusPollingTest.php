@@ -53,10 +53,12 @@ test('returns current payment status with valid client_secret', function () {
     $response->assertOk();
 
     $data = $response->json('data');
-    expect($data)->toHaveKeys(['status', 'amount', 'currency']);
-    expect($data['status'])->toBe('requires_payment_method');
-    expect($data['amount'])->toBe(10000);
-    expect($data['currency'])->toBe('RUB');
+    expect($data)->toHaveKeys(['type', 'id', 'attributes']);
+    expect($data['type'])->toBe('payment_status');
+    expect($data['id'])->toBe($this->payment->key);
+    expect($data['attributes']['status'])->toBe('requires_payment_method');
+    expect($data['attributes']['amount'])->toBe(10000);
+    expect($data['attributes']['currency'])->toBe('RUB');
 });
 
 test('returns 404 with invalid client_secret', function () {
@@ -86,7 +88,7 @@ test('returns succeeded status when payment is complete', function () {
     );
 
     $response->assertOk();
-    expect($response->json('data.status'))->toBe('succeeded');
+    expect($response->json('data.attributes.status'))->toBe('succeeded');
 });
 
 test('returns requires_customer_action for pending QR payments', function () {
@@ -98,5 +100,5 @@ test('returns requires_customer_action for pending QR payments', function () {
     );
 
     $response->assertOk();
-    expect($response->json('data.status'))->toBe('requires_customer_action');
+    expect($response->json('data.attributes.status'))->toBe('requires_customer_action');
 });

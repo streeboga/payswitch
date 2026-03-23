@@ -345,11 +345,8 @@ abstract class HttpConnector implements ConnectorInterface
 
     /**
      * Apply authentication configured by configureRequest() to the pending HTTP request.
-     *
-     * @param  PendingRequest  $pendingRequest
-     * @return PendingRequest
      */
-    private function applyAuth($pendingRequest)
+    private function applyAuth(PendingRequest $pendingRequest): PendingRequest
     {
         $config = $this->configureRequest();
 

@@ -101,6 +101,7 @@ final class PublicPaymentController extends Controller
         return response()->json([
             'data' => [
                 'type' => 'payment_methods',
+                'id' => $payment->key,
                 'attributes' => $methods,
             ],
         ], 200, ['Content-Type' => 'application/vnd.api+json']);
