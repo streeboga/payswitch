@@ -99,11 +99,10 @@ final class PublicPaymentController extends Controller
         $methods = $this->paymentService->getAvailablePaymentMethods($payment, $locale);
 
         return response()->json([
-            'data' => $methods->map(fn (array $method): array => [
+            'data' => [
                 'type' => 'payment_methods',
-                'id' => $method['payment_method'],
-                'attributes' => $method,
-            ])->all(),
+                'attributes' => $methods,
+            ],
         ], 200, ['Content-Type' => 'application/vnd.api+json']);
     }
 }

@@ -10,7 +10,6 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
@@ -94,48 +93,117 @@ final readonly class PaymentService
     }
 
     /**
-     * Get unique payment methods available for a payment's business profile.
+     * Get available payment methods with smart method/connector resolution.
      *
-     * @return Collection<int, array<string, mixed>>
+     * @return array{mode: string, methods: list<array<string, mixed>>, connectors: list<array<string, mixed>>}
      */
-    public function getAvailablePaymentMethods(PaymentIntent $payment, ?string $locale = null): Collection
+    public function getAvailablePaymentMethods(PaymentIntent $payment, ?string $locale = null): array
     {
         $locale ??= 'en';
 
-        return $this->merchantRepository
+        $connectors = $this->merchantRepository
             ->getActiveConnectorsByMerchant($payment->merchant_account_id)
             ->where('business_profile_id', $payment->business_profile_id)
-            ->whereNotNull('payment_methods_enabled')
-            ->flatMap(function (MerchantConnectorAccount $mca) use ($locale): array {
-                $displayConfig = $mca->display_config['payment_methods'] ?? [];
-                $displayByMethod = collect($displayConfig)->keyBy('method');
+            ->whereNotNull('payment_methods_enabled');
 
-                return array_map(
-                    function (mixed $m) use ($displayByMethod, $locale, $mca): array {
-                        $base = is_array($m) ? $m : ['payment_method' => $m];
-                        $method = $base['payment_method'];
-                        $display = $displayByMethod->get($method);
+        $methods = [];
+        $connectorEntries = [];
+        $seenMethods = [];
 
-                        if ($display) {
-                            if (isset($display['display_name'])) {
-                                $base['display_name'] = is_array($display['display_name'])
-                                    ? ($display['display_name'][$locale] ?? $display['display_name']['en'] ?? null)
-                                    : $display['display_name'];
-                            }
-                            if (isset($display['icon_url'])) {
-                                $base['icon_url'] = $display['icon_url'];
-                            }
-                        }
+        foreach ($connectors as $mca) {
+            /** @var MerchantConnectorAccount $mca */
+            $driverClass = ConnectorFactory::resolveClass($mca->connector_name);
 
-                        $base['mode'] = $mca->display_config['widget_mode'] ?? 'redirect';
+            if (! $driverClass) {
+                continue;
+            }
 
-                        return $base;
-                    },
-                    $mca->payment_methods_enabled ?? [],
-                );
-            })
-            ->unique('payment_method')
-            ->values();
+            $capabilities = $driverClass::capabilities();
+            $enabledMethods = $this->normalizeEnabledMethods($mca->payment_methods_enabled ?? []);
+            $hasAnyDirectMethod = false;
+
+            foreach ($enabledMethods as $method) {
+                if ($capabilities->supportsDirectMethod($method)) {
+                    $hasAnyDirectMethod = true;
+
+                    // First connector wins for each method
+                    if (isset($seenMethods[$method])) {
+                        continue;
+                    }
+
+                    $seenMethods[$method] = true;
+                    $directMethod = $capabilities->getDirectMethod($method);
+
+                    $methods[] = [
+                        'method' => $method,
+                        'display_name' => $this->getMethodDisplayName($method, $locale),
+                        'type' => 'direct',
+                        'connector' => $mca->connector_name,
+                        'connector_key' => $mca->key,
+                        'session_type' => $directMethod->sessionType->value,
+                    ];
+                }
+            }
+
+            // If no enabled methods have direct support, add as connector entry
+            if (! $hasAnyDirectMethod) {
+                $displayConfig = $mca->display_config ?? [];
+
+                $connectorEntries[] = [
+                    'connector_name' => $mca->connector_name,
+                    'connector_key' => $mca->key,
+                    'display_name' => $displayConfig['display_name'] ?? $capabilities->displayName($locale),
+                    'logo_url' => $displayConfig['logo_url'] ?? $capabilities->logoPath,
+                    'session_type' => $capabilities->fallbackSessionType->value,
+                ];
+            }
+        }
+
+        $mode = match (true) {
+            ! empty($methods) && ! empty($connectorEntries) => 'mixed',
+            ! empty($methods) => 'direct_methods',
+            ! empty($connectorEntries) => 'connector_selection',
+            default => 'none',
+        };
+
+        return [
+            'mode' => $mode,
+            'methods' => array_values($methods),
+            'connectors' => array_values($connectorEntries),
+        ];
+    }
+
+    /**
+     * Normalize payment_methods_enabled to a flat list of method strings.
+     *
+     * Handles both ['card', 'sbp'] and [['payment_method' => 'card']] formats.
+     *
+     * @return list<string>
+     */
+    private function normalizeEnabledMethods(array $methods): array
+    {
+        return array_map(
+            fn (mixed $m): string => is_array($m) ? ($m['payment_method'] ?? '') : (string) $m,
+            $methods,
+        );
+    }
+
+    /**
+     * Get localized display name for a payment method.
+     */
+    private function getMethodDisplayName(string $method, string $locale): string
+    {
+        $names = [
+            'card' => ['ru' => 'Банковская карта', 'en' => 'Card'],
+            'sbp' => ['ru' => 'СБП', 'en' => 'SBP'],
+            'bank_transfer' => ['ru' => 'Банковский перевод', 'en' => 'Bank Transfer'],
+            'qiwi' => ['ru' => 'QIWI', 'en' => 'QIWI'],
+            'yoomoney' => ['ru' => 'ЮMoney', 'en' => 'YooMoney'],
+            'apple_pay' => ['ru' => 'Apple Pay', 'en' => 'Apple Pay'],
+            'google_pay' => ['ru' => 'Google Pay', 'en' => 'Google Pay'],
+        ];
+
+        return $names[$method][$locale] ?? $names[$method]['en'] ?? ucfirst(str_replace('_', ' ', $method));
     }
 
     public function confirm(string $paymentKey, ConfirmPaymentData $dto, int|string $merchantAccountId): PaymentIntent

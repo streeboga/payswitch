@@ -81,61 +81,38 @@ test('payment methods returns enabled methods in JSON:API format', function () {
     $response->assertOk()
         ->assertHeader('Content-Type', 'application/vnd.api+json');
 
-    $methods = $response->json('data');
-    expect($methods)->toBeArray();
-    expect($methods)->not->toBeEmpty();
-    expect($methods[0])->toHaveKeys(['type', 'id', 'attributes']);
-    expect($methods[0]['type'])->toBe('payment_methods');
-    expect($methods[0]['id'])->toBe('card');
-    expect($methods[0]['attributes']['payment_method'])->toBe('card');
+    $data = $response->json('data');
+    expect($data)->toHaveKeys(['type', 'attributes']);
+    expect($data['type'])->toBe('payment_methods');
+
+    $attrs = $data['attributes'];
+    expect($attrs)->toHaveKeys(['mode', 'methods', 'connectors']);
+    expect($attrs['mode'])->toBe('direct_methods');
+    expect($attrs['methods'])->not->toBeEmpty();
+    expect($attrs['methods'][0]['method'])->toBe('card');
+    expect($attrs['methods'][0]['type'])->toBe('direct');
 });
 
-test('payment methods include display_config data when set', function () {
-    MerchantConnectorAccount::query()->update([
-        'display_config' => [
-            'payment_methods' => [
-                [
-                    'method' => 'card',
-                    'display_name' => ['ru' => 'Банковская карта', 'en' => 'Bank Card'],
-                    'icon_url' => 'https://cdn.example.com/card.svg',
-                    'enabled' => true,
-                ],
-            ],
-            'widget_mode' => 'redirect',
-        ],
-    ]);
-
+test('payment methods include display_name from getMethodDisplayName', function () {
     $response = $this->getJson(
         '/api/v1/payments/'.$this->payment->key.'/payment-methods?client_secret='.$this->payment->client_secret.'&locale=ru',
         publicHeaders($this->merchant),
     );
 
     $response->assertOk();
-    $attrs = $response->json('data.0.attributes');
-    expect($attrs['display_name'])->toBe('Банковская карта');
-    expect($attrs['icon_url'])->toBe('https://cdn.example.com/card.svg');
-    expect($attrs['mode'])->toBe('redirect');
+    $methods = $response->json('data.attributes.methods');
+    expect($methods[0]['display_name'])->toBe('Банковская карта');
 });
 
 test('payment methods fallback to en when locale not found', function () {
-    MerchantConnectorAccount::query()->update([
-        'display_config' => [
-            'payment_methods' => [
-                [
-                    'method' => 'card',
-                    'display_name' => ['en' => 'Bank Card'],
-                ],
-            ],
-        ],
-    ]);
-
     $response = $this->getJson(
         '/api/v1/payments/'.$this->payment->key.'/payment-methods?client_secret='.$this->payment->client_secret.'&locale=fr',
         publicHeaders($this->merchant),
     );
 
     $response->assertOk();
-    expect($response->json('data.0.attributes.display_name'))->toBe('Bank Card');
+    // French not available, should fall back to en
+    expect($response->json('data.attributes.methods.0.display_name'))->toBe('Card');
 });
 
 test('payment methods work without display_config', function () {
@@ -145,13 +122,13 @@ test('payment methods work without display_config', function () {
     );
 
     $response->assertOk();
-    $attrs = $response->json('data.0.attributes');
-    expect($attrs['payment_method'])->toBe('card');
-    expect($attrs)->not->toHaveKey('display_name');
-    expect($attrs['mode'])->toBe('redirect');
+    $attrs = $response->json('data.attributes');
+    expect($attrs['mode'])->toBe('direct_methods');
+    expect($attrs['methods'][0]['method'])->toBe('card');
+    expect($attrs['methods'][0]['session_type'])->toBe('redirect');
 });
 
-test('payment methods returns empty when no active connectors', function () {
+test('payment methods returns none mode when no active connectors', function () {
     MerchantConnectorAccount::query()->update(['disabled' => true]);
 
     $response = $this->getJson(
@@ -160,7 +137,10 @@ test('payment methods returns empty when no active connectors', function () {
     );
 
     $response->assertOk();
-    expect($response->json('data'))->toBeEmpty();
+    $attrs = $response->json('data.attributes');
+    expect($attrs['mode'])->toBe('none');
+    expect($attrs['methods'])->toBeEmpty();
+    expect($attrs['connectors'])->toBeEmpty();
 });
 
 // --- confirm() ---

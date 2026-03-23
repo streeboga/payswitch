@@ -16,6 +16,16 @@ final class ConnectorFactory
         'yookassa' => Drivers\YooKassaConnector::class,
     ];
 
+    /**
+     * Resolve the driver class name without instantiation.
+     *
+     * @return class-string<ConnectorInterface>|null
+     */
+    public static function resolveClass(string $connectorName): ?string
+    {
+        return self::$drivers[$connectorName] ?? null;
+    }
+
     public static function resolve(MerchantConnectorAccount $mca): ConnectorInterface
     {
         $driverClass = self::$drivers[$mca->connector_name] ?? null;
