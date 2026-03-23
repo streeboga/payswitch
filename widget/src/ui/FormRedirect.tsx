@@ -43,7 +43,7 @@ export function FormRedirect({ data, t }: FormRedirectProps) {
         method={data.method}
         style={{ display: 'none' }}
       >
-        {Object.entries(data.params).map(([name, value]) => (
+        {Object.entries(data.params ?? {}).map(([name, value]) => (
           <input type="hidden" name={name} value={value} key={name} />
         ))}
       </form>

@@ -219,7 +219,7 @@ function EmbeddedPspWidget({ widgetData }: { widgetData: WidgetData }) {
 
     const script = document.createElement('script');
     script.src = widgetData.script_url;
-    for (const [key, value] of Object.entries(widgetData.params)) {
+    for (const [key, value] of Object.entries(widgetData.params ?? {})) {
       script.dataset[key] = value;
     }
     el.appendChild(script);
@@ -237,7 +237,7 @@ function ExternalPspWidget({ data }: { data: ExternalWidgetData }) {
 
     const script = document.createElement('script');
     script.src = data.scriptUrl;
-    for (const [key, value] of Object.entries(data.params)) {
+    for (const [key, value] of Object.entries(data.params ?? {})) {
       script.dataset[key] = String(value);
     }
     el.appendChild(script);
