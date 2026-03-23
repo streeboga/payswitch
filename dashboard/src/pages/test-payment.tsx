@@ -325,7 +325,7 @@ interface WidgetPreviewProps {
 
 function WidgetPreview({ clientSecret, publishableKey }: WidgetPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   useEffect(() => {
     if (!clientSecret || !containerRef.current) return
@@ -337,7 +337,7 @@ function WidgetPreview({ clientSecret, publishableKey }: WidgetPreviewProps) {
       const { loadPayswitch } = await import('@payswitch/js')
       if (destroyed) return
       const ps = await loadPayswitch(publishableKey, { customBackendUrl: '' })
-      const widgets = ps.widgets({ clientSecret })
+      const widgets = ps.widgets({ clientSecret, locale: i18n.language })
       widget = widgets.create('payment')
       widget.mount(containerRef.current!)
     }
@@ -347,7 +347,7 @@ function WidgetPreview({ clientSecret, publishableKey }: WidgetPreviewProps) {
       destroyed = true
       widget?.destroy()
     }
-  }, [clientSecret, publishableKey])
+  }, [clientSecret, publishableKey, i18n.language])
 
   return (
     <Card>

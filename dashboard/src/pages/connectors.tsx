@@ -8,7 +8,11 @@ import {
   Trash2,
   CreditCard,
   Cloud,
+  DollarSign,
   TestTube,
+  Landmark,
+  ShoppingCart,
+  CircleDot,
 } from 'lucide-react'
 import { Link, useNavigate } from '@tanstack/react-router'
 
@@ -49,12 +53,24 @@ type ConnectorRow = ConnectorAttributes & { id: string }
 const CONNECTOR_ICONS: Record<ConnectorName, typeof CreditCard> = {
   stripe: CreditCard,
   cloudpayments: Cloud,
+  yookassa: DollarSign,
+  sberbank: Landmark,
+  alfabank: Landmark,
+  tbank: Landmark,
+  robokassa: ShoppingCart,
+  tochka: CircleDot,
   test: TestTube,
 }
 
 const CONNECTOR_LABELS: Record<ConnectorName, string> = {
   stripe: 'Stripe',
   cloudpayments: 'CloudPayments',
+  yookassa: 'YooKassa',
+  sberbank: 'Сбербанк',
+  alfabank: 'Альфа-Банк',
+  tbank: 'Т-Банк',
+  robokassa: 'Робокасса',
+  tochka: 'Точка',
   test: 'Test',
 }
 

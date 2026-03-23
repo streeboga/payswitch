@@ -90,6 +90,31 @@ final readonly class ConnectorService
         return $driver->testConnection();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function getCapabilities(string $merchantKey, string $connectorKey): array
+    {
+        $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
+        $connector = $this->merchantRepository->findConnectorByMerchantAndKey($merchant->id, $connectorKey);
+
+        $driverClass = ConnectorFactory::resolveClass($connector->connector_name);
+
+        if (! $driverClass) {
+            return [];
+        }
+
+        $capabilities = $driverClass::capabilities();
+
+        return [
+            'display_name' => $capabilities->defaultDisplayName,
+            'logo_path' => $capabilities->logoPath,
+            'direct_methods' => array_keys($capabilities->directMethods),
+            'fallback_session_type' => $capabilities->fallbackSessionType->value,
+            'amount_unit' => $capabilities->amountUnit->value,
+        ];
+    }
+
     public function delete(string $merchantKey, string $connectorKey): void
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);

@@ -57,9 +57,25 @@ export const dashboardConnectors = {
     return deleteResource(`dashboard/connectors/${key}`)
   },
 
-  testConnection(key: string) {
-    return api
+  async testConnection(key: string) {
+    const res = await api
       .post(`dashboard/connectors/${key}/test`)
-      .json<{ success: boolean; message?: string }>()
+      .json<{ data: { type: string; attributes: { success: boolean; message?: string } } }>()
+    return res.data.attributes
+  },
+
+  async getCapabilities(key: string) {
+    const res = await api
+      .get(`dashboard/connectors/${key}/capabilities`)
+      .json<{ data: { type: string; id: string; attributes: ConnectorCapabilitiesData } }>()
+    return res.data.attributes
   },
 } as const
+
+export interface ConnectorCapabilitiesData {
+  display_name: Record<string, string>
+  logo_path: string
+  direct_methods: string[]
+  fallback_session_type: string
+  amount_unit: string
+}

@@ -135,7 +135,8 @@ export function TestPspPage() {
                 style={styles.linkSecondary}
                 onClick={() => {
                   // SPA navigation — preserves auth session
-                  const path = new URL(result.dashboard_url!, window.location.origin).pathname
+                  const path = new URL(result.dashboard_url!, window.location.origin)
+                    .pathname
                   navigate({ to: path })
                 }}
               >

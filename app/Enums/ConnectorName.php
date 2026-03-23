@@ -12,6 +12,12 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
 {
     case Stripe = 'stripe';
     case CloudPayments = 'cloudpayments';
+    case YooKassa = 'yookassa';
+    case Sberbank = 'sberbank';
+    case AlfaBank = 'alfabank';
+    case TBank = 'tbank';
+    case Robokassa = 'robokassa';
+    case Tochka = 'tochka';
     case Test = 'test';
 
     public function getLabel(): string
@@ -19,6 +25,12 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Stripe => 'Stripe',
             self::CloudPayments => 'CloudPayments',
+            self::YooKassa => 'ЮKassa',
+            self::Sberbank => 'Сбербанк',
+            self::AlfaBank => 'Альфа-Банк',
+            self::TBank => 'Т-Банк',
+            self::Robokassa => 'Робокасса',
+            self::Tochka => 'Точка',
             self::Test => 'Тестовый',
         };
     }
@@ -28,6 +40,12 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Stripe => 'primary',
             self::CloudPayments => 'info',
+            self::YooKassa => 'success',
+            self::Sberbank => 'success',
+            self::AlfaBank => 'danger',
+            self::TBank => 'warning',
+            self::Robokassa => 'info',
+            self::Tochka => 'warning',
             self::Test => 'gray',
         };
     }
@@ -37,6 +55,12 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Stripe => 'heroicon-o-credit-card',
             self::CloudPayments => 'heroicon-o-cloud',
+            self::YooKassa => 'heroicon-o-currency-dollar',
+            self::Sberbank => 'heroicon-o-building-library',
+            self::AlfaBank => 'heroicon-o-building-office-2',
+            self::TBank => 'heroicon-o-banknotes',
+            self::Robokassa => 'heroicon-o-shopping-cart',
+            self::Tochka => 'heroicon-o-building-office',
             self::Test => 'heroicon-o-beaker',
         };
     }

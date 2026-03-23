@@ -125,7 +125,36 @@ final class DashboardConnectorController extends Controller
         $merchantKey = $request->attributes->get('merchant_key');
         $result = $this->connectorService->testConnection($merchantKey, $connectorKey);
 
-        return response()->json(['data' => $result]);
+        return response()->json([
+            'data' => [
+                'type' => 'connection_test',
+                'attributes' => $result,
+            ],
+        ], 200, ['Content-Type' => 'application/vnd.api+json']);
+    }
+
+    /**
+     * Get connector capabilities
+     *
+     * Retrieve the static capabilities of the connector's PSP driver (supported methods, integration mode, etc.).
+     */
+    #[PathParameter('connectorKey', description: 'Connector public key', example: 'mca_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Connector capabilities')]
+    #[Response(404, description: 'Connector not found')]
+    public function capabilities(string $connectorKey, Request $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('connector.view', [$merchantId]);
+        $merchantKey = $request->attributes->get('merchant_key');
+        $capabilities = $this->connectorService->getCapabilities($merchantKey, $connectorKey);
+
+        return response()->json([
+            'data' => [
+                'type' => 'connector_capabilities',
+                'id' => $connectorKey,
+                'attributes' => $capabilities,
+            ],
+        ], 200, ['Content-Type' => 'application/vnd.api+json']);
     }
 
     /**

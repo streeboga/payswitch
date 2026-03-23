@@ -49,8 +49,8 @@
 | ~~39~~ | ~~@payswitch/js SDK~~ | **DONE** | `loadPayswitch()` → `widgets()` → `create('payment')` → `mount('#el')`. Preact UI, Vite library (ESM + UMD), 5 kB |
 | ~~40~~ | ~~Dashboard widget integration~~ | **DONE** | `WidgetPreview` на странице test-payment, dynamic import |
 | ~~41~~ | ~~CORS for widget~~ | **DONE** | `allowed_origins: ['*']`, `supports_credentials: false` |
-| 42 | **Widget theming/appearance** | Нужно | `AppearanceOptions` в типах есть, UI не использует |
-| 43 | **Widget i18n** | Нужно | `locale` в `WidgetOptions` есть, UI hardcoded EN |
+| ~~42~~ | ~~Widget theming/appearance~~ | **Частично** | `AppearanceOptions` в типах, UI inline styles — базовый стиль работает, кастомизация тем не реализована |
+| ~~43~~ | ~~Widget i18n~~ | **DONE** | `src/i18n.ts` — RU/EN, locale в API, `getMethodDisplayName()` fallback, custom translations override |
 | 44 | **Hosted Checkout Page** | Нужно | Отдельная страница на нашем домене для мерчантов без фронтенда |
 
 ## MEDIUM — улучшения

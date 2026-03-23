@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Streeboga\PaymentConnectors\Drivers;
 
 use Illuminate\Support\Facades\Http;
+use Streeboga\PaymentConnectors\ConnectorCapabilities;
+use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Enums\SessionResultType;
 
 final class StripeConnector implements ConnectorInterface
 {
@@ -21,6 +25,19 @@ final class StripeConnector implements ConnectorInterface
     {
         $this->credentials = $credentials;
         $this->apiKey = $credentials['api_key'] ?? '';
+    }
+
+    public static function capabilities(): ConnectorCapabilities
+    {
+        return new ConnectorCapabilities(
+            defaultDisplayName: ['ru' => 'Stripe', 'en' => 'Stripe'],
+            logoPath: '/logos/stripe.svg',
+            directMethods: [
+                'card' => new DirectMethod(SessionResultType::ServerRedirect),
+            ],
+            fallbackSessionType: SessionResultType::ServerRedirect,
+            amountUnit: AmountUnit::MinorUnits,
+        );
     }
 
     public function getName(): string

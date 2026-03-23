@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Streeboga\PaymentConnectors\Drivers;
 
 use Illuminate\Support\Facades\Http;
+use Streeboga\PaymentConnectors\ConnectorCapabilities;
+use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Enums\SessionResultType;
 
 final class YooKassaConnector implements ConnectorInterface
 {
@@ -21,6 +25,20 @@ final class YooKassaConnector implements ConnectorInterface
     {
         $this->shopId = $credentials['shop_id'] ?? '';
         $this->secretKey = $credentials['secret_key'] ?? $credentials['api_key'] ?? '';
+    }
+
+    public static function capabilities(): ConnectorCapabilities
+    {
+        return new ConnectorCapabilities(
+            defaultDisplayName: ['ru' => 'ЮKassa', 'en' => 'YooKassa'],
+            logoPath: '/logos/yookassa.svg',
+            directMethods: [
+                'card' => new DirectMethod(SessionResultType::ServerRedirect),
+                'sbp' => new DirectMethod(SessionResultType::ServerRedirect),
+            ],
+            fallbackSessionType: SessionResultType::ServerRedirect,
+            amountUnit: AmountUnit::Rubles,
+        );
     }
 
     public function getName(): string

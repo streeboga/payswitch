@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentMethodController;
 use App\Http\Controllers\Api\V1\PublicPaymentController;
+use App\Http\Controllers\Api\V1\PublicPaymentStatusController;
 use App\Http\Controllers\Api\V1\RefundController;
 use App\Http\Controllers\Api\V1\WebhookReceiverController;
 use App\Http\Controllers\Auth\UserController;
@@ -110,6 +111,7 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     Route::patch('/connectors/{connectorKey}', [DashboardConnectorController::class, 'update']);
     Route::delete('/connectors/{connectorKey}', [DashboardConnectorController::class, 'destroy']);
     Route::post('/connectors/{connectorKey}/test', [DashboardConnectorController::class, 'testConnection']);
+    Route::get('/connectors/{connectorKey}/capabilities', [DashboardConnectorController::class, 'capabilities']);
 
     // Connector health (Story 16-2)
     Route::get('/connectors/{connectorKey}/health', [ConnectorHealthController::class, 'health']);
@@ -210,6 +212,9 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('/payments/{paymentKey}', [PublicPaymentController::class, 'show'])->name('api.v1.public.payments.show');
         Route::post('/payments/{paymentKey}/confirm', [PublicPaymentController::class, 'confirm'])->name('api.v1.public.payments.confirm');
         Route::get('/payments/{paymentKey}/payment-methods', [PublicPaymentController::class, 'paymentMethods'])->name('api.v1.public.payments.payment-methods');
+        Route::get('/payments/{paymentKey}/status', PublicPaymentStatusController::class)
+            ->middleware('throttle:20,1') // QR polling: 20 req/min per IP
+            ->name('api.v1.public.payments.status');
     });
 
     // Merchant API

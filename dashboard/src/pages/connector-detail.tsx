@@ -7,12 +7,17 @@ import {
   Loader2,
   CreditCard,
   Cloud,
+  DollarSign,
   TestTube,
+  Landmark,
+  ShoppingCart,
+  CircleDot,
   Wifi,
   Copy,
   CheckCheck,
   BookOpen,
   Link2,
+  Zap,
 } from 'lucide-react'
 
 import type { ConnectorName, ConnectorAttributes } from '@/api/types'
@@ -21,6 +26,7 @@ import {
   useConnector,
   useUpdateConnector,
   useTestConnection,
+  useConnectorCapabilities,
 } from '@/hooks/use-connectors'
 import { ErrorState } from '@/components/shared/error-state'
 import { Button } from '@/components/ui/button'
@@ -50,12 +56,24 @@ function capitalize(s: string) {
 const CONNECTOR_LABELS: Record<ConnectorName, string> = {
   stripe: 'Stripe',
   cloudpayments: 'CloudPayments',
+  yookassa: 'YooKassa',
+  sberbank: 'Сбербанк',
+  alfabank: 'Альфа-Банк',
+  tbank: 'Т-Банк',
+  robokassa: 'Робокасса',
+  tochka: 'Точка',
   test: 'Test',
 }
 
 const CONNECTOR_ICONS: Record<ConnectorName, typeof CreditCard> = {
   stripe: CreditCard,
   cloudpayments: Cloud,
+  yookassa: DollarSign,
+  sberbank: Landmark,
+  alfabank: Landmark,
+  tbank: Landmark,
+  robokassa: ShoppingCart,
+  tochka: CircleDot,
   test: TestTube,
 }
 
@@ -84,6 +102,40 @@ const CREDENTIAL_FIELDS: Record<ConnectorName, CredentialField[]> = {
       placeholder: 'Секретный ключ',
       type: 'password',
     },
+  ],
+  yookassa: [
+    { key: 'shop_id', label: 'Shop ID', placeholder: '123456' },
+    {
+      key: 'secret_key',
+      label: 'Secret Key',
+      placeholder: 'live_...',
+      type: 'password',
+    },
+  ],
+  sberbank: [
+    { key: 'base_url', label: 'Base URL', placeholder: 'https://securepayments.sberbank.ru/payment/rest' },
+    { key: 'username', label: 'Username', placeholder: 'merchant-api' },
+    { key: 'password', label: 'Password', placeholder: '...', type: 'password' },
+    { key: 'token', label: 'Token (alternative)', placeholder: 'Optional — use instead of login/password' },
+  ],
+  alfabank: [
+    { key: 'base_url', label: 'Base URL', placeholder: 'https://pay.alfabank.ru/payment/rest' },
+    { key: 'username', label: 'Username', placeholder: 'merchant-api' },
+    { key: 'password', label: 'Password', placeholder: '...', type: 'password' },
+    { key: 'token', label: 'Token (alternative)', placeholder: 'Optional' },
+  ],
+  tbank: [
+    { key: 'terminal_key', label: 'Terminal Key', placeholder: 'TinkoffBankTest' },
+    { key: 'password', label: 'Password', placeholder: '...', type: 'password' },
+  ],
+  robokassa: [
+    { key: 'login', label: 'Merchant Login', placeholder: 'your_merchant_login' },
+    { key: 'password1', label: 'Password #1', placeholder: 'For payment initiation', type: 'password' },
+    { key: 'password2', label: 'Password #2', placeholder: 'For webhook verification', type: 'password' },
+  ],
+  tochka: [
+    { key: 'token', label: 'JWT Token', placeholder: 'OAuth2 JWT token', type: 'password' },
+    { key: 'customer_code', label: 'Customer Code', placeholder: '9-character code' },
   ],
   test: [{ key: 'api_key', label: 'API Key', placeholder: 'test_key_123' }],
 }
@@ -122,6 +174,19 @@ function DetailSkeleton() {
 
 // ─── Detail Form (rendered after data loads) ────────────────
 
+const SESSION_TYPE_LABELS: Record<string, string> = {
+  redirect: 'Redirect',
+  form_redirect: 'Form Redirect',
+  widget: 'Embedded Widget',
+  qr: 'QR Code',
+}
+
+const AMOUNT_UNIT_LABELS: Record<string, string> = {
+  rubles: 'Rubles',
+  kopecks: 'Kopecks',
+  minor: 'Minor Units (cents/kopecks)',
+}
+
 function ConnectorDetailForm({
   connector,
   connectorKey,
@@ -134,6 +199,7 @@ function ConnectorDetailForm({
   const { t } = useTranslation()
   const updateMutation = useUpdateConnector()
   const testMutation = useTestConnection()
+  const capabilitiesQuery = useConnectorCapabilities(connectorKey)
 
   const [credentials, setCredentials] = useState<Record<string, string>>({})
   const [copied, setCopied] = useState(false)
@@ -325,6 +391,68 @@ function ConnectorDetailForm({
         </CardContent>
       </Card>
 
+      {/* Capabilities Section */}
+      {capabilitiesQuery.data && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              {t('connectorDetail.capabilitiesTitle', 'Capabilities')}
+            </CardTitle>
+            <CardDescription>
+              {t(
+                'connectorDetail.capabilitiesDesc',
+                'Read-only capabilities reported by the PSP driver.',
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <Label className="text-muted-foreground text-xs">
+                  {t('connectorDetail.capIntegrationMode', 'Integration Mode')}
+                </Label>
+                <div className="mt-1">
+                  <Badge variant="secondary">
+                    {SESSION_TYPE_LABELS[capabilitiesQuery.data.fallback_session_type] ??
+                      capabilitiesQuery.data.fallback_session_type}
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">
+                  {t('connectorDetail.capAmountUnit', 'Amount Unit')}
+                </Label>
+                <div className="mt-1">
+                  <Badge variant="outline">
+                    {AMOUNT_UNIT_LABELS[capabilitiesQuery.data.amount_unit] ??
+                      capabilitiesQuery.data.amount_unit}
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground text-xs">
+                  {t('connectorDetail.capDirectMethods', 'Supported Direct Methods')}
+                </Label>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {capabilitiesQuery.data.direct_methods.length > 0 ? (
+                    capabilitiesQuery.data.direct_methods.map((method) => (
+                      <Badge key={method} variant="outline">
+                        {method}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-sm">
+                      {t('connectorDetail.capNone', 'None')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Payment Methods Section */}
       <Card>
         <CardHeader>
@@ -375,7 +503,10 @@ function ConnectorDetailForm({
       <PaymentWidgetPreview
         connectorName={connector.connector_name}
         title={t('connectorDetail.widgetPreview', 'Widget Preview')}
-        description={t('connectorDetail.widgetPreviewDesc', 'Test the payment widget with this connector')}
+        description={t(
+          'connectorDetail.widgetPreviewDesc',
+          'Test the payment widget with this connector',
+        )}
       />
 
       <Separator />

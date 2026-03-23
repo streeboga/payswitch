@@ -1,6 +1,7 @@
 import { PaymentApi } from './api';
 import { getTranslations } from './i18n';
 import { renderWidget, unmountWidget } from './ui/PaymentWidget';
+import type { WidgetResult } from './ui/PaymentWidget';
 import type {
   PayswitchInstance,
   WidgetOptions,
@@ -10,6 +11,8 @@ import type {
   ConfirmPaymentResult,
   PaymentIntentResponse,
   PaymentMethodInfo,
+  ConnectorInfo,
+  PaymentMethodsMode,
   WidgetTranslations,
   WidgetEvent,
   WidgetEventHandler,
@@ -25,15 +28,19 @@ class PaymentWidgetImpl implements PaymentWidget {
   private container: HTMLElement | null = null;
   private listeners: Map<WidgetEvent, Set<WidgetEventHandler>> = new Map();
   private selectedMethod: string | null = null;
+  private selectedConnector: string | null = null;
+  private mode: PaymentMethodsMode = 'none';
   private methods: PaymentMethodInfo[] = [];
+  private connectors: ConnectorInfo[] = [];
   private payment: PaymentIntentResponse | null = null;
   private confirming = false;
-  private result: { status: string; redirectUrl?: string; error?: string; widgetData?: import('./types').WidgetData } | null = null;
+  private result: WidgetResult | null = null;
   private destroyed = false;
   private parentInstance: PayswitchInstance | null = null;
   private parentWidgets: WidgetCollection | null = null;
   private locale: string | undefined;
   private t: WidgetTranslations;
+  private paymentKey: string;
 
   constructor(
     private api: PaymentApi,
@@ -44,6 +51,7 @@ class PaymentWidgetImpl implements PaymentWidget {
   ) {
     this.locale = locale;
     this.t = getTranslations(locale, translations);
+    this.paymentKey = extractPaymentKey(clientSecret);
   }
 
   setParent(instance: PayswitchInstance, widgets: WidgetCollection): void {
@@ -63,20 +71,26 @@ class PaymentWidgetImpl implements PaymentWidget {
 
     this.render({ loading: true });
 
-    const paymentKey = extractPaymentKey(this.clientSecret);
-
     // Load payment info and methods in parallel
     Promise.all([
-      this.api.getPayment(paymentKey, this.clientSecret),
-      this.api.getPaymentMethods(paymentKey, this.clientSecret, this.locale),
+      this.api.getPayment(this.paymentKey, this.clientSecret),
+      this.api.getPaymentMethods(this.paymentKey, this.clientSecret, this.locale),
     ])
-      .then(([payment, methods]) => {
+      .then(([payment, methodsResponse]) => {
         if (this.destroyed || !this.container) return;
         this.payment = payment;
-        this.methods = methods;
-        if (methods.length > 0) {
-          this.selectedMethod = methods[0].payment_method;
+        this.mode = methodsResponse.mode;
+        this.methods = methodsResponse.methods;
+        this.connectors = methodsResponse.connectors;
+
+        // Auto-select first method/connector
+        if (this.methods.length > 0) {
+          this.selectedMethod = this.methods[0].method ?? this.methods[0].payment_method ?? null;
         }
+        if (this.connectors.length > 0 && this.mode === 'connector_selection') {
+          this.selectedConnector = this.connectors[0].connector_key;
+        }
+
         this.render();
         this.emit('ready', {});
       })
@@ -115,8 +129,15 @@ class PaymentWidgetImpl implements PaymentWidget {
     return this.selectedMethod;
   }
 
+  getSelectedConnector(): string | null {
+    return this.selectedConnector;
+  }
+
   private async handlePay(): Promise<void> {
-    if (!this.parentInstance || !this.parentWidgets || !this.selectedMethod) return;
+    if (!this.parentInstance || !this.parentWidgets) return;
+
+    // For 'none' mode, no selection required
+    if (this.mode !== 'none' && !this.selectedMethod && !this.selectedConnector) return;
 
     this.confirming = true;
     this.render();
@@ -124,12 +145,22 @@ class PaymentWidgetImpl implements PaymentWidget {
     const result = await this.parentInstance.confirmPayment({
       widgets: this.parentWidgets,
       confirmParams: { return_url: window.location.href },
-      redirect: 'if_required', // Don't auto-redirect, show result in widget
+      redirect: 'if_required',
     });
 
     this.confirming = false;
 
-    if (result.status === 'requires_widget') {
+    if (result.status === 'requires_qr') {
+      this.result = { status: 'requires_qr', qrData: result.qrData };
+      this.render();
+      this.emit('change', { status: 'requires_qr' });
+    } else if (result.status === 'requires_form_redirect') {
+      this.result = { status: 'requires_form_redirect', formRedirect: result.formRedirect };
+      this.render();
+    } else if (result.status === 'requires_external_widget') {
+      this.result = { status: 'requires_external_widget', externalWidget: result.externalWidget };
+      this.render();
+    } else if (result.status === 'requires_widget') {
       this.result = { status: 'requires_widget', widgetData: result.widgetData };
       this.render();
       this.emit('change', { status: 'requires_widget', widgetData: result.widgetData });
@@ -153,16 +184,38 @@ class PaymentWidgetImpl implements PaymentWidget {
     }
   }
 
+  private handleQrSuccess = (): void => {
+    this.result = { status: 'succeeded' };
+    this.render();
+    this.emit('change', { status: 'succeeded' });
+  };
+
+  private handleQrError = (message: string): void => {
+    this.result = { status: 'error', error: message };
+    this.render();
+    this.emit('error', { type: 'qr_error', message });
+  };
+
   private render(overrides?: { loading?: boolean; error?: string | null }): void {
     if (!this.container) return;
     renderWidget(this.container, {
       payment: this.payment,
+      mode: this.mode,
       methods: this.methods,
+      connectors: this.connectors,
       selectedMethod: this.selectedMethod,
+      selectedConnector: this.selectedConnector,
       onMethodChange: (method) => {
         this.selectedMethod = method;
+        this.selectedConnector = null; // Deselect connector when method is selected
         this.render();
         this.emit('change', { paymentMethod: method });
+      },
+      onConnectorChange: (connectorKey) => {
+        this.selectedConnector = connectorKey;
+        this.selectedMethod = null; // Deselect method when connector is selected
+        this.render();
+        this.emit('change', { connector: connectorKey });
       },
       onPay: () => this.handlePay(),
       confirming: this.confirming,
@@ -171,6 +224,11 @@ class PaymentWidgetImpl implements PaymentWidget {
       error: overrides?.error,
       t: this.t,
       locale: this.locale,
+      api: this.api,
+      paymentKey: this.paymentKey,
+      clientSecret: this.clientSecret,
+      onQrSuccess: this.handleQrSuccess,
+      onQrError: this.handleQrError,
     });
   }
 
@@ -217,6 +275,11 @@ class WidgetCollectionImpl implements WidgetCollection {
     return payment ? payment.getSelectedMethod() : null;
   }
 
+  getSelectedConnector(): string | null {
+    const payment = this.elements.get('payment');
+    return payment ? payment.getSelectedConnector() : null;
+  }
+
   getClientSecret(): string {
     return this.options.clientSecret;
   }
@@ -240,28 +303,78 @@ export function createPayswitchInstance(
       const clientSecret = collection.getClientSecret();
       const paymentKey = extractPaymentKey(clientSecret);
       const selectedMethod = collection.getSelectedMethod();
+      const selectedConnector = collection.getSelectedConnector();
 
-      if (!selectedMethod) {
-        return {
-          status: 'error',
-          error: { type: 'validation_error', message: 'No payment method selected' },
-        };
+      // Build confirm body
+      const body: Record<string, unknown> = {
+        client_secret: clientSecret,
+      };
+
+      if (selectedMethod) {
+        body.payment_method = selectedMethod;
+      }
+      if (selectedConnector) {
+        body.connector = selectedConnector;
+      }
+
+      // If neither is selected and mode is not 'none', error
+      if (!selectedMethod && !selectedConnector) {
+        // Allow 'none' mode — server picks the default
+        // But if there are methods/connectors available and none selected, error
       }
 
       try {
-        const result = await api.confirmPayment(paymentKey, {
-          client_secret: clientSecret,
-          payment_method: selectedMethod,
-        });
+        const result = await api.confirmPayment(paymentKey, body as any);
+        const meta = result.metadata ?? {};
 
+        // New v2 format: check for `type` in metadata
+        if (meta.type) {
+          switch (meta.type) {
+            case 'redirect': {
+              const redirectUrl = meta.redirect_url!;
+              if (params.redirect !== 'if_required') {
+                window.location.href = redirectUrl;
+              }
+              return { status: 'requires_customer_action', redirectUrl };
+            }
+            case 'form_redirect':
+              return {
+                status: 'requires_form_redirect',
+                formRedirect: {
+                  url: meta.form_url!,
+                  params: meta.form_params ?? {},
+                  method: meta.form_method ?? 'POST',
+                },
+              };
+            case 'widget':
+              return {
+                status: 'requires_external_widget',
+                externalWidget: {
+                  provider: meta.widget_provider!,
+                  scriptUrl: meta.widget_script_url!,
+                  params: meta.widget_params ?? {},
+                },
+              };
+            case 'qr':
+              return {
+                status: 'requires_qr',
+                qrData: {
+                  data: meta.qr_data!,
+                  format: meta.qr_format ?? 'payload',
+                  paymentId: meta.qr_payment_id,
+                  expiresAt: meta.qr_expires_at,
+                },
+              };
+          }
+        }
+
+        // Legacy format: check for widget_data first, then redirect_url
         if (result.status === 'requires_customer_action') {
-          // Embedded PSP widget mode
-          if (result.metadata?.widget_data) {
-            return { status: 'requires_widget', widgetData: result.metadata.widget_data };
+          if (meta.widget_data) {
+            return { status: 'requires_widget', widgetData: meta.widget_data };
           }
 
-          // Redirect mode
-          const redirectUrl = result.metadata?.redirect_url;
+          const redirectUrl = meta.redirect_url;
           if (redirectUrl) {
             if (params.redirect !== 'if_required') {
               window.location.href = redirectUrl;

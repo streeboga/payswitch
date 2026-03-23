@@ -3,6 +3,7 @@ import {
   dashboardConnectors,
   type ConnectorCreateAttrs,
   type ConnectorUpdateAttrs,
+  type ConnectorCapabilitiesData,
 } from '@/api/endpoints/dashboard-connectors'
 import { useContextStore } from '@/stores/context'
 
@@ -71,3 +72,16 @@ export function useTestConnection() {
     mutationFn: (key: string) => dashboardConnectors.testConnection(key),
   })
 }
+
+export function useConnectorCapabilities(key: string) {
+  const merchantKey = useContextStore((s) => s.currentMerchantKey)
+
+  return useQuery({
+    queryKey: ['connectors', 'capabilities', key, merchantKey],
+    queryFn: () => dashboardConnectors.getCapabilities(key),
+    staleTime: 60_000,
+    enabled: !!merchantKey && !!key,
+  })
+}
+
+export type { ConnectorCapabilitiesData }

@@ -42,6 +42,12 @@ const CONDITION_OPERATORS = [
 const CONNECTOR_OPTIONS = [
   { value: 'stripe', label: 'Stripe' },
   { value: 'cloudpayments', label: 'CloudPayments' },
+  { value: 'yookassa', label: 'YooKassa' },
+  { value: 'sberbank', label: 'Сбербанк' },
+  { value: 'alfabank', label: 'Альфа-Банк' },
+  { value: 'tbank', label: 'Т-Банк' },
+  { value: 'robokassa', label: 'Робокасса' },
+  { value: 'tochka', label: 'Точка' },
   { value: 'test', label: 'Test' },
 ]
 

@@ -5,9 +5,12 @@ declare(strict_types=1);
 use App\Enums\RoutingRuleType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Enums\SessionResultType;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -46,6 +49,17 @@ beforeEach(function () {
     $throwingClass = new class([]) implements ConnectorInterface
     {
         public function __construct(?array $credentials = []) {}
+
+        public static function capabilities(): ConnectorCapabilities
+        {
+            return new ConnectorCapabilities(
+                defaultDisplayName: ['en' => 'Test'],
+                logoPath: '/logos/test.svg',
+                directMethods: [],
+                fallbackSessionType: SessionResultType::ServerRedirect,
+                amountUnit: AmountUnit::MinorUnits,
+            );
+        }
 
         public function getName(): string
         {

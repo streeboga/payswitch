@@ -1,0 +1,11 @@
+{
+    "TerminalKey": "TinkoffBankTest",
+    "OrderId": "pay_01ABC",
+    "Success": true,
+    "Status": "CONFIRMED",
+    "PaymentId": 2304882,
+    "ErrorCode": "0",
+    "Amount": 10000,
+    "Pan": "430000******0777",
+    "Token": "3d1a3dbb918a1b2bae2a6aed4e1e9a1ad9653bb60d6dba1ef5b84d498e6e7224"
+}

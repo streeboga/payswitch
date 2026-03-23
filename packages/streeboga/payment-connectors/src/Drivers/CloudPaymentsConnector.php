@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Streeboga\PaymentConnectors\Drivers;
 
 use Illuminate\Support\Facades\Http;
+use Streeboga\PaymentConnectors\ConnectorCapabilities;
+use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Enums\SessionResultType;
 
 final class CloudPaymentsConnector implements ConnectorInterface
 {
@@ -24,6 +28,20 @@ final class CloudPaymentsConnector implements ConnectorInterface
         $this->credentials = $credentials;
         $this->publicId = $credentials['public_id'] ?? '';
         $this->apiSecret = $credentials['api_secret'] ?? $credentials['api_key'] ?? '';
+    }
+
+    public static function capabilities(): ConnectorCapabilities
+    {
+        return new ConnectorCapabilities(
+            defaultDisplayName: ['ru' => 'CloudPayments', 'en' => 'CloudPayments'],
+            logoPath: '/logos/cloudpayments.svg',
+            directMethods: [
+                'card' => new DirectMethod(SessionResultType::EmbeddedWidget),
+                'sbp' => new DirectMethod(SessionResultType::EmbeddedWidget),
+            ],
+            fallbackSessionType: SessionResultType::EmbeddedWidget,
+            amountUnit: AmountUnit::Rubles,
+        );
     }
 
     public function getName(): string
