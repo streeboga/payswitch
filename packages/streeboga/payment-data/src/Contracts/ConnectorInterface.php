@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Streeboga\PaymentData\Contracts;
 
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
+use Streeboga\PaymentConnectors\PaymentSessionResult;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 
 interface ConnectorInterface
@@ -92,7 +93,7 @@ interface ConnectorInterface
      * @param  array<string, mixed>  $params  Keys: amount, currency, payment_id, return_url, description, payment_method
      * @return array<string, mixed> Keys: success, redirect_url, session_id, code, transaction_id, data
      */
-    public function createPaymentSession(array $params): array;
+    public function createPaymentSession(array $params): PaymentSessionResult|array;
 
     /**
      * Test the connection to the PSP by performing a lightweight health check.
