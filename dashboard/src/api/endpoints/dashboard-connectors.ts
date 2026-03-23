@@ -62,4 +62,19 @@ export const dashboardConnectors = {
       .post(`dashboard/connectors/${key}/test`)
       .json<{ success: boolean; message?: string }>()
   },
+
+  async getCapabilities(key: string) {
+    const res = await api
+      .get(`dashboard/connectors/${key}/capabilities`)
+      .json<{ data: ConnectorCapabilitiesData }>()
+    return res.data
+  },
 } as const
+
+export interface ConnectorCapabilitiesData {
+  display_name: Record<string, string>
+  logo_path: string
+  direct_methods: string[]
+  fallback_session_type: string
+  amount_unit: string
+}

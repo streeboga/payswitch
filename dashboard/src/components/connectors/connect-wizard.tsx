@@ -98,6 +98,15 @@ const CREDENTIAL_FIELDS: Record<ConnectorName, CredentialField[]> = {
       type: 'password',
     },
   ],
+  yookassa: [
+    { key: 'shop_id', label: 'Shop ID', placeholder: '123456' },
+    {
+      key: 'secret_key',
+      label: 'Secret Key',
+      placeholder: 'live_...',
+      type: 'password',
+    },
+  ],
   test: [{ key: 'api_key', label: 'API Key', placeholder: 'test_key_123' }],
 }
 

@@ -12,6 +12,7 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
 {
     case Stripe = 'stripe';
     case CloudPayments = 'cloudpayments';
+    case YooKassa = 'yookassa';
     case Test = 'test';
 
     public function getLabel(): string
@@ -19,6 +20,7 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Stripe => 'Stripe',
             self::CloudPayments => 'CloudPayments',
+            self::YooKassa => 'ЮKassa',
             self::Test => 'Тестовый',
         };
     }
@@ -28,6 +30,7 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Stripe => 'primary',
             self::CloudPayments => 'info',
+            self::YooKassa => 'success',
             self::Test => 'gray',
         };
     }
@@ -37,6 +40,7 @@ enum ConnectorName: string implements HasColor, HasIcon, HasLabel
         return match ($this) {
             self::Stripe => 'heroicon-o-credit-card',
             self::CloudPayments => 'heroicon-o-cloud',
+            self::YooKassa => 'heroicon-o-currency-dollar',
             self::Test => 'heroicon-o-beaker',
         };
     }

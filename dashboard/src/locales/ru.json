@@ -403,7 +403,15 @@
     "setupTest": "Тестовый коннектор не требует дополнительной настройки.",
     "credentialsSaved": "Учётные данные сохранены. Оставьте поля пустыми, чтобы не менять.",
     "widgetPreview": "Превью виджета",
-    "widgetPreviewDesc": "Тестирование виджета оплаты с этим коннектором"
+    "widgetPreviewDesc": "Тестирование виджета оплаты с этим коннектором",
+    "yookassa": "ЮKassa",
+    "setupYookassa": "1. Откройте Личный кабинет ЮKassa -> Настройки -> HTTP-уведомления\n2. Укажите Webhook URL для событий payment.succeeded, payment.canceled, payment.waiting_for_capture\n3. Скопируйте Shop ID и Секретный ключ из настроек интеграции",
+    "capabilitiesTitle": "Возможности",
+    "capabilitiesDesc": "Возможности PSP-драйвера (только чтение).",
+    "capIntegrationMode": "Режим интеграции",
+    "capAmountUnit": "Единица суммы",
+    "capDirectMethods": "Поддерживаемые методы",
+    "capNone": "Нет"
   },
   "connectorHealth": {
     "uptime": "Uptime",

@@ -403,7 +403,15 @@
     "setupTest": "Test connector requires no additional setup.",
     "credentialsSaved": "Credentials saved. Leave fields empty to keep current values.",
     "widgetPreview": "Widget Preview",
-    "widgetPreviewDesc": "Test the payment widget with this connector"
+    "widgetPreviewDesc": "Test the payment widget with this connector",
+    "yookassa": "YooKassa",
+    "setupYookassa": "1. Open YooKassa Dashboard -> Settings -> HTTP Notifications\n2. Set the Webhook URL above for payment.succeeded, payment.canceled, payment.waiting_for_capture events\n3. Copy Shop ID and Secret Key from Integration settings",
+    "capabilitiesTitle": "Capabilities",
+    "capabilitiesDesc": "Read-only capabilities reported by the PSP driver.",
+    "capIntegrationMode": "Integration Mode",
+    "capAmountUnit": "Amount Unit",
+    "capDirectMethods": "Supported Direct Methods",
+    "capNone": "None"
   },
   "connectorHealth": {
     "uptime": "Uptime",

@@ -129,6 +129,24 @@ final class DashboardConnectorController extends Controller
     }
 
     /**
+     * Get connector capabilities
+     *
+     * Retrieve the static capabilities of the connector's PSP driver (supported methods, integration mode, etc.).
+     */
+    #[PathParameter('connectorKey', description: 'Connector public key', example: 'mca_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Connector capabilities')]
+    #[Response(404, description: 'Connector not found')]
+    public function capabilities(string $connectorKey, Request $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('connector.view', [$merchantId]);
+        $merchantKey = $request->attributes->get('merchant_key');
+        $capabilities = $this->connectorService->getCapabilities($merchantKey, $connectorKey);
+
+        return response()->json(['data' => $capabilities]);
+    }
+
+    /**
      * Delete connector
      *
      * Remove a connector from the current merchant.
