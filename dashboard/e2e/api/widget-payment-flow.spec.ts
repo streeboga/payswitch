@@ -1,8 +1,19 @@
 import { test, expect, type APIRequestContext } from '@playwright/test'
+import { authenticateApi, createApiKey, getPublishableKey } from '../helpers/api-client'
 
 const BASE_URL = process.env.E2E_API_URL ?? 'http://localhost:8000'
-const SECRET_KEY = process.env.E2E_SECRET_KEY ?? 'snd_01KM5VQYHYBAEB5SJ7VXC731EV'
-const PUBLISHABLE_KEY = process.env.E2E_PUBLISHABLE_KEY ?? 'pk_snd_01KM1NJATEJ91E5GKTBZ00NMJM'
+
+let SECRET_KEY: string
+let PUBLISHABLE_KEY: string
+
+// Setup: authenticate via Sanctum and obtain API keys dynamically
+test.beforeAll(async ({ playwright }) => {
+  const setup = await playwright.request.newContext({ baseURL: BASE_URL })
+  await authenticateApi(setup)
+  SECRET_KEY = await createApiKey(setup, 'e2e-widget-flow')
+  PUBLISHABLE_KEY = getPublishableKey() ?? ''
+  await setup.dispose()
+})
 
 /**
  * E2E: Full widget payment flow via Public API

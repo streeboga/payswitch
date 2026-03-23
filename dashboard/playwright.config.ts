@@ -9,6 +9,7 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     headless: true,
     locale: 'ru-RU',
+    viewport: { width: 1440, height: 900 },
   },
   projects: [
     {

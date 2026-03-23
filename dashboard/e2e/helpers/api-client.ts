@@ -12,8 +12,12 @@ async function getXsrfToken(request: APIRequestContext): Promise<string> {
 }
 
 let merchantKey: string | undefined
+let publishableKey: string | undefined
+const authenticatedContexts = new WeakSet<APIRequestContext>()
 
 export async function authenticateApi(request: APIRequestContext) {
+  if (authenticatedContexts.has(request)) return
+
   const token = await getXsrfToken(request)
   const loginResp = await request.post('/login', {
     headers: { 'X-XSRF-TOKEN': token },
@@ -23,12 +27,25 @@ export async function authenticateApi(request: APIRequestContext) {
     throw new Error(`Login failed: ${loginResp.status()}`)
   }
 
-  // Resolve merchant key for dashboard API requests
-  const merchantsResp = await request.get('/api/v1/dashboard/merchants')
-  if (merchantsResp.ok()) {
-    const body = await merchantsResp.json()
-    merchantKey = body.data?.[0]?.id
+  authenticatedContexts.add(request)
+
+  // Resolve merchant key and publishable key for API requests
+  if (!merchantKey) {
+    const merchantsResp = await request.get('/api/v1/dashboard/merchants')
+    if (merchantsResp.ok()) {
+      const body = await merchantsResp.json()
+      merchantKey = body.data?.[0]?.id
+      publishableKey = body.data?.[0]?.attributes?.publishable_key
+    }
   }
+}
+
+export function getMerchantKey(): string | undefined {
+  return merchantKey
+}
+
+export function getPublishableKey(): string | undefined {
+  return publishableKey
 }
 
 export function getMerchantHeaders(): Record<string, string> {
