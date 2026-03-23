@@ -61,6 +61,7 @@ export class PaymentApi {
   private async request(url: string, init: RequestInit = {}): Promise<any> {
     const res = await fetch(url, {
       ...init,
+      credentials: 'omit',
       headers: {
         'api-key': this.publishableKey,
         Accept: 'application/vnd.api+json',
