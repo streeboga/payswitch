@@ -37,6 +37,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install & Build Widget
+        run: npm --prefix widget ci && npm --prefix widget run build
+
       - name: Install Node Dependencies
         run: npm --prefix dashboard ci
 
@@ -75,6 +78,9 @@ jobs:
 
       - name: Install PHP Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Install & Build Widget
+        run: npm --prefix widget ci && npm --prefix widget run build
 
       - name: Install Node Dependencies
         run: npm --prefix dashboard ci

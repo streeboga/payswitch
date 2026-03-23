@@ -338,8 +338,9 @@ function WidgetPreview({ clientSecret, publishableKey }: WidgetPreviewProps) {
       if (destroyed) return
       const ps = await loadPayswitch(publishableKey, { customBackendUrl: '' })
       const widgets = ps.widgets({ clientSecret, locale: i18n.language })
-      widget = widgets.create('payment')
-      widget.mount(containerRef.current!)
+      const w = widgets.create('payment')
+      widget = w
+      w.mount(containerRef.current!)
     }
     init().catch(console.error)
 
