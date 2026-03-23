@@ -63,8 +63,9 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('login', function ($request) {
             $email = strtolower((string) $request->string('email'));
+            $perMinute = app()->environment('production') ? 5 : 30;
 
-            return Limit::perMinute(5)->by($email.'|'.$request->ip());
+            return Limit::perMinute($perMinute)->by($email.'|'.$request->ip());
         });
 
         RateLimiter::for('two-factor', function ($request) {

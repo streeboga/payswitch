@@ -6,7 +6,7 @@ test.describe('Sidebar navigation', () => {
     await expect(page.getByText('ОПЕРАЦИИ')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('КОНФИГУРАЦИЯ')).toBeVisible()
     await expect(page.getByText('РАЗРАБОТКА')).toBeVisible()
-    await expect(page.getByText('АККАУНТ')).toBeVisible()
+    await expect(page.getByText('УПРАВЛЕНИЕ')).toBeVisible()
   })
 
   test('clicking nav item navigates', async ({ page }) => {

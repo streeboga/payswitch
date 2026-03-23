@@ -41,7 +41,7 @@ test.describe('Auth flow', () => {
     await expect(page).toHaveURL(/\/overview/, { timeout: 15000 })
 
     // Open user popover, then logout
-    await page.getByText('test@example.com').click()
+    await page.getByRole('button', { name: 'test@example.com' }).click()
     await page.getByRole('button', { name: 'Выйти' }).click()
     await expect(page).toHaveURL(/\/login/, { timeout: 5000 })
   })

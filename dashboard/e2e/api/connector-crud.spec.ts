@@ -9,9 +9,12 @@ test.describe('Connector CRUD via dashboard API', () => {
   let createdConnectorKey: string
 
   test('list connectors', async ({ request }) => {
-    const resp = await request.get('/api/v1/dashboard/connectors', {
-      headers: getMerchantHeaders(),
-    })
+    const headers = getMerchantHeaders()
+    console.log('CONNECTOR LIST: merchant headers =', JSON.stringify(headers))
+    const resp = await request.get('/api/v1/dashboard/connectors', { headers })
+    if (!resp.ok()) {
+      console.log('CONNECTOR LIST: error =', resp.status(), await resp.text())
+    }
     expect(resp.status()).toBe(200)
 
     const body = await resp.json()
