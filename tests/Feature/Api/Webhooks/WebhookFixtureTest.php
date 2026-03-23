@@ -80,6 +80,35 @@ test('cloudpayments: payment.canceled webhook updates payment status', function 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Cancelled);
 });
 
+test('cloudpayments: real webhook without type field uses Status fallback', function () {
+    $mca = MerchantConnectorAccount::create([
+        'merchant_account_id' => $this->merchant->id,
+        'business_profile_id' => $this->profile->id,
+        'connector_name' => 'cloudpayments',
+        'connector_type' => 'fiz_operations',
+        'connector_account_details' => ['public_id' => 'pk_test', 'api_secret' => 'secret'],
+        'test_mode' => true,
+    ]);
+
+    $payment = PaymentIntent::create([
+        'merchant_account_id' => $this->merchant->id,
+        'amount' => 5000,
+        'currency' => 'RUB',
+        'status' => PaymentStatus::RequiresCustomerAction,
+        'capture_method' => CaptureMethod::Automatic,
+        'attempt_count' => 1,
+    ]);
+
+    $fixture = ConnectorTestData::webhookFixture('cloudpayments_payment_succeeded');
+    $fixture['InvoiceId'] = $payment->key;
+
+    // Real CloudPayments webhook does NOT include 'type' — only 'Status: Completed'
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", $fixture)
+        ->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
+});
+
 test('yookassa: payment.succeeded webhook updates payment status', function () {
     $mca = MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,

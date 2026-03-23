@@ -103,6 +103,12 @@ final readonly class WebhookReceiverService
         }
 
         $newStatus = $connector->mapWebhookEventToStatus($eventType);
+
+        // Fallback for connectors that don't use `type` field (e.g. CloudPayments sends `Status` directly)
+        if (! $newStatus && isset($payload['Status'])) {
+            $newStatus = $connector->mapPaymentStatusToInternal($payload['Status']);
+        }
+
         if (! $newStatus || ! PaymentStateMachine::canTransition($payment->status, $newStatus)) {
             return;
         }

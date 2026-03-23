@@ -13,7 +13,7 @@ final class PaymentStateMachine
     private static array $transitions = [
         'requires_payment_method' => ['requires_confirmation', 'processing', 'requires_capture', 'requires_customer_action', 'succeeded', 'cancelled', 'expired', 'failed'],
         'requires_confirmation' => ['processing', 'requires_capture', 'requires_customer_action', 'cancelled', 'expired', 'failed'],
-        'requires_customer_action' => ['processing', 'cancelled', 'expired', 'failed'],
+        'requires_customer_action' => ['processing', 'succeeded', 'requires_capture', 'cancelled', 'expired', 'failed'],
         'requires_merchant_action' => ['processing', 'cancelled', 'failed'],
         'processing' => ['succeeded', 'failed', 'requires_capture', 'requires_customer_action'],
         'requires_capture' => ['succeeded', 'partially_captured', 'partially_captured_and_capturable', 'cancelled'],
