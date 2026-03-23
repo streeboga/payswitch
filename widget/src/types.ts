@@ -96,7 +96,9 @@ export interface WidgetData {
 export type SessionType = 'redirect' | 'form_redirect' | 'widget' | 'qr';
 
 export interface PaymentMethodInfo {
-  payment_method: string;
+  /** Method identifier: 'card', 'sbp', etc. API v2 uses 'method', v1 used 'payment_method' */
+  method?: string;
+  payment_method?: string;
   display_name?: string;
   icon_url?: string;
   mode?: 'redirect' | 'widget' | 'inline';

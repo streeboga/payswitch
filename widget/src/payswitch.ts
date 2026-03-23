@@ -85,7 +85,7 @@ class PaymentWidgetImpl implements PaymentWidget {
 
         // Auto-select first method/connector
         if (this.methods.length > 0) {
-          this.selectedMethod = this.methods[0].payment_method;
+          this.selectedMethod = this.methods[0].method ?? this.methods[0].payment_method ?? null;
         }
         if (this.connectors.length > 0 && this.mode === 'connector_selection') {
           this.selectedConnector = this.connectors[0].connector_key;

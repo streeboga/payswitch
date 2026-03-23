@@ -262,10 +262,11 @@ function MethodList({
   return (
     <div style={s.methods}>
       {methods.map((m) => {
-        const sel = selectedMethod === m.payment_method;
+        const methodId = m.method ?? m.payment_method ?? '';
+        const sel = selectedMethod === methodId;
         return (
           <label
-            key={m.payment_method}
+            key={methodId}
             style={{ ...s.method, ...(sel ? s.methodSelected : {}) }}
             onMouseEnter={(e) => { if (!sel) (e.currentTarget as HTMLElement).style.borderColor = '#999'; }}
             onMouseLeave={(e) => { if (!sel) (e.currentTarget as HTMLElement).style.borderColor = '#e0e0e0'; }}
@@ -273,9 +274,9 @@ function MethodList({
             <input
               type="radio"
               name="ps-payment-method"
-              value={m.payment_method}
+              value={methodId}
               checked={sel}
-              onChange={() => onMethodChange(m.payment_method)}
+              onChange={() => onMethodChange(methodId)}
               style={s.hidden}
             />
             <span style={s.icon}>
@@ -283,7 +284,7 @@ function MethodList({
                 ? <img src={m.icon_url} alt="" width="20" height="20" style={{ display: 'block' }} />
                 : <span dangerouslySetInnerHTML={{ __html: GENERIC_PAYMENT_ICON }} />}
             </span>
-            <span style={s.label}>{m.display_name ?? getMethodDisplayName(m.payment_method, locale)}</span>
+            <span style={s.label}>{m.display_name ?? getMethodDisplayName(methodId, locale)}</span>
             {sel && <span style={s.checkmark}>{'\u2713'}</span>}
           </label>
         );
