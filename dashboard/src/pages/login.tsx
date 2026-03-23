@@ -82,9 +82,13 @@ export function LoginPage() {
   const { theme, setTheme } = useTheme()
 
   const themeIcon =
-    theme === 'dark' ? <Moon className="h-3.5 w-3.5" /> :
-    theme === 'light' ? <Sun className="h-3.5 w-3.5" /> :
-    <Monitor className="h-3.5 w-3.5" />
+    theme === 'dark' ? (
+      <Moon className="h-3.5 w-3.5" />
+    ) : theme === 'light' ? (
+      <Sun className="h-3.5 w-3.5" />
+    ) : (
+      <Monitor className="h-3.5 w-3.5" />
+    )
 
   const THEME_CYCLE = ['light', 'dark', 'system'] as const
   const cycleTheme = () => {
