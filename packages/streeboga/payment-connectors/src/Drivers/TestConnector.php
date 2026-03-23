@@ -6,7 +6,9 @@ namespace Streeboga\PaymentConnectors\Drivers;
 
 use Illuminate\Support\Str;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
+use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
 
@@ -26,12 +28,14 @@ final class TestConnector implements ConnectorInterface
 
     public static function capabilities(): ConnectorCapabilities
     {
-        // TODO: Task 3 — implement real capabilities
         return new ConnectorCapabilities(
-            defaultDisplayName: ['en' => 'Test', 'ru' => 'Тест'],
-            logoPath: '/images/connectors/test.svg',
-            directMethods: [],
+            defaultDisplayName: ['ru' => 'Тестовый', 'en' => 'Test'],
+            logoPath: '/logos/test.svg',
+            directMethods: [
+                'card' => new DirectMethod(SessionResultType::ServerRedirect),
+            ],
             fallbackSessionType: SessionResultType::ServerRedirect,
+            amountUnit: AmountUnit::MinorUnits,
         );
     }
 

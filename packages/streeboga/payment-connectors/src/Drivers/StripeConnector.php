@@ -6,7 +6,9 @@ namespace Streeboga\PaymentConnectors\Drivers;
 
 use Illuminate\Support\Facades\Http;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
+use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
 
@@ -27,12 +29,14 @@ final class StripeConnector implements ConnectorInterface
 
     public static function capabilities(): ConnectorCapabilities
     {
-        // TODO: Task 3 — implement real capabilities
         return new ConnectorCapabilities(
-            defaultDisplayName: ['en' => 'Stripe', 'ru' => 'Stripe'],
-            logoPath: '/images/connectors/stripe.svg',
-            directMethods: [],
+            defaultDisplayName: ['ru' => 'Stripe', 'en' => 'Stripe'],
+            logoPath: '/logos/stripe.svg',
+            directMethods: [
+                'card' => new DirectMethod(SessionResultType::ServerRedirect),
+            ],
             fallbackSessionType: SessionResultType::ServerRedirect,
+            amountUnit: AmountUnit::MinorUnits,
         );
     }
 
