@@ -106,6 +106,13 @@ final readonly class WebhookReceiverService
 
         // Fallback for connectors that don't use `type` field (e.g. CloudPayments sends `Status` directly)
         if (! $newStatus && isset($payload['Status'])) {
+            // CloudPayments "check" notification: Status=Completed but no AuthCode — it's a
+            // validation request ("can I proceed?"), not a payment confirmation. Skip status update.
+            // Pay notifications have AuthCode; Fail notifications have Status=Declined.
+            if ($payload['Status'] === 'Completed' && ! isset($payload['AuthCode'])) {
+                return;
+            }
+
             $newStatus = $connector->mapPaymentStatusToInternal($payload['Status']);
         }
 
