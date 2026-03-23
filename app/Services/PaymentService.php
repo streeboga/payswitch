@@ -106,6 +106,11 @@ final readonly class PaymentService
             ->where('business_profile_id', $payment->business_profile_id)
             ->whereNotNull('payment_methods_enabled');
 
+        // If payment is pinned to a specific connector, show only that one
+        if ($payment->connector) {
+            $connectors = $connectors->where('connector_name', $payment->connector);
+        }
+
         $methods = [];
         $connectorEntries = [];
         $seenMethods = [];
