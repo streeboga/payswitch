@@ -249,7 +249,16 @@ function ExternalPspWidget({ data }: { data: ExternalWidgetData }) {
     el.appendChild(script);
   };
 
-  return <div ref={containerRef} style={{ minHeight: '200px' }} />;
+  return (
+    <div ref={containerRef} style={{ minHeight: '120px' }}>
+      <div style={s.center}>
+        <div style={s.spinner} />
+        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
+          {data.provider === 'cloudpayments' ? 'CloudPayments' : data.provider}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function loadCloudPaymentsWidget(params: Record<string, unknown>): void {
