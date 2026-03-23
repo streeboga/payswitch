@@ -64,7 +64,7 @@ final readonly class PaymentConfirmationService
                 $connectorOverride = $pm->connector_name;
             }
 
-            $explicitConnector = $connectorOverride ?? $dto->connector;
+            $explicitConnector = $connectorOverride ?? $dto->connector ?? $payment->connector;
             $mca = $this->routingService->resolve($merchantAccountId, $explicitConnector, $dto->payment_method, $payment->currency, $payment->amount);
 
             $returnUrl = $payment->return_url;

@@ -78,7 +78,14 @@ final class TestPaymentController extends Controller
         $payment = $this->paymentService->create($dto, $merchantId);
 
         // Update return_url with actual payment key so test-psp redirects to payment detail
-        $payment->update(['return_url' => $frontendUrl.'/payments/'.$payment->key]);
+        $updateData = ['return_url' => $frontendUrl.'/payments/'.$payment->key];
+
+        // Pin connector so widget confirm uses the right PSP
+        if ($request->filled('connector_name')) {
+            $updateData['connector'] = $request->string('connector_name')->toString();
+        }
+
+        $payment->update($updateData);
 
         return (new PaymentIntentResource($payment))
             ->withStatus(201)
