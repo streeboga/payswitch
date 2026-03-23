@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from '@playwright/test'
 
-const BASE_URL = process.env.E2E_API_URL ?? 'http://payswitch.test'
+const BASE_URL = process.env.E2E_API_URL ?? 'http://localhost:8000'
 const SECRET_KEY = process.env.E2E_SECRET_KEY ?? 'snd_01KM5VQYHYBAEB5SJ7VXC731EV'
 const PUBLISHABLE_KEY = process.env.E2E_PUBLISHABLE_KEY ?? 'pk_snd_01KM1NJATEJ91E5GKTBZ00NMJM'
 

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { authenticateApi } from '../helpers/api-client'
+import { authenticateApi, getMerchantHeaders } from '../helpers/api-client'
 
 test.describe('Connector CRUD via dashboard API', () => {
   test.beforeAll(async ({ request }) => {
@@ -9,7 +9,9 @@ test.describe('Connector CRUD via dashboard API', () => {
   let createdConnectorKey: string
 
   test('list connectors', async ({ request }) => {
-    const resp = await request.get('/api/v1/dashboard/connectors')
+    const resp = await request.get('/api/v1/dashboard/connectors', {
+      headers: getMerchantHeaders(),
+    })
     expect(resp.status()).toBe(200)
 
     const body = await resp.json()
@@ -18,6 +20,7 @@ test.describe('Connector CRUD via dashboard API', () => {
 
   test('create test connector', async ({ request }) => {
     const resp = await request.post('/api/v1/dashboard/connectors', {
+      headers: getMerchantHeaders(),
       data: {
         connector_name: `e2e-test-${Date.now()}`,
         connector_type: 'stripe',
@@ -38,7 +41,9 @@ test.describe('Connector CRUD via dashboard API', () => {
   test('get connector detail', async ({ request }) => {
     test.skip(!createdConnectorKey, 'No connector was created in previous test')
 
-    const resp = await request.get(`/api/v1/dashboard/connectors/${createdConnectorKey}`)
+    const resp = await request.get(`/api/v1/dashboard/connectors/${createdConnectorKey}`, {
+      headers: getMerchantHeaders(),
+    })
     expect(resp.status()).toBe(200)
 
     const body = await resp.json()
@@ -48,7 +53,9 @@ test.describe('Connector CRUD via dashboard API', () => {
   test('delete connector', async ({ request }) => {
     test.skip(!createdConnectorKey, 'No connector was created in previous test')
 
-    const resp = await request.delete(`/api/v1/dashboard/connectors/${createdConnectorKey}`)
+    const resp = await request.delete(`/api/v1/dashboard/connectors/${createdConnectorKey}`, {
+      headers: getMerchantHeaders(),
+    })
     expect(resp.status()).toBeLessThan(500)
   })
 })

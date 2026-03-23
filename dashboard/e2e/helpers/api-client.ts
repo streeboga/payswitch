@@ -11,6 +11,8 @@ async function getXsrfToken(request: APIRequestContext): Promise<string> {
   return match ? decodeURIComponent(match[1]) : ''
 }
 
+let merchantKey: string | undefined
+
 export async function authenticateApi(request: APIRequestContext) {
   const token = await getXsrfToken(request)
   const loginResp = await request.post('/login', {
@@ -20,10 +22,22 @@ export async function authenticateApi(request: APIRequestContext) {
   if (!loginResp.ok()) {
     throw new Error(`Login failed: ${loginResp.status()}`)
   }
+
+  // Resolve merchant key for dashboard API requests
+  const merchantsResp = await request.get('/api/v1/dashboard/merchants')
+  if (merchantsResp.ok()) {
+    const body = await merchantsResp.json()
+    merchantKey = body.data?.[0]?.id
+  }
+}
+
+export function getMerchantHeaders(): Record<string, string> {
+  return merchantKey ? { 'X-Merchant-Key': merchantKey } : {}
 }
 
 export async function createApiKey(request: APIRequestContext, name: string): Promise<string> {
-  const resp = await request.post('/dashboard/api-keys', {
+  const resp = await request.post('/api/v1/dashboard/api-keys', {
+    headers: getMerchantHeaders(),
     data: { name },
   })
   const body = await resp.json()
