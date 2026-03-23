@@ -40,6 +40,18 @@ final class PublicPaymentIntentResource extends JsonApiResource
             'redirect_url',
             'redirect_method',
             'widget_data',
+            // v2 PaymentSessionResult fields
+            'type',
+            'url',
+            'method',
+            'params',
+            'provider',
+            'script_url',
+            'transaction_id',
+            'qr_data',
+            'format',
+            'payment_id',
+            'expires_at',
         ]));
     }
 }

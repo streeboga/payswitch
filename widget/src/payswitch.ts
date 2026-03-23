@@ -327,11 +327,11 @@ export function createPayswitchInstance(
         const result = await api.confirmPayment(paymentKey, body as any);
         const meta = result.metadata ?? {};
 
-        // New v2 format: check for `type` in metadata
+        // New v2 format: check for `type` in metadata (from PaymentSessionResult::toArray())
         if (meta.type) {
           switch (meta.type) {
             case 'redirect': {
-              const redirectUrl = meta.redirect_url!;
+              const redirectUrl = meta.url!;
               if (params.redirect !== 'if_required') {
                 window.location.href = redirectUrl;
               }
@@ -341,18 +341,18 @@ export function createPayswitchInstance(
               return {
                 status: 'requires_form_redirect',
                 formRedirect: {
-                  url: meta.form_url!,
-                  params: meta.form_params ?? {},
-                  method: meta.form_method ?? 'POST',
+                  url: meta.url!,
+                  params: (meta.params ?? {}) as Record<string, string>,
+                  method: meta.method ?? 'POST',
                 },
               };
             case 'widget':
               return {
                 status: 'requires_external_widget',
                 externalWidget: {
-                  provider: meta.widget_provider!,
-                  scriptUrl: meta.widget_script_url!,
-                  params: meta.widget_params ?? {},
+                  provider: meta.provider!,
+                  scriptUrl: meta.script_url!,
+                  params: meta.params ?? {},
                 },
               };
             case 'qr':
@@ -360,9 +360,9 @@ export function createPayswitchInstance(
                 status: 'requires_qr',
                 qrData: {
                   data: meta.qr_data!,
-                  format: meta.qr_format ?? 'payload',
-                  paymentId: meta.qr_payment_id,
-                  expiresAt: meta.qr_expires_at,
+                  format: meta.format ?? 'payload',
+                  paymentId: meta.payment_id,
+                  expiresAt: meta.expires_at,
                 },
               };
           }

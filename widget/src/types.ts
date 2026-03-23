@@ -72,19 +72,18 @@ export interface PaymentIntentResponse {
     redirect_url?: string;
     redirect_method?: string;
     widget_data?: WidgetData;
-    // New v2 fields
+    // v2 fields (from PaymentSessionResult::toArray())
     type?: 'redirect' | 'form_redirect' | 'widget' | 'qr';
+    url?: string;
+    method?: string;
+    params?: Record<string, unknown>;
     transaction_id?: string;
-    form_url?: string;
-    form_method?: string;
-    form_params?: Record<string, string>;
-    widget_provider?: string;
-    widget_script_url?: string;
-    widget_params?: Record<string, unknown>;
+    provider?: string;
+    script_url?: string;
     qr_data?: string;
-    qr_format?: 'svg' | 'base64_png' | 'payload';
-    qr_payment_id?: string;
-    qr_expires_at?: string;
+    format?: string;
+    payment_id?: string;
+    expires_at?: string;
   };
 }
 

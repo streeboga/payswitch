@@ -235,6 +235,12 @@ function ExternalPspWidget({ data }: { data: ExternalWidgetData }) {
     if (!el || el.dataset.loaded) return;
     el.dataset.loaded = '1';
 
+    if (data.provider === 'cloudpayments') {
+      loadCloudPaymentsWidget(data.params);
+      return;
+    }
+
+    // Generic: load script with data-* attributes
     const script = document.createElement('script');
     script.src = data.scriptUrl;
     for (const [key, value] of Object.entries(data.params ?? {})) {
@@ -244,6 +250,34 @@ function ExternalPspWidget({ data }: { data: ExternalWidgetData }) {
   };
 
   return <div ref={containerRef} style={{ minHeight: '200px' }} />;
+}
+
+function loadCloudPaymentsWidget(params: Record<string, unknown>): void {
+  const scriptId = 'cp-widget-script';
+  const launch = () => {
+    const cp = (window as any).cp;
+    if (!cp) return;
+    const widget = new cp.CloudPayments();
+    widget.pay('charge', {
+      publicId: params.publicId as string,
+      description: (params.description as string) || '',
+      amount: params.amount as number,
+      currency: (params.currency as string) || 'RUB',
+      invoiceId: params.invoiceId as string,
+      skin: 'mini',
+    }, null);
+  };
+
+  if (document.getElementById(scriptId)) {
+    launch();
+    return;
+  }
+
+  const script = document.createElement('script');
+  script.id = scriptId;
+  script.src = 'https://widget.cloudpayments.ru/bundles/cloudpayments.js';
+  script.onload = launch;
+  document.head.appendChild(script);
 }
 
 // ─── Method List ─────────────────────────────────────────────

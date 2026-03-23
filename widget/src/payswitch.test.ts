@@ -55,7 +55,7 @@ describe('createPayswitchInstance', () => {
         data: {
           attributes: {
             status: 'requires_customer_action',
-            metadata: { type: 'redirect', redirect_url: 'https://stripe.com/pay/123' },
+            metadata: { type: 'redirect', url: 'https://stripe.com/pay/123' },
           },
         },
       }),
@@ -91,9 +91,9 @@ describe('createPayswitchInstance', () => {
             status: 'requires_customer_action',
             metadata: {
               type: 'form_redirect',
-              form_url: 'https://bank.com/3ds',
-              form_method: 'POST',
-              form_params: { MD: 'abc', PaReq: 'xyz' },
+              url: 'https://bank.com/3ds',
+              method: 'POST',
+              params: { MD: 'abc', PaReq: 'xyz' },
             },
           },
         },
@@ -133,9 +133,9 @@ describe('createPayswitchInstance', () => {
             metadata: {
               type: 'qr',
               qr_data: '<svg>qr</svg>',
-              qr_format: 'svg',
-              qr_payment_id: 'qr_abc',
-              qr_expires_at: '2026-03-23T12:00:00Z',
+              format: 'svg',
+              payment_id: 'qr_abc',
+              expires_at: '2026-03-23T12:00:00Z',
             },
           },
         },
@@ -175,9 +175,9 @@ describe('createPayswitchInstance', () => {
             status: 'requires_customer_action',
             metadata: {
               type: 'widget',
-              widget_provider: 'cloudpayments',
-              widget_script_url: 'https://widget.cloudpayments.ru/bundles/checkout.js',
-              widget_params: { publicId: 'pk_xxx', amount: 50 },
+              provider: 'cloudpayments',
+              script_url: 'https://widget.cloudpayments.ru/bundles/checkout.js',
+              params: { publicId: 'pk_xxx', amount: 50 },
             },
           },
         },

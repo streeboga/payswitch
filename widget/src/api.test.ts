@@ -120,9 +120,9 @@ describe('PaymentApi', () => {
             status: 'requires_customer_action',
             metadata: {
               type: 'form_redirect',
-              form_url: 'https://bank.example.com/3ds',
-              form_method: 'POST',
-              form_params: { MD: 'xxx', PaReq: 'yyy', TermUrl: 'https://example.com/return' },
+              url: 'https://bank.example.com/3ds',
+              method: 'POST',
+              params: { MD: 'xxx', PaReq: 'yyy', TermUrl: 'https://example.com/return' },
             },
           },
         },
@@ -135,8 +135,8 @@ describe('PaymentApi', () => {
     });
 
     expect(result.metadata?.type).toBe('form_redirect');
-    expect(result.metadata?.form_url).toBe('https://bank.example.com/3ds');
-    expect(result.metadata?.form_params?.MD).toBe('xxx');
+    expect(result.metadata?.url).toBe('https://bank.example.com/3ds');
+    expect((result.metadata?.params as Record<string, string>)?.MD).toBe('xxx');
   });
 
   it('confirmPayment returns qr metadata', async () => {
@@ -149,9 +149,9 @@ describe('PaymentApi', () => {
             metadata: {
               type: 'qr',
               qr_data: '<svg>...</svg>',
-              qr_format: 'svg',
-              qr_payment_id: 'qr_123',
-              qr_expires_at: '2026-03-23T12:00:00Z',
+              format: 'svg',
+              payment_id: 'qr_123',
+              expires_at: '2026-03-23T12:00:00Z',
             },
           },
         },
@@ -165,7 +165,7 @@ describe('PaymentApi', () => {
 
     expect(result.metadata?.type).toBe('qr');
     expect(result.metadata?.qr_data).toBe('<svg>...</svg>');
-    expect(result.metadata?.qr_format).toBe('svg');
+    expect(result.metadata?.format).toBe('svg');
   });
 
   it('getPaymentStatus returns status', async () => {

@@ -7,6 +7,7 @@ namespace Streeboga\PaymentConnectors\Drivers;
 use Illuminate\Support\Facades\Http;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\DirectMethod;
+use Streeboga\PaymentConnectors\PaymentSessionResult;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -134,24 +135,19 @@ final class CloudPaymentsConnector implements ConnectorInterface
         ]);
     }
 
-    public function createPaymentSession(array $params): array
+    public function createPaymentSession(array $params): PaymentSessionResult
     {
-        // CloudPayments uses client-side widget, not server-side redirect.
-        // Return parameters needed to initialize the widget.
-        return [
-            'success' => true,
-            'redirect_url' => null,
-            'session_id' => $params['payment_id'] ?? '',
-            'code' => 'widget',
-            'transaction_id' => null,
-            'data' => [
-                'public_id' => $this->publicId,
+        return PaymentSessionResult::embeddedWidget(
+            provider: 'cloudpayments',
+            scriptUrl: 'https://widget.cloudpayments.ru/bundles/cloudpayments.js',
+            params: [
+                'publicId' => $this->publicId,
                 'amount' => ($params['amount'] ?? 0) / 100,
                 'currency' => $params['currency'] ?? 'RUB',
                 'description' => $params['description'] ?? '',
-                'invoice_id' => $params['payment_id'] ?? '',
+                'invoiceId' => $params['payment_id'] ?? '',
             ],
-        ];
+        );
     }
 
     public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
