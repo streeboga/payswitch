@@ -9,6 +9,11 @@ const translations: Record<string, WidgetTranslations> = {
     redirecting: 'Redirecting to payment provider...',
     paymentSucceeded: 'Payment Succeeded',
     error: 'Error',
+    or: 'or',
+    scanWithBankApp: 'Scan with your bank app',
+    qrExpired: 'QR code expired',
+    qrPaymentFailed: 'Payment failed',
+    formRedirecting: 'Redirecting...',
   },
   ru: {
     pay: 'Оплатить',
@@ -18,6 +23,11 @@ const translations: Record<string, WidgetTranslations> = {
     redirecting: 'Перенаправление на платёжный провайдер...',
     paymentSucceeded: 'Оплата прошла успешно',
     error: 'Ошибка',
+    or: 'или',
+    scanWithBankApp: 'Отсканируйте в приложении банка',
+    qrExpired: 'QR-код истёк',
+    qrPaymentFailed: 'Оплата не прошла',
+    formRedirecting: 'Перенаправление...',
   },
 };
 

@@ -1,21 +1,54 @@
 import { h, render as preactRender } from 'preact';
-import type { PaymentMethodInfo, PaymentIntentResponse, WidgetTranslations, WidgetData } from '../types';
+import type {
+  PaymentMethodInfo,
+  PaymentIntentResponse,
+  WidgetTranslations,
+  WidgetData,
+  ConnectorInfo,
+  PaymentMethodsMode,
+  FormRedirectData,
+  QrData,
+  ExternalWidgetData,
+} from '../types';
+import type { PaymentApi } from '../api';
 import { getMethodDisplayName } from '../i18n';
+import { FormRedirect } from './FormRedirect';
+import { QrPayment } from './QrPayment';
 
 // ─── Types ───────────────────────────────────────────────────
 
-interface PaymentWidgetProps {
+export interface PaymentWidgetProps {
   payment: PaymentIntentResponse | null;
+  mode: PaymentMethodsMode;
   methods: PaymentMethodInfo[];
+  connectors: ConnectorInfo[];
   selectedMethod: string | null;
+  selectedConnector: string | null;
   onMethodChange: (method: string) => void;
+  onConnectorChange: (connectorKey: string) => void;
   onPay: () => void;
   confirming?: boolean;
-  result?: { status: string; redirectUrl?: string; error?: string; widgetData?: WidgetData } | null;
+  result?: WidgetResult | null;
   loading?: boolean;
   error?: string | null;
   t: WidgetTranslations;
   locale?: string;
+  // For QR polling
+  api?: PaymentApi;
+  paymentKey?: string;
+  clientSecret?: string;
+  onQrSuccess?: () => void;
+  onQrError?: (message: string) => void;
+}
+
+export interface WidgetResult {
+  status: string;
+  redirectUrl?: string;
+  error?: string;
+  widgetData?: WidgetData;
+  formRedirect?: FormRedirectData;
+  qrData?: QrData;
+  externalWidget?: ExternalWidgetData;
 }
 
 // ─── Constants ───────────────────────────────────────────────
@@ -135,6 +168,25 @@ const s = {
     borderRadius: '50%',
     animation: 'ps-spin 0.6s linear infinite',
   },
+  separator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    margin: '16px 0',
+    color: '#999',
+    fontSize: '13px',
+  },
+  separatorLine: {
+    flex: 1,
+    height: '1px',
+    backgroundColor: '#e0e0e0',
+  },
+  connectorLogo: {
+    width: '24px',
+    height: '24px',
+    borderRadius: '4px',
+    objectFit: 'contain' as const,
+  },
 };
 
 function injectKeyframes(): void {
@@ -158,7 +210,7 @@ function formatAmount(amount: number, currency: string, locale?: string): string
   }
 }
 
-// ─── Embedded PSP Widget ─────────────────────────────────────
+// ─── Embedded PSP Widget (legacy) ───────────────────────────
 
 function EmbeddedPspWidget({ widgetData }: { widgetData: WidgetData }) {
   const containerRef = (el: HTMLDivElement | null) => {
@@ -176,10 +228,138 @@ function EmbeddedPspWidget({ widgetData }: { widgetData: WidgetData }) {
   return <div ref={containerRef} style={{ minHeight: '200px' }} />;
 }
 
+// ─── External PSP Widget (v2) ───────────────────────────────
+
+function ExternalPspWidget({ data }: { data: ExternalWidgetData }) {
+  const containerRef = (el: HTMLDivElement | null) => {
+    if (!el || el.dataset.loaded) return;
+    el.dataset.loaded = '1';
+
+    const script = document.createElement('script');
+    script.src = data.scriptUrl;
+    for (const [key, value] of Object.entries(data.params)) {
+      script.dataset[key] = String(value);
+    }
+    el.appendChild(script);
+  };
+
+  return <div ref={containerRef} style={{ minHeight: '200px' }} />;
+}
+
+// ─── Method List ─────────────────────────────────────────────
+
+function MethodList({
+  methods,
+  selectedMethod,
+  onMethodChange,
+  locale,
+}: {
+  methods: PaymentMethodInfo[];
+  selectedMethod: string | null;
+  onMethodChange: (method: string) => void;
+  locale?: string;
+}) {
+  return (
+    <div style={s.methods}>
+      {methods.map((m) => {
+        const sel = selectedMethod === m.payment_method;
+        return (
+          <label
+            key={m.payment_method}
+            style={{ ...s.method, ...(sel ? s.methodSelected : {}) }}
+            onMouseEnter={(e) => { if (!sel) (e.currentTarget as HTMLElement).style.borderColor = '#999'; }}
+            onMouseLeave={(e) => { if (!sel) (e.currentTarget as HTMLElement).style.borderColor = '#e0e0e0'; }}
+          >
+            <input
+              type="radio"
+              name="ps-payment-method"
+              value={m.payment_method}
+              checked={sel}
+              onChange={() => onMethodChange(m.payment_method)}
+              style={s.hidden}
+            />
+            <span style={s.icon}>
+              {m.icon_url
+                ? <img src={m.icon_url} alt="" width="20" height="20" style={{ display: 'block' }} />
+                : <span dangerouslySetInnerHTML={{ __html: GENERIC_PAYMENT_ICON }} />}
+            </span>
+            <span style={s.label}>{m.display_name ?? getMethodDisplayName(m.payment_method, locale)}</span>
+            {sel && <span style={s.checkmark}>{'\u2713'}</span>}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Connector List ──────────────────────────────────────────
+
+function ConnectorList({
+  connectors,
+  selectedConnector,
+  onConnectorChange,
+}: {
+  connectors: ConnectorInfo[];
+  selectedConnector: string | null;
+  onConnectorChange: (connectorKey: string) => void;
+}) {
+  return (
+    <div style={s.methods}>
+      {connectors.map((c) => {
+        const sel = selectedConnector === c.connector_key;
+        return (
+          <label
+            key={c.connector_key}
+            style={{ ...s.method, ...(sel ? s.methodSelected : {}) }}
+            onMouseEnter={(e) => { if (!sel) (e.currentTarget as HTMLElement).style.borderColor = '#999'; }}
+            onMouseLeave={(e) => { if (!sel) (e.currentTarget as HTMLElement).style.borderColor = '#e0e0e0'; }}
+          >
+            <input
+              type="radio"
+              name="ps-connector"
+              value={c.connector_key}
+              checked={sel}
+              onChange={() => onConnectorChange(c.connector_key)}
+              style={s.hidden}
+            />
+            <span style={s.icon}>
+              {c.logo_url
+                ? <img src={c.logo_url} alt="" style={s.connectorLogo} />
+                : <span dangerouslySetInnerHTML={{ __html: GENERIC_PAYMENT_ICON }} />}
+            </span>
+            <span style={s.label}>{c.display_name}</span>
+            {sel && <span style={s.checkmark}>{'\u2713'}</span>}
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Separator ───────────────────────────────────────────────
+
+function Separator({ text }: { text: string }) {
+  return (
+    <div style={s.separator}>
+      <div style={s.separatorLine} />
+      <span>{text}</span>
+      <div style={s.separatorLine} />
+    </div>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────
 
 function PaymentWidgetUI(props: PaymentWidgetProps) {
-  const { payment, methods, selectedMethod, onMethodChange, onPay, confirming, result, loading, error, t, locale } = props;
+  const {
+    payment, mode, methods, connectors,
+    selectedMethod, selectedConnector,
+    onMethodChange, onConnectorChange,
+    onPay, confirming, result, loading, error,
+    t, locale,
+    api, paymentKey, clientSecret,
+    onQrSuccess, onQrError,
+  } = props;
 
   injectKeyframes();
 
@@ -203,6 +383,39 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
 
   // Result state — payment confirmed
   if (result) {
+    // QR code display
+    if (result.status === 'requires_qr' && result.qrData && api && paymentKey && clientSecret) {
+      return (
+        <div style={s.widget}>
+          <QrPayment
+            qrData={result.qrData}
+            api={api}
+            paymentKey={paymentKey}
+            clientSecret={clientSecret}
+            t={t}
+            onSuccess={onQrSuccess ?? (() => {})}
+            onError={onQrError ?? (() => {})}
+          />
+        </div>
+      );
+    }
+    // Form redirect
+    if (result.status === 'requires_form_redirect' && result.formRedirect) {
+      return (
+        <div style={s.widget}>
+          <FormRedirect data={result.formRedirect} t={t} />
+        </div>
+      );
+    }
+    // External widget (v2)
+    if (result.status === 'requires_external_widget' && result.externalWidget) {
+      return (
+        <div style={s.widget}>
+          <ExternalPspWidget data={result.externalWidget} />
+        </div>
+      );
+    }
+    // Legacy redirect
     if (result.status === 'requires_customer_action' && result.redirectUrl) {
       return (
         <div style={s.widget}>
@@ -215,6 +428,7 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
         </div>
       );
     }
+    // Legacy embedded widget
     if (result.status === 'requires_widget' && result.widgetData) {
       return (
         <div style={s.widget}>
@@ -241,8 +455,10 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
     }
   }
 
-  // No methods
-  if (methods.length === 0) {
+  // No methods and no connectors
+  const hasSelection = mode === 'none' || selectedMethod || selectedConnector;
+
+  if (mode !== 'none' && methods.length === 0 && connectors.length === 0) {
     return (
       <div style={s.widget}>
         <div style={s.center}>{t.noMethods}</div>
@@ -261,42 +477,35 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
         </div>
       )}
 
-      {/* Payment methods */}
-      <div style={s.methods}>
-        {methods.map((m) => {
-          const sel = selectedMethod === m.payment_method;
-          return (
-            <label
-              key={m.payment_method}
-              style={{ ...s.method, ...(sel ? s.methodSelected : {}) }}
-              onMouseEnter={(e) => { if (!sel) (e.currentTarget as HTMLElement).style.borderColor = '#999'; }}
-              onMouseLeave={(e) => { if (!sel) (e.currentTarget as HTMLElement).style.borderColor = '#e0e0e0'; }}
-            >
-              <input
-                type="radio"
-                name="ps-payment-method"
-                value={m.payment_method}
-                checked={sel}
-                onChange={() => onMethodChange(m.payment_method)}
-                style={s.hidden}
-              />
-              <span style={s.icon}>
-                {m.icon_url
-                  ? <img src={m.icon_url} alt="" width="20" height="20" style={{ display: 'block' }} />
-                  : <span dangerouslySetInnerHTML={{ __html: GENERIC_PAYMENT_ICON }} />}
-              </span>
-              <span style={s.label}>{m.display_name ?? getMethodDisplayName(m.payment_method, locale)}</span>
-              {sel && <span style={s.checkmark}>{'\u2713'}</span>}
-            </label>
-          );
-        })}
-      </div>
+      {/* Mode: direct_methods — show method buttons */}
+      {(mode === 'direct_methods' || mode === 'mixed') && methods.length > 0 && (
+        <MethodList
+          methods={methods}
+          selectedMethod={selectedMethod}
+          onMethodChange={onMethodChange}
+          locale={locale}
+        />
+      )}
+
+      {/* Mode: mixed — separator */}
+      {mode === 'mixed' && methods.length > 0 && connectors.length > 0 && (
+        <Separator text={t.or} />
+      )}
+
+      {/* Mode: connector_selection or mixed — show connector buttons */}
+      {(mode === 'connector_selection' || mode === 'mixed') && connectors.length > 0 && (
+        <ConnectorList
+          connectors={connectors}
+          selectedConnector={selectedConnector}
+          onConnectorChange={onConnectorChange}
+        />
+      )}
 
       {/* Pay button */}
       <button
         type="button"
-        style={{ ...s.payBtn, ...(confirming || !selectedMethod ? s.payBtnDisabled : {}) }}
-        disabled={confirming || !selectedMethod}
+        style={{ ...s.payBtn, ...(confirming || !hasSelection ? s.payBtnDisabled : {}) }}
+        disabled={confirming || !hasSelection}
         onClick={onPay}
         onMouseEnter={(e) => { if (!confirming) (e.currentTarget as HTMLElement).style.backgroundColor = '#0052cc'; }}
         onMouseLeave={(e) => { if (!confirming) (e.currentTarget as HTMLElement).style.backgroundColor = '#0066ff'; }}
