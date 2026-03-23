@@ -2,8 +2,10 @@
 
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use PragmaRX\Google2FA\Google2FA;
 
 uses(RefreshDatabase::class);
@@ -134,6 +136,13 @@ test('logout clears session', function () {
 });
 
 test('login rate limiting after multiple failures', function () {
+    // Override login rate limiter with strict production-like limit for this test
+    RateLimiter::for('login', function ($request) {
+        $email = strtolower((string) $request->string('email'));
+
+        return Limit::perMinute(5)->by($email.'|'.$request->ip());
+    });
+
     $user = User::factory()->create();
 
     // Exhaust the 5 attempts allowed per minute
