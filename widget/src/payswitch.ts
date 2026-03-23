@@ -90,6 +90,10 @@ class PaymentWidgetImpl implements PaymentWidget {
         if (this.connectors.length > 0 && this.mode === 'connector_selection') {
           this.selectedConnector = this.connectors[0].connector_key;
         }
+        // Single connector with no methods — auto-set connector for confirm
+        if (methodsResponse.default_connector) {
+          this.selectedConnector = methodsResponse.default_connector;
+        }
 
         this.render();
         this.emit('ready', {});

@@ -90,12 +90,11 @@ test('connector without direct methods for enabled method returns connector_sele
     $payment = createPaymentForMethodsTest($this);
     $result = $this->service->getAvailablePaymentMethods($payment, 'ru');
 
-    expect($result['mode'])->toBe('connector_selection');
+    // Single connector with no direct methods — mode is 'none' with default_connector
+    expect($result['mode'])->toBe('none');
     expect($result['methods'])->toBeEmpty();
     expect($result['connectors'])->toHaveCount(1);
-    expect($result['connectors'][0])
-        ->toHaveKey('connector_name', 'robokassa')
-        ->toHaveKey('session_type', 'form_redirect');
+    expect($result['default_connector'])->toBe($result['connectors'][0]['connector_key']);
 });
 
 test('multiple connectors producing mixed mode', function () {

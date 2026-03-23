@@ -122,6 +122,7 @@ export interface PaymentMethodsResponse {
   mode: PaymentMethodsMode;
   methods: PaymentMethodInfo[];
   connectors: ConnectorInfo[];
+  default_connector?: string;
 }
 
 export interface ConfirmResponse {

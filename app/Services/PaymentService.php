@@ -166,10 +166,19 @@ final readonly class PaymentService
             default => 'none',
         };
 
+        // Single connector with no direct methods — skip connector selection, just show Pay button.
+        // The widget will auto-send the connector key on confirm.
+        $defaultConnector = null;
+        if ($mode === 'connector_selection' && count($connectorEntries) === 1) {
+            $mode = 'none';
+            $defaultConnector = $connectorEntries[0]['connector_key'];
+        }
+
         return [
             'mode' => $mode,
             'methods' => array_values($methods),
             'connectors' => array_values($connectorEntries),
+            ...($defaultConnector ? ['default_connector' => $defaultConnector] : []),
         ];
     }
 

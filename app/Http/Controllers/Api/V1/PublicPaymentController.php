@@ -59,7 +59,7 @@ final class PublicPaymentController extends Controller
     public function confirm(string $paymentKey, Request $request): JsonResponse
     {
         $request->validate([
-            'payment_method' => ['required', 'string'],
+            'payment_method' => ['sometimes', 'string'],
             'payment_method_data' => ['sometimes', 'array'],
             'connector' => ['sometimes', 'string'],
         ]);
