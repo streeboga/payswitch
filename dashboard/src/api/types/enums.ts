@@ -20,7 +20,7 @@ export type CaptureMethod = 'automatic' | 'manual'
 
 export type AuthenticationType = 'three_ds' | 'no_three_ds'
 
-export type ConnectorName = 'stripe' | 'cloudpayments' | 'yookassa' | 'test'
+export type ConnectorName = 'stripe' | 'cloudpayments' | 'yookassa' | 'sberbank' | 'alfabank' | 'tbank' | 'robokassa' | 'tochka' | 'test'
 
 export type ConnectorType = 'fiz_operations' | 'payout_processor'
 

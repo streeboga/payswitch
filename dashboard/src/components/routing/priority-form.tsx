@@ -51,6 +51,12 @@ export type PriorityFormValues = z.infer<typeof prioritySchema>
 const AVAILABLE_CONNECTORS = [
   { id: 'stripe', label: 'Stripe' },
   { id: 'cloudpayments', label: 'CloudPayments' },
+  { id: 'yookassa', label: 'YooKassa' },
+  { id: 'sberbank', label: 'Сбербанк' },
+  { id: 'alfabank', label: 'Альфа-Банк' },
+  { id: 'tbank', label: 'Т-Банк' },
+  { id: 'robokassa', label: 'Робокасса' },
+  { id: 'tochka', label: 'Точка' },
   { id: 'test', label: 'Test' },
 ]
 

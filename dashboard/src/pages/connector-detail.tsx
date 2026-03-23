@@ -9,6 +9,9 @@ import {
   Cloud,
   DollarSign,
   TestTube,
+  Landmark,
+  ShoppingCart,
+  CircleDot,
   Wifi,
   Copy,
   CheckCheck,
@@ -54,6 +57,11 @@ const CONNECTOR_LABELS: Record<ConnectorName, string> = {
   stripe: 'Stripe',
   cloudpayments: 'CloudPayments',
   yookassa: 'YooKassa',
+  sberbank: 'Сбербанк',
+  alfabank: 'Альфа-Банк',
+  tbank: 'Т-Банк',
+  robokassa: 'Робокасса',
+  tochka: 'Точка',
   test: 'Test',
 }
 
@@ -61,6 +69,11 @@ const CONNECTOR_ICONS: Record<ConnectorName, typeof CreditCard> = {
   stripe: CreditCard,
   cloudpayments: Cloud,
   yookassa: DollarSign,
+  sberbank: Landmark,
+  alfabank: Landmark,
+  tbank: Landmark,
+  robokassa: ShoppingCart,
+  tochka: CircleDot,
   test: TestTube,
 }
 
@@ -98,6 +111,31 @@ const CREDENTIAL_FIELDS: Record<ConnectorName, CredentialField[]> = {
       placeholder: 'live_...',
       type: 'password',
     },
+  ],
+  sberbank: [
+    { key: 'base_url', label: 'Base URL', placeholder: 'https://securepayments.sberbank.ru/payment/rest' },
+    { key: 'username', label: 'Username', placeholder: 'merchant-api' },
+    { key: 'password', label: 'Password', placeholder: '...', type: 'password' },
+    { key: 'token', label: 'Token (alternative)', placeholder: 'Optional — use instead of login/password' },
+  ],
+  alfabank: [
+    { key: 'base_url', label: 'Base URL', placeholder: 'https://pay.alfabank.ru/payment/rest' },
+    { key: 'username', label: 'Username', placeholder: 'merchant-api' },
+    { key: 'password', label: 'Password', placeholder: '...', type: 'password' },
+    { key: 'token', label: 'Token (alternative)', placeholder: 'Optional' },
+  ],
+  tbank: [
+    { key: 'terminal_key', label: 'Terminal Key', placeholder: 'TinkoffBankTest' },
+    { key: 'password', label: 'Password', placeholder: '...', type: 'password' },
+  ],
+  robokassa: [
+    { key: 'login', label: 'Merchant Login', placeholder: 'your_merchant_login' },
+    { key: 'password1', label: 'Password #1', placeholder: 'For payment initiation', type: 'password' },
+    { key: 'password2', label: 'Password #2', placeholder: 'For webhook verification', type: 'password' },
+  ],
+  tochka: [
+    { key: 'token', label: 'JWT Token', placeholder: 'OAuth2 JWT token', type: 'password' },
+    { key: 'customer_code', label: 'Customer Code', placeholder: '9-character code' },
   ],
   test: [{ key: 'api_key', label: 'API Key', placeholder: 'test_key_123' }],
 }
