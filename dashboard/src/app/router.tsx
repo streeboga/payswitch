@@ -100,6 +100,9 @@ const UsersPage = lazy(() =>
 const TestPspPage = lazy(() =>
   import('@/pages/test-psp').then((m) => ({ default: m.TestPspPage })),
 )
+const IntegrationPage = lazy(() =>
+  import('@/pages/integration').then((m) => ({ default: m.IntegrationPage })),
+)
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -358,6 +361,13 @@ const usersRoute = createRoute({
   beforeLoad: requireAdmin,
 })
 
+const integrationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/integration',
+  component: IntegrationPage,
+  beforeLoad: requireAuth,
+})
+
 const testPspRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/test-psp/$paymentKey',
@@ -403,6 +413,7 @@ const routeTree = rootRoute.addChildren([
   connectorHealthRoute,
   usersRoute,
   settingsRoute,
+  integrationRoute,
   testPspRoute,
 ])
 

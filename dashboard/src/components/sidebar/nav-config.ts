@@ -18,6 +18,7 @@ import {
   Briefcase,
   UserCog,
   FileSearch,
+  Code,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -70,6 +71,11 @@ export function getNavGroups(t: TFunction): NavGroup[] {
           path: '/test-payment',
           icon: FlaskConical,
           testOnly: true,
+        },
+        {
+          label: t('sidebar.integration'),
+          path: '/integration',
+          icon: Code,
         },
         { label: t('sidebar.eventLogs'), path: '/event-logs', icon: ScrollText },
       ],
