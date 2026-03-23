@@ -1,0 +1,10 @@
+{
+    "eventType": "acquiringInternetPayment",
+    "paymentId": "pmt_tochka_001",
+    "paymentLinkId": "pay_01ABC",
+    "status": "APPROVED",
+    "amount": 1500.00,
+    "customerCode": "cust_123",
+    "paymentMode": "card",
+    "purpose": "Payment for order #123"
+}

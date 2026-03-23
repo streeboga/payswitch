@@ -6,6 +6,7 @@ use Streeboga\PaymentConnectors\Drivers\RobokassaConnector;
 use Streeboga\PaymentConnectors\Drivers\StripeConnector;
 use Streeboga\PaymentConnectors\Drivers\TBankConnector;
 use Streeboga\PaymentConnectors\Drivers\TestConnector;
+use Streeboga\PaymentConnectors\Drivers\TochkaConnector;
 use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
 
 return [
@@ -31,6 +32,7 @@ return [
         'alfabank' => RbsConnector::class,
         'tbank' => TBankConnector::class,
         'robokassa' => RobokassaConnector::class,
+        'tochka' => TochkaConnector::class,
         'test' => TestConnector::class,
     ],
 
