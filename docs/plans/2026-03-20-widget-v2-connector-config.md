@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Переделать логику виджета: вместо плоского списка методов (card, sbp, apple_pay) — умный выбор на основе конфигурации коннекторов и возможностей PSP.
+**Goal:** Переделать логику виджета: вместо плоского списка методов (card, sbp, apple_pay) — умный выбор на основе возможностей PSP (hardcoded capabilities) и конфигурации мерчанта.
 
-**Architecture:** Конфиг коннектора на сервере определяет что и как показывает виджет.
+**Architecture:** PSP capabilities в коде драйвера (hardcoded). Мерчант настраивает только credentials, enabled methods, display name и logo. Виджет получает от API готовый набор вариантов оплаты.
 
 ---
 
@@ -12,236 +12,390 @@
 
 Сейчас виджет показывает `["card", "sbp", "apple_pay", "google_pay", "bank_transfer"]` — плоский список из `payment_methods_enabled`. Это неправильно:
 
-1. Не все PSP поддерживают прямой redirect на конкретный метод
+1. Не все PSP поддерживают прямой redirect на конкретный метод (Т-Банк, Сбер, Альфа — нельзя)
 2. CloudPayments работает через виджет (JS popup), не через redirect
-3. Если PSP не поддерживает прямой метод — нужно показывать PSP, а не методы
-4. Нет конфига для каждого коннектора
+3. Робокасса не имеет REST API — только form redirect с подписью
+4. SBP у Т-Банка, Сбера, Альфы — отдельный flow с QR кодом inline
+5. Сбер и Альфа — один и тот же gateway (RBS), можно один коннектор
 
-## Как должно работать
+---
 
-### Два режима отображения в виджете
+## Исследование PSP (7 провайдеров)
 
-**Режим 1 — Direct Method Selection (если роутинг + PSP поддерживают):**
+### Сводная матрица возможностей
 
-Роутинг настроен: SBP → CloudPayments, карта → YooKassa.
-PSP поддерживают прямой redirect/widget на конкретный метод.
+| PSP | Создание платежа | Embedded widget | Direct method select | SBP QR inline | Сумма в | Webhook верификация |
+|-----|-----------------|-----------------|---------------------|---------------|---------|---------------------|
+| **ЮKassa** | REST `POST /v3/payments` | ✅ `type=embedded` → `YooMoneyCheckoutWidget` | ✅ `payment_method_data.type` | ✅ type=sbp → QR page | рублях | IP whitelist |
+| **CloudPayments** | REST API | ✅ JS popup (основной режим) | ✅ `restrictedPaymentMethods` | ✅ через виджет | рублях | HMAC подпись |
+| **Робокасса** | ❌ Form redirect (нет REST) | ✅ iframe `Robokassa.Render()` / modal | ⚠️ `IncCurrLabel` (soft, юзер может переключить) | ❌ только redirect | рублях | MD5 подпись (Password#2) |
+| **Т-Банк** | REST `POST /v2/Init` | ⚠️ overlay `tinkoff_v2.js` (не inline) | ❌ метод на hosted page | ✅ `GetQr(DataType=IMAGE)` → SVG | **копейках** | SHA-256 Token |
+| **Сбер** | REST `register.do` | ❌ нет | ⚠️ `allowedPaymentWays` (фильтр, не выбор) | ✅ `getSbpDynamicQr.do` → payload | **копейках** | Polling (callbacks ненадёжны) |
+| **Альфа** | REST `register.do` (= Сбер, RBS gateway) | ❌ нет | ❌ | ✅ `sbp/c2b/qr/dynamic/get.do` → base64 PNG | **копейках** | HMAC (callbacks ненадёжны) |
+| **Точка** | REST `POST acquiring/v1.0/payments` | ❌ нет | ✅ `paymentMode` (card/sbp/tinkoff/dolyame) | ✅ Отдельный SBP QR API | рублях | JWT (RS256) |
 
-Виджет показывает:
-```
-┌─────────────────────────┐
-│ 100,00 ₽                │
-│                         │
-│ 💳 Оплатить картой      │  → YooKassa redirect (type: bank_card)
-│ 📱 СБП                  │  → CloudPayments SBP API (QR)
-│                         │
-│ [Оплатить 100,00 ₽]     │
-└─────────────────────────┘
-```
+### Детали по каждому PSP
 
-По клику — сразу оплата без лишних шагов.
+#### ЮKassa
+- **Два режима:** `confirmation.type=redirect` (redirect на hosted page) или `confirmation.type=embedded` (JS widget на странице)
+- **Direct methods:** `payment_method_data.type` = `bank_card`, `sbp`, `yoo_money`, `sberbank`, `tinkoff_bank`, `installments`
+- **Embedded widget:** создаёт платёж с `type=embedded`, получает `confirmation_token`, передаёт в `YooMoneyCheckoutWidget` JS SDK. Виджет сам показывает все методы — **конфликтует с нашим виджетом**
+- **Рекомендация:** использовать `redirect` + `payment_method_data.type` для direct methods. Embedded widget не использовать (дублирует наш UI)
 
-**Режим 2 — PSP Selection (если прямой метод невозможен):**
+#### CloudPayments
+- **Основной режим:** JS popup widget. Collect card data через их виджет
+- **Direct methods:** через `restrictedPaymentMethods` — отключаем ненужные методы
+- **SBP:** через виджет с restricted methods (оставляем только QR)
 
-Нет роутинга по методу, или PSP не поддерживает прямой redirect.
+#### Робокасса
+- **Нет REST API.** URL формируется локально: `MD5(Login:Sum:InvId:Password#1:Shp_*)` → redirect на `auth.robokassa.ru`
+- **iframe/modal:** `Robokassa.Render()` (inline) или `Robokassa.StartPayment()` (modal popup)
+- **Direct methods:** `IncCurrLabel=BankCardPSR` / `SBP` — pre-select, но юзер может переключить
+- **Stricter filter:** в iframe режиме `Settings.PaymentMethods: ['BankCard', 'SBP']` — ограничивает видимые методы
+- **Два пароля:** Password#1 (инициация + SuccessURL), Password#2 (ResultURL webhook)
 
-Виджет показывает платёжные системы:
-```
-┌─────────────────────────┐
-│ 100,00 ₽                │
-│                         │
-│ [logo] CloudPayments    │  → opens their widget on page
-│ [logo] YooKassa         │  → redirect to their hosted page
-│ [logo] Robokassa        │  → redirect to their hosted page
-│                         │
-│ [Оплатить 100,00 ₽]     │
-└─────────────────────────┘
-```
+#### Т-Банк (Tinkoff)
+- **REST API:** `POST /v2/Init` → `PaymentURL` для redirect
+- **Нельзя указать метод** при Init. Пользователь выбирает на hosted page
+- **SBP inline:** `Init` → `GetQr(PaymentId, DataType=IMAGE)` → SVG QR код. **Polling** через `GetState`
+- **T-Pay:** отдельные эндпоинты для deeplink/QR в приложение Т-Банка
+- **Amount в копейках** (×100)
 
-### Connector Config Structure
+#### Сбер
+- **RBS gateway:** `register.do` → `formUrl` → redirect
+- **Нет inline card form.** Только hosted page
+- **SBP inline:** `register.do` с `jsonParams.QRType=DYNAMIC_QR_SBP` → `sbpPayload` (NSPK ссылка). Генерируем QR на фронте
+- **SberPay:** через `sberbankOnlineAttributes` в jsonParams — QR/deeplink
+- **Amount в копейках.** Auth: `userName`/`password` или `token`
+- **Callbacks ненадёжны** — всегда polling через `getOrderStatusExtended.do`
 
-Каждый MerchantConnectorAccount получает `connector_config` (JSON):
+#### Альфа
+- **= Сбер (RBS gateway).** Идентичное API, другой base URL (`pay.alfabank.ru`)
+- **SBP:** `register.do` → `sbp/c2b/qr/dynamic/get.do` → base64 PNG или payload
+- **Один коннектор `RbsConnector`** с настраиваемым base URL покрывает Сбер + Альфа (+ другие банки на RBS)
+- **dynamicCallbackUrl** — можно задать webhook per-payment
 
-```json
-{
-  "display_name": {"ru": "ЮKassa", "en": "YooKassa"},
-  "logo_url": "/logos/yookassa.svg",
-  "show_logo": true,
-  "show_name": true,
-  "integration_mode": "redirect",
-  "supports_direct_methods": true,
-  "direct_methods": {
-    "card": {"api_param": "bank_card", "mode": "redirect"},
-    "sbp": {"api_param": "sbp", "mode": "redirect"}
-  },
-  "custom_fields": {
-    "shop_id": {"type": "string", "label": "Shop ID", "required": true},
-    "show_installments": {"type": "boolean", "label": "Show installment option", "default": false}
-  }
+#### Точка
+- **Redirect-only** для карт. Нет виджета, нет iframe
+- **Direct method:** `paymentMode` = `card` | `sbp` | `tinkoff` | `dolyame`
+- **SBP QR:** отдельный API `/sbp/v1.0/qr-code/` — генерация dynamic/static QR
+- **Webhooks:** JWT (RS256), верификация публичным ключом Точки
+- **Процессинг через PayKeeper** для карт
+
+---
+
+## Архитектура
+
+### 4 типа результата `createPaymentSession()`
+
+```php
+enum SessionResultType: string {
+    case ServerRedirect = 'server_redirect';   // REST API → URL от PSP → redirect
+    case FormRedirect = 'form_redirect';       // URL формируется локально → redirect (Робокасса)
+    case EmbeddedWidget = 'embedded_widget';   // REST API → token/params → JS SDK на странице
+    case QrInline = 'qr_inline';              // REST API → QR данные → показываем + polling
 }
 ```
 
-**Для CloudPayments:**
-```json
-{
-  "display_name": {"ru": "CloudPayments", "en": "CloudPayments"},
-  "logo_url": "/logos/cloudpayments.svg",
-  "integration_mode": "widget",
-  "supports_direct_methods": true,
-  "direct_methods": {
-    "card": {"mode": "widget", "restricted": []},
-    "sbp": {"mode": "widget", "restricted": ["Card", "TinkoffPay", "MirPay", "SberPay"]}
-  }
+**Маппинг PSP → типы:**
+
+| PSP | Card | SBP |
+|-----|------|-----|
+| ЮKassa | `server_redirect` (с `payment_method_data.type=bank_card`) | `server_redirect` (с type=sbp, redirect на QR page) |
+| CloudPayments | `embedded_widget` (JS popup) | `embedded_widget` (JS popup, restricted) |
+| Робокасса | `form_redirect` (MD5 подпись) | `form_redirect` (IncCurrLabel=SBP) |
+| Т-Банк | `server_redirect` (Init → PaymentURL) | `qr_inline` (Init → GetQr → SVG) |
+| Сбер/Альфа (RBS) | `server_redirect` (register.do → formUrl) | `qr_inline` (register.do → getSbpDynamicQr) |
+| Точка | `server_redirect` (paymentMode=card) | `qr_inline` (SBP QR API) |
+
+### PSP Capabilities (hardcoded в коде драйвера)
+
+Каждый драйвер декларирует `capabilities()` — статический метод:
+
+```php
+// ConnectorCapabilities value object
+new ConnectorCapabilities(
+    defaultDisplayName: ['ru' => 'ЮKassa', 'en' => 'YooKassa'],
+    logoPath: '/logos/yookassa.svg',
+    directMethods: [
+        'card' => new DirectMethod(sessionType: SessionResultType::ServerRedirect),
+        'sbp'  => new DirectMethod(sessionType: SessionResultType::ServerRedirect),
+    ],
+    fallbackSessionType: SessionResultType::ServerRedirect,
+    amountUnit: AmountUnit::Rubles,  // или AmountUnit::Kopecks для Т-Банк/Сбер/Альфа
+)
+```
+
+**Мерчант НЕ настраивает capabilities.** Только:
+- `connector_account_details` — credentials (encrypted)
+- `payment_methods_enabled` — какие методы включены
+- `display_config.display_name` — переопределение имени (optional)
+- `display_config.logo_url` — переопределение логотипа (optional)
+
+### PaymentSessionResult (полиморфный ответ)
+
+```php
+class PaymentSessionResult {
+    public static function serverRedirect(string $url, string $method = 'GET', array $params = []): self;
+    public static function formRedirect(string $url, array $params, string $method = 'POST'): self;
+    public static function embeddedWidget(string $provider, string $scriptUrl, array $params): self;
+    public static function qrInline(string $qrData, string $format, string $paymentId): self;
+    // format: 'svg' | 'base64_png' | 'payload' (NSPK link)
 }
 ```
 
-**Для Robokassa:**
-```json
-{
-  "display_name": {"ru": "Робокасса", "en": "Robokassa"},
-  "logo_url": "/logos/robokassa.svg",
-  "integration_mode": "redirect",
-  "supports_direct_methods": true,
-  "direct_methods": {
-    "card": {"api_param": "BankCard", "mode": "redirect"},
-    "sbp": {"api_param": "SBP", "mode": "redirect"}
-  }
-}
+### Логика API `/payment-methods` v2
+
+```
+Для каждого активного коннектора бизнес-профиля:
+  1. Получить capabilities() из драйвера
+  2. Получить payment_methods_enabled мерчанта
+  3. Для каждого enabled метода:
+     a. Есть ли direct method в capabilities? → добавить как direct
+     b. Нет → добавить коннектор в connector_selection
+
+Приоритет для SBP:
+  - qr_inline > server_redirect (QR инлайн лучше чем redirect на QR page)
+
+Если один коннектор + supports direct → показать методы
+Если один коннектор + НЕ supports direct → сразу redirect (0 кликов)
+Если несколько коннекторов → mixed (direct где возможно + connector_selection для остальных)
 ```
 
-### API Response — Payment Methods v2
-
-`GET /api/v1/payments/{key}/payment-methods` возвращает:
+### API Response `/payment-methods` v2
 
 ```json
 {
   "data": {
-    "mode": "direct_methods",
+    "mode": "mixed",
     "methods": [
       {
         "method": "card",
         "display_name": "Банковская карта",
-        "icon_url": null,
+        "type": "direct",
         "connector": "yookassa",
-        "action_mode": "redirect"
+        "session_type": "server_redirect"
       },
       {
         "method": "sbp",
         "display_name": "СБП",
-        "icon_url": null,
-        "connector": "cloudpayments",
-        "action_mode": "widget"
+        "type": "direct",
+        "connector": "tbank",
+        "session_type": "qr_inline"
       }
-    ]
-  }
-}
-```
-
-Или если direct methods недоступен:
-
-```json
-{
-  "data": {
-    "mode": "connector_selection",
+    ],
     "connectors": [
       {
-        "connector_name": "cloudpayments",
-        "display_name": "CloudPayments",
-        "logo_url": "/logos/cloudpayments.svg",
-        "action_mode": "widget"
-      },
-      {
-        "connector_name": "yookassa",
-        "display_name": "ЮKassa",
-        "logo_url": "/logos/yookassa.svg",
-        "action_mode": "redirect"
+        "connector_name": "robokassa",
+        "display_name": "Робокасса",
+        "logo_url": "/logos/robokassa.svg",
+        "session_type": "form_redirect"
       }
     ]
   }
 }
 ```
 
-### Confirm Response — Widget vs Redirect
+### Confirm Response — 4 типа
 
-`POST /api/v1/payments/{key}/confirm` с `connector: "cloudpayments"`:
+`POST /api/v1/payments/{key}/confirm`:
 
-**Redirect mode:**
+**server_redirect:**
 ```json
 {
   "status": "requires_customer_action",
-  "metadata": {
-    "redirect_url": "https://yookassa.ru/pay/...",
-    "redirect_method": "GET"
+  "action_type": "redirect",
+  "redirect_url": "https://yookassa.ru/pay/...",
+  "redirect_method": "GET"
+}
+```
+
+**form_redirect (Робокасса):**
+```json
+{
+  "status": "requires_customer_action",
+  "action_type": "form_redirect",
+  "form_url": "https://auth.robokassa.ru/Merchant/Index.aspx",
+  "form_method": "POST",
+  "form_params": {
+    "MerchantLogin": "...",
+    "OutSum": "100.00",
+    "InvId": "123",
+    "SignatureValue": "abc123..."
   }
 }
 ```
 
-**Widget mode (CloudPayments):**
+**embedded_widget (CloudPayments):**
 ```json
 {
   "status": "requires_customer_action",
-  "metadata": {
-    "widget_data": {
-      "script_url": "https://widget.cloudpayments.ru/bundles/cloudpayments.js",
-      "params": {
-        "publicId": "pk_xxx",
-        "amount": "100.00",
-        "currency": "RUB",
-        "description": "Payment"
-      }
-    }
+  "action_type": "widget",
+  "widget_data": {
+    "provider": "cloudpayments",
+    "script_url": "https://widget.cloudpayments.ru/bundles/cloudpayments.js",
+    "params": {"publicId": "pk_xxx", "amount": "100.00", "currency": "RUB"}
   }
 }
 ```
 
-Виджет рендерит:
-- Redirect → `window.location.href = redirect_url`
-- Widget → создаёт `<script>` тег CloudPayments и открывает их popup
+**qr_inline (Т-Банк SBP):**
+```json
+{
+  "status": "requires_customer_action",
+  "action_type": "qr",
+  "qr_data": {
+    "format": "svg",
+    "data": "<svg>...</svg>",
+    "payment_id": "tbank_12345",
+    "poll_url": "/api/v1/payments/{key}/status",
+    "poll_interval_ms": 3000,
+    "expires_at": "2026-03-23T12:05:00Z"
+  }
+}
+```
+
+### Виджет — обработка 4 типов
+
+```
+action_type === 'redirect'      → window.location.href = redirect_url
+action_type === 'form_redirect' → создать <form>, заполнить hidden inputs, submit()
+action_type === 'widget'        → загрузить script_url, вызвать SDK PSP
+action_type === 'qr'            → показать QR код + polling до success/timeout
+```
+
+---
+
+## Виджет UI — три сценария
+
+**Один коннектор + direct methods:**
+```
+┌─────────────────────────┐
+│ 100,00 ₽                │
+│                         │
+│ 💳 Оплатить картой      │  → direct
+│ 📱 СБП                  │  → direct (QR inline если qr_inline)
+│                         │
+│ [Оплатить 100,00 ₽]     │
+└─────────────────────────┘
+```
+
+**Один коннектор + НЕ supports direct:**
+```
+┌─────────────────────────┐
+│ 100,00 ₽                │
+│                         │
+│ [Оплатить 100,00 ₽]     │  → сразу redirect на PSP
+└─────────────────────────┘
+```
+
+**Несколько коннекторов, mixed:**
+```
+┌─────────────────────────┐
+│ 100,00 ₽                │
+│                         │
+│ 💳 Оплатить картой      │  → direct (ЮKassa)
+│ 📱 СБП                  │  → QR inline (Т-Банк)
+│ ─── или ───             │
+│ [logo] Робокасса        │  → form_redirect
+│                         │
+│ [Оплатить 100,00 ₽]     │
+└─────────────────────────┘
+```
+
+---
+
+## Коннектор RBS (Сбер + Альфа)
+
+Один `RbsConnector` с настраиваемым base URL:
+
+```php
+// capabilities
+'sberbank' => new ConnectorCapabilities(
+    defaultDisplayName: ['ru' => 'Сбербанк', 'en' => 'Sberbank'],
+    directMethods: [],  // метод выбирается на hosted page
+    sbpMethod: new DirectMethod(sessionType: SessionResultType::QrInline),
+    fallbackSessionType: SessionResultType::ServerRedirect,
+    amountUnit: AmountUnit::Kopecks,
+)
+
+// connector_account_details
+{
+    "base_url": "https://securepayments.sberbank.ru",  // или https://pay.alfabank.ru
+    "username": "merchant-api",
+    "password": "secret",
+    "token": null  // альтернатива username/password
+}
+```
 
 ---
 
 ## Steps
 
-### Step 1: Connector config schema + migration
+### Step 1: ConnectorCapabilities + PaymentSessionResult
 
-- Rename `display_config` → `connector_config` (или расширить)
-- Добавить default configs для known connectors (stripe, cloudpayments, yookassa, test)
-- Dashboard: кастомные поля в настройках коннектора из `custom_fields`
+- Добавить `ConnectorCapabilities` value object в `payment-connectors` пакет
+- Добавить `PaymentSessionResult` value object с 4 типами
+- Добавить `capabilities()` метод в `AbstractConnector`
+- Имплементировать в каждом существующем драйвере (Stripe, CloudPayments, YooKassa, Test)
+- Обновить `createPaymentSession()` — возвращает `PaymentSessionResult` вместо массива
 
 ### Step 2: Payment methods API v2
 
-- Логика: проверить роутинг → если есть правила по методам И PSP поддерживают direct → mode: "direct_methods"
-- Иначе → mode: "connector_selection" с PSP list
-- `action_mode` берётся из connector_config
+- Переписать `PaymentService::getAvailablePaymentMethods()`:
+  - Для каждого коннектора: capabilities() ∩ payment_methods_enabled
+  - Routing rules определяют какой коннектор для какого метода
+  - Формирование response с `mode`, `methods[]`, `connectors[]`
+- Обновить `PublicPaymentController::paymentMethods()`
+- Обновить `PaymentMethodResource`
 
-### Step 3: Widget v2 — dual mode render
+### Step 3: Confirm endpoint — полиморфный ответ
 
-- Режим direct_methods: показывает методы оплаты
-- Режим connector_selection: показывает PSP с логотипами
-- Confirm: обрабатывает redirect и widget responses
+- `PaymentConfirmationService` обрабатывает `PaymentSessionResult` и формирует ответ по типу
+- Для `form_redirect` — URL + params без HTTP запроса к PSP
+- Для `qr_inline` — отдельный шаг (Init → GetQr для Т-Банка)
+- Для `embedded_widget` — token/params из createPaymentSession
 
-### Step 4: Widget embedded PSP support
+### Step 4: Widget v2 — 4 action types
 
-- CloudPayments widget integration
-- Script injection, параметры из widget_data
+- Обработка `redirect`, `form_redirect`, `widget`, `qr` типов
+- QR режим: рендер SVG/PNG, polling через `/status`, таймер expiry
+- Form redirect: динамическое создание `<form>` + submit
+- Widget: lazy load скрипта PSP, вызов SDK
 
-### Step 5: Connector config UI в дашборде
+### Step 5: Новые коннекторы (Т-Банк, RBS, Робокасса, Точка)
 
-- Custom fields рендеринг из connector_config.custom_fields
-- Logo upload/URL
-- Display name editing
-- Direct methods toggle
+- `TBankConnector` — Init, GetQr, GetState, Confirm, Cancel, Notifications
+- `RbsConnector` — register.do, getOrderStatusExtended.do, getSbpDynamicQr.do (Сбер + Альфа)
+- `RobokassaConnector` — form URL generation, MD5 подписи, ResultURL webhook
+- `TochkaConnector` — Payment Links API, SBP QR API, JWT webhooks
+- Каждый с `capabilities()`, тестами, webhook handler
 
-### Step 6: Connector default configs
+### Step 6: Dashboard — connector config UI
 
-- Seed/migration с default connector_config для каждого известного PSP
-- ConnectorFactory учитывает config при createPaymentSession
+- Capabilities preview (read-only) — integration modes, supported methods
+- Display name override (ru/en)
+- Logo URL override
+- Payment methods enabled toggles (из capabilities)
+- Webhook URL + инструкции для каждого PSP
+
+### Step 7: Polling endpoint для QR
+
+- `GET /api/v1/payments/{key}/status` — lightweight endpoint для polling
+- Возвращает текущий статус платежа
+- Rate limit: 1 req/sec per payment
+- Widget поллит каждые 3 секунды до terminal state
 
 ---
 
-## PSP Research Summary (из предыдущей сессии)
+## PSP Auth & Webhook Summary
 
-| PSP | Direct SBP | Direct Card | Widget Mode | API Param |
-|-----|-----------|-------------|-------------|-----------|
-| YooKassa | YES → QR page | YES → card form | YES (embedded) | `payment_method_data.type` |
-| CloudPayments | YES (виджет) | YES (виджет) | YES (основной) | `restrictedPaymentMethods` |
-| Robokassa | YES (soft) | YES (soft) | iframe | `IncCurrLabel` |
+| PSP | Credentials | Webhook верификация | Webhook надёжность |
+|-----|------------|--------------------|--------------------|
+| ЮKassa | `shop_id` + `secret_key` | IP whitelist + polling | Ретраи 24ч |
+| CloudPayments | `public_id` + `api_secret` | HMAC подпись | Надёжно |
+| Робокасса | `login` + `password1` + `password2` | MD5(OutSum:InvId:Password#2) | Надёжно |
+| Т-Банк | `terminal_key` + `password` | SHA-256 Token | Ретраи |
+| Сбер | `username`/`password` или `token` | Ненадёжно — **polling обязателен** | 3 попытки |
+| Альфа | `username`/`password` или `token` | HMAC (symmetric key) | Ненадёжно — polling |
+| Точка | OAuth JWT token | JWT RS256 (публичный ключ Точки) | 30 ретраев по 10сек |
