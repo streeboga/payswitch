@@ -1,5 +1,7 @@
 # Payswitch
 
+> Открытый проект [EQ Platform](https://eq.team) — [страница проекта](https://eq.team/open-source/oss-payswitch/)
+
 Payment processing платформа с дашбордом — Laravel 13 API + React 19 SPA.
 
 ## Стек
