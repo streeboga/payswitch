@@ -1,4 +1,5 @@
 import { h, render as preactRender } from 'preact';
+import { useState } from 'preact/hooks';
 import type {
   PaymentMethodInfo,
   PaymentIntentResponse,
@@ -289,6 +290,32 @@ function loadCloudPaymentsWidget(params: Record<string, unknown>): void {
   document.head.appendChild(script);
 }
 
+/**
+ * Иконка способа оплаты.
+ *
+ * Картинка может не загрузиться — файла нет, домен недоступен, адрес
+ * относительный и разрешился от страницы мерчанта. Битая картинка выглядит
+ * как поломка виджета, поэтому на ошибке молча подставляем общую иконку.
+ */
+function MethodIcon({ url, style }: { url?: string | null; style?: Record<string, string> }) {
+  const [broken, setBroken] = useState(false);
+
+  if (!url || broken) {
+    return <span dangerouslySetInnerHTML={{ __html: GENERIC_PAYMENT_ICON }} />;
+  }
+
+  return (
+    <img
+      src={url}
+      alt=""
+      width="20"
+      height="20"
+      style={style ?? { display: 'block' }}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 // ─── Method List ─────────────────────────────────────────────
 
 function MethodList({
@@ -323,9 +350,7 @@ function MethodList({
               style={s.hidden}
             />
             <span style={s.icon}>
-              {m.icon_url
-                ? <img src={m.icon_url} alt="" width="20" height="20" style={{ display: 'block' }} />
-                : <span dangerouslySetInnerHTML={{ __html: GENERIC_PAYMENT_ICON }} />}
+              <MethodIcon url={m.icon_url} />
             </span>
             <span style={s.label}>{m.display_name ?? getMethodDisplayName(methodId, locale)}</span>
             {sel && <span style={s.checkmark}>{'\u2713'}</span>}
@@ -367,9 +392,7 @@ function ConnectorList({
               style={s.hidden}
             />
             <span style={s.icon}>
-              {c.logo_url
-                ? <img src={c.logo_url} alt="" style={s.connectorLogo} />
-                : <span dangerouslySetInnerHTML={{ __html: GENERIC_PAYMENT_ICON }} />}
+              <MethodIcon url={c.logo_url} style={s.connectorLogo} />
             </span>
             <span style={s.label}>{c.display_name}</span>
             {sel && <span style={s.checkmark}>{'\u2713'}</span>}

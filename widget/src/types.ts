@@ -112,7 +112,7 @@ export interface ConnectorInfo {
   connector_name: string;
   connector_key: string;
   display_name: string;
-  logo_url: string;
+  logo_url: string | null;
   session_type: SessionType;
 }
 

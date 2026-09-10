@@ -130,6 +130,54 @@ test('multiple connectors producing mixed mode', function () {
     expect($result['connectors'])->not->toBeEmpty();
 });
 
+test('логотипа нет в public — адрес не отдаём, чтобы не было битой картинки', function () {
+    ConnectorFactory::register('robokassa', FakeNonDirectConnector::class);
+
+    MerchantConnectorAccount::create([
+        'merchant_account_id' => $this->merchant->id,
+        'business_profile_id' => $this->profile->id,
+        'connector_name' => 'robokassa',
+        'connector_type' => 'fiz_operations',
+        'connector_account_details' => ['key' => 'test'],
+        'payment_methods_enabled' => ['card'],
+        'display_config' => ['logo_url' => '/logos/never-shipped.svg'],
+        'test_mode' => true,
+    ]);
+
+    $payment = createPaymentForMethodsTest($this);
+    $result = $this->service->getAvailablePaymentMethods($payment, 'ru');
+
+    expect($result['connectors'][0])->toHaveKey('logo_url', null);
+});
+
+test('логотип отдаётся абсолютным адресом: виджет живёт на домене мерчанта', function () {
+    ConnectorFactory::register('robokassa', FakeNonDirectConnector::class);
+
+    $file = public_path('logos/spec-logo.svg');
+    @mkdir(dirname($file), 0777, true);
+    file_put_contents($file, '<svg/>');
+
+    MerchantConnectorAccount::create([
+        'merchant_account_id' => $this->merchant->id,
+        'business_profile_id' => $this->profile->id,
+        'connector_name' => 'robokassa',
+        'connector_type' => 'fiz_operations',
+        'connector_account_details' => ['key' => 'test'],
+        'payment_methods_enabled' => ['card'],
+        'display_config' => ['logo_url' => '/logos/spec-logo.svg'],
+        'test_mode' => true,
+    ]);
+
+    $payment = createPaymentForMethodsTest($this);
+    $result = $this->service->getAvailablePaymentMethods($payment, 'ru');
+
+    expect($result['connectors'][0]['logo_url'])
+        ->toBe(url('/logos/spec-logo.svg'))
+        ->toStartWith('http');
+
+    @unlink($file);
+});
+
 test('display_config overrides display_name and logo_url', function () {
     ConnectorFactory::register('robokassa', FakeNonDirectConnector::class);
 
@@ -142,7 +190,7 @@ test('display_config overrides display_name and logo_url', function () {
         'payment_methods_enabled' => ['card'],
         'display_config' => [
             'display_name' => 'Custom Robo Name',
-            'logo_url' => '/custom/robo-logo.png',
+            'logo_url' => 'https://cdn.example/robo-logo.png',
         ],
         'test_mode' => true,
     ]);
@@ -152,7 +200,7 @@ test('display_config overrides display_name and logo_url', function () {
 
     expect($result['connectors'][0])
         ->toHaveKey('display_name', 'Custom Robo Name')
-        ->toHaveKey('logo_url', '/custom/robo-logo.png');
+        ->toHaveKey('logo_url', 'https://cdn.example/robo-logo.png');
 });
 
 test('locale fallback from ru to en', function () {

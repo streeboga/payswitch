@@ -158,7 +158,7 @@ final readonly class PaymentService
                     'connector_name' => $mca->connector_name,
                     'connector_key' => $mca->key,
                     'display_name' => $displayConfig['display_name'] ?? $capabilities->displayName($locale),
-                    'logo_url' => $displayConfig['logo_url'] ?? $capabilities->logoPath,
+                    'logo_url' => self::logoUrl($displayConfig['logo_url'] ?? $capabilities->logoPath),
                     'session_type' => $capabilities->fallbackSessionType->value,
                 ];
             }
@@ -185,6 +185,29 @@ final readonly class PaymentService
             'connectors' => array_values($connectorEntries),
             ...($defaultConnector ? ['default_connector' => $defaultConnector] : []),
         ];
+    }
+
+    /**
+     * Абсолютный адрес логотипа коннектора — или ничего.
+     *
+     * Виджет живёт на странице мерчанта, поэтому путь вида `/logos/test.svg`
+     * браузер разрешает от домена мерчанта, а не от нашего: картинка не
+     * находится нигде. И отдавать адрес файла, которого у нас нет, тоже нельзя —
+     * получится битая картинка вместо иконки. Нет файла — нет адреса, виджет
+     * рисует свою общую иконку.
+     */
+    private static function logoUrl(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        // Уже абсолютный — отдаём как есть: это осознанно настроенный адрес.
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        return file_exists(public_path(ltrim($path, '/'))) ? url($path) : null;
     }
 
     /**
