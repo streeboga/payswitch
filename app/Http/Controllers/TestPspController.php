@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Events\PaymentStatusChanged;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -43,6 +44,7 @@ final class TestPspController extends Controller
 
         $action = $request->input('action');
         $payment = PaymentIntent::where('key', $paymentKey)->firstOrFail();
+        $previousStatus = $payment->status->value;
 
         if ($action === 'approve') {
             $payment->update([
@@ -69,6 +71,11 @@ final class TestPspController extends Controller
                     'error_message' => 'Payment declined by customer',
                 ]);
         }
+
+        // Без этого события тестовый платёж проходил молча: ни вебхука
+        // мерчанту, ни пополнения кошелька — то есть проверить сквозной путь
+        // тестовым коннектором было нельзя.
+        event(new PaymentStatusChanged($payment->refresh(), $previousStatus));
 
         $returnUrl = $payment->return_url;
         if ($returnUrl) {

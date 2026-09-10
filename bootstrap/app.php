@@ -34,6 +34,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
         $middleware->validateCsrfTokens(except: [
             'api/v1/payments/*/confirm',
+            // Симулятор PSP открывается с чужого origin по ссылке из виджета:
+            // сессии и токена там нет и быть не может.
+            'api/v1/test-psp/*/complete',
         ]);
 
         $middleware->web(append: [
