@@ -51,6 +51,9 @@ final readonly class RefundRepository implements RefundRepositoryInterface
     {
         $builder = $this->query()->forMerchant($merchantAccountId);
 
+        if (! empty($filters['payment_id'])) {
+            $builder->forPaymentKey((string) $filters['payment_id']);
+        }
         if (! empty($filters['status'])) {
             $builder->withStatus($filters['status']);
         }

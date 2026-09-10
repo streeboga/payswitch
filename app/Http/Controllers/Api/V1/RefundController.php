@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Requests\Api\Refund\StoreRefundRequest;
+use App\Http\Requests\Dashboard\RefundListRequest;
 use App\Http\Resources\RefundResource;
+use App\Services\DashboardRefundService;
 use App\Services\RefundService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +22,34 @@ final class RefundController extends Controller
 {
     public function __construct(
         private readonly RefundService $refundService,
+        private readonly DashboardRefundService $listService,
     ) {}
+
+    /**
+     * List refunds.
+     *
+     * Refunds of the merchant the API key belongs to. filter[payment_id] takes the
+     * public key of the payment: the card screen asks for refunds by that key.
+     */
+    #[QueryParameter('filter[payment_id]', type: 'string', description: 'Payment public key', example: 'pay_01jd5x7k3m9p2q4r6s8t0v')]
+    #[QueryParameter('filter[status]', type: 'string', example: 'succeeded')]
+    #[QueryParameter('filter[from]', type: 'string', example: '2026-01-01')]
+    #[QueryParameter('filter[to]', type: 'string', example: '2026-03-18')]
+    #[QueryParameter('page[size]', type: 'integer', example: 20)]
+    #[QueryParameter('page[number]', type: 'integer', example: 1)]
+    #[Response(200, description: 'Paginated refund list')]
+    #[Response(401, description: 'Missing or invalid API key')]
+    #[Response(403, description: 'Publishable key is not allowed here')]
+    public function index(RefundListRequest $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+        $filters = array_filter([...$request->filters(), 'sort' => $request->sortParam()]);
+
+        return RefundResource::jsonApiCollection(
+            $this->listService->list($merchantId, $filters, $request->perPage()),
+            $request,
+        );
+    }
 
     /**
      * Create a refund.

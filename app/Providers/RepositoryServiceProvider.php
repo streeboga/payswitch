@@ -36,6 +36,7 @@ use App\Repositories\Eloquent\SavedFilterRepository;
 use App\Repositories\Eloquent\UserPreferenceRepository;
 use App\Repositories\Eloquent\UserRoleRepository;
 use App\Repositories\Eloquent\WebhookEventRepository;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 
 final class RepositoryServiceProvider extends ServiceProvider
@@ -59,4 +60,19 @@ final class RepositoryServiceProvider extends ServiceProvider
         UserRoleRepositoryInterface::class => UserRoleRepository::class,
         WebhookEventRepositoryInterface::class => WebhookEventRepository::class,
     ];
+
+    /**
+     * Номер страницы приходит как page[number] (JSON:API), а Laravel по умолчанию
+     * читает скалярный ?page=. Без этого вторая страница молча отдаёт первую —
+     * во всех списках сразу, поэтому правится один раз здесь.
+     */
+    public function boot(): void
+    {
+        Paginator::currentPageResolver(function (): int {
+            $page = request()->input('page');
+            $number = is_array($page) ? ($page['number'] ?? 1) : $page;
+
+            return max(1, (int) $number);
+        });
+    }
 }

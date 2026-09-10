@@ -7,10 +7,13 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Requests\Api\Payment\CapturePaymentRequest;
 use App\Http\Requests\Api\Payment\ConfirmPaymentRequest;
 use App\Http\Requests\Api\Payment\StorePaymentRequest;
+use App\Http\Requests\Dashboard\PaymentListRequest;
 use App\Http\Resources\PaymentIntentResource;
+use App\Services\DashboardPaymentService;
 use App\Services\PaymentService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +24,41 @@ final class PaymentController extends Controller
 {
     public function __construct(
         private readonly PaymentService $paymentService,
+        private readonly DashboardPaymentService $listService,
     ) {}
+
+    /**
+     * List payment intents.
+     *
+     * Returns the payments of the merchant the API key belongs to. The merchant is
+     * taken from the key alone: merchant_id in the query or body is ignored, so a key
+     * cannot be pointed at somebody else's payments.
+     */
+    #[QueryParameter('filter[status]', type: 'string', example: 'succeeded')]
+    #[QueryParameter('filter[currency]', type: 'string', example: 'RUB')]
+    #[QueryParameter('filter[connector]', type: 'string')]
+    #[QueryParameter('filter[capture_method]', type: 'string', description: 'automatic | manual')]
+    #[QueryParameter('filter[amount_min]', type: 'integer')]
+    #[QueryParameter('filter[amount_max]', type: 'integer')]
+    #[QueryParameter('filter[from]', type: 'string', example: '2026-01-01')]
+    #[QueryParameter('filter[to]', type: 'string', example: '2026-03-18')]
+    #[QueryParameter('filter[search]', type: 'string')]
+    #[QueryParameter('sort', type: 'string', example: '-created_at')]
+    #[QueryParameter('page[size]', type: 'integer', example: 20)]
+    #[QueryParameter('page[number]', type: 'integer', example: 1)]
+    #[Response(200, description: 'Paginated payment list')]
+    #[Response(401, description: 'Missing or invalid API key')]
+    #[Response(403, description: 'Publishable key is not allowed here')]
+    public function index(PaymentListRequest $request): JsonResponse
+    {
+        $merchantId = $request->attributes->get('merchant_id');
+        $filters = array_filter([...$request->filters(), 'sort' => $request->sortParam()]);
+
+        return PaymentIntentResource::jsonApiCollection(
+            $this->listService->list($merchantId, $filters, $request->perPage()),
+            $request,
+        );
+    }
 
     /**
      * Create a payment intent.

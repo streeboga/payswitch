@@ -12,6 +12,7 @@ final class RefundListRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'filter.payment_id' => ['sometimes', 'string', 'max:64'],
             'filter.status' => ['sometimes', 'string'],
             'filter.from' => ['sometimes', 'date'],
             'filter.to' => ['sometimes', 'date', 'after_or_equal:filter.from'],

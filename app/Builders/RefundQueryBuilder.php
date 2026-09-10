@@ -38,6 +38,14 @@ final class RefundQueryBuilder
         return $this;
     }
 
+    /** Публичный ключ платежа — то, чем оперирует вызывающая сторона. */
+    public function forPaymentKey(string $paymentKey): self
+    {
+        $this->query->whereHas('paymentIntent', fn (Builder $q) => $q->where('key', $paymentKey));
+
+        return $this;
+    }
+
     public function whereKey(string $key): self
     {
         $this->query->where('key', $key);

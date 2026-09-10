@@ -219,11 +219,13 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
 
     // Merchant API
     Route::middleware(['auth.api_key', 'auth.secret_api_key', 'throttle:payswitch-api'])->group(function () {
+        Route::get('/payments', [PaymentController::class, 'index'])->name('api.v1.payments.index');
         Route::post('/payments', [PaymentController::class, 'store'])->name('api.v1.payments.store');
         Route::post('/payments/{paymentKey}/capture', [PaymentController::class, 'capture']);
         Route::post('/payments/{paymentKey}/cancel', [PaymentController::class, 'cancel']);
         Route::post('/payments/{paymentKey}/sync', [PaymentController::class, 'sync']);
 
+        Route::get('/refunds', [RefundController::class, 'index'])->name('api.v1.refunds.index');
         Route::post('/refunds', [RefundController::class, 'store']);
         Route::get('/refunds/{refundKey}', [RefundController::class, 'show']);
 
