@@ -36,6 +36,22 @@ return [
         'robokassa' => RobokassaConnector::class,
         'tochka' => TochkaConnector::class,
         'test' => TestConnector::class,
+        'test_sbp' => TestConnector::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Wallets Service
+    |--------------------------------------------------------------------------
+    |
+    | Internal API of the platform wallets service. A payment carrying
+    | `wallet_key` in its metadata credits that wallet once it succeeds.
+    |
+    */
+
+    'wallets' => [
+        'url' => env('WALLETS_SERVICE_URL'),
+        'internal_secret' => env('WALLETS_INTERNAL_SECRET'),
     ],
 
 ];

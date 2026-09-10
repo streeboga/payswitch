@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Events\PaymentStatusChanged;
+use App\Listeners\DepositToWallet;
 use App\Listeners\LogPaymentAudit;
 use App\Listeners\SendWebhookNotification;
 use App\Policies\AnalyticsPolicy;
@@ -54,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(PaymentStatusChanged::class, LogPaymentAudit::class);
         Event::listen(PaymentStatusChanged::class, SendWebhookNotification::class);
+        Event::listen(PaymentStatusChanged::class, DepositToWallet::class);
     }
 
     /**
