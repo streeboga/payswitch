@@ -220,10 +220,12 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
 
     public function revokeApiKey(int|string $merchantAccountId, string $apiKeyKey): void
     {
+        // Колонки key у api_keys нет — ключ целиком не хранится, только его
+        // хэш и префикс. На Postgres такой запрос падал пятисоткой, и отозвать
+        // ключ через API было нельзя вовсе; sqlite в тестах молчал, потому что
+        // считает "key" строковым литералом, а не именем колонки.
         $apiKey = ApiKey::where('merchant_account_id', $merchantAccountId)
-            ->where(function ($q) use ($apiKeyKey) {
-                $q->where('key', $apiKeyKey)->orWhere('id', $apiKeyKey);
-            })
+            ->where('id', (int) $apiKeyKey)
             ->firstOrFail();
         $apiKey->revoke();
     }

@@ -65,3 +65,11 @@ test('can revoke api key', function () {
         ->assertStatus(401)
         ->assertJsonPath('errors.0.code', 'api_key_revoked');
 });
+
+test('revoking an unknown key id is a 404, not a 500', function () {
+    $this->deleteJson(
+        "/api/v1/merchants/{$this->merchant->key}/api-keys/prod_not_an_id",
+        [],
+        ['api-key' => 'admin_test_key']
+    )->assertStatus(404);
+});
