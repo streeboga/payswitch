@@ -84,7 +84,7 @@ test('payment webhook sets connector name on payment', function () {
     $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", $body, [
         'Content-HMAC' => base64_encode(hash_hmac('sha256', (string) json_encode($body), 'sekret', true)),
     ])->assertOk()
-        ->assertJson(['status' => 'ok']);
+        ->assertJson(['code' => 0]);
 
     $fresh = $payment->fresh();
     expect($fresh->status)->toBe(PaymentStatus::Succeeded)

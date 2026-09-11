@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Contracts\WebhookAcknowledging;
+use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
@@ -27,7 +29,7 @@ final readonly class WebhookReceiverService
     ) {}
 
     /**
-     * @return array{status: string, code: int}
+     * @return array{status: string, code: int, ack?: array<string, mixed>|null}
      */
     public function handle(Request $request, string $merchantKey, string $mcaKey): array
     {
@@ -74,42 +76,51 @@ final readonly class WebhookReceiverService
         ]);
 
         try {
-            $this->processWebhook($connector, $mca->merchant_account_id, $payload, $mca->connector_name);
+            $refusal = $this->processWebhook($connector, $mca->merchant_account_id, $payload, $mca->connector_name);
         } catch (\Exception $e) {
             Log::error('Webhook processing failed', [
                 'mca_key' => $mcaKey,
                 'error' => $e->getMessage(),
             ]);
+
+            // We do not know what we just failed to record, so we do not vouch for it.
+            $refusal = 'unacceptable';
         }
 
-        return ['status' => 'ok', 'code' => 200];
+        return [
+            'status' => 'ok',
+            'code' => 200,
+            'ack' => $connector instanceof WebhookAcknowledging ? $connector->webhookAck($refusal) : null,
+        ];
     }
 
     /**
      * @param  array<string, mixed>  $payload
+     * @return string|null Why we refuse to vouch for this notification, or null if we do.
+     *                     See WebhookAcknowledging.
      */
     private function processWebhook(
         ConnectorInterface $connector,
         int $merchantAccountId,
         array $payload,
         string $connectorName,
-    ): void {
+    ): ?string {
         $eventType = $payload['type'] ?? '';
 
         if (str_contains($eventType, 'refund')) {
             $this->processRefundWebhook($payload, $connectorName);
 
-            return;
+            return null;
         }
 
         $paymentId = $connector->extractPaymentIdFromWebhook($payload);
         if (! $paymentId) {
-            return;
+            return 'unacceptable';
         }
 
         $payment = $this->paymentRepository->findByKeyOrNull($paymentId, $merchantAccountId);
         if (! $payment) {
-            return;
+            return 'unacceptable';
         }
 
         $newStatus = $connector->mapWebhookEventToStatus($eventType);
@@ -120,14 +131,17 @@ final readonly class WebhookReceiverService
             // validation request ("can I proceed?"), not a payment confirmation. Skip status update.
             // Pay notifications have AuthCode; Fail notifications have Status=Declined.
             if ($payload['Status'] === 'Completed' && ! isset($payload['AuthCode'])) {
-                return;
+                // This is the one moment we get to compare what the payer is about to be
+                // charged with what we billed. The widget is handed its amount in the
+                // browser, so that number is the payer's to change until we say otherwise.
+                return $this->amountMatches($connector, $payload, $payment->amount) ? null : 'amount';
             }
 
             $newStatus = $connector->mapPaymentStatusToInternal($payload['Status']);
         }
 
         if (! $newStatus || ! PaymentStateMachine::canTransition($payment->status, $newStatus)) {
-            return;
+            return null;
         }
 
         $result = DB::transaction(function () use ($payment, $newStatus, $connectorName) {
@@ -158,6 +172,41 @@ final readonly class WebhookReceiverService
         if ($result) {
             event(new PaymentStatusChanged($result['payment'], $result['previousStatus']));
         }
+
+        return null;
+    }
+
+    /**
+     * Does the amount in the notification match what we billed?
+     *
+     * Providers quote amounts in their own unit — CloudPayments in rubles, most in minor
+     * units — and the connector already declares which, so convert rather than guess.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function amountMatches(ConnectorInterface $connector, array $payload, int $expectedMinor): bool
+    {
+        $amount = $payload['Amount'] ?? $payload['amount'] ?? null;
+
+        if (! is_numeric($amount)) {
+            return false;
+        }
+
+        $notified = $connector::capabilities()->amountUnit === AmountUnit::Rubles
+            ? (int) round(((float) $amount) * 100)
+            : (int) round((float) $amount);
+
+        if ($notified !== $expectedMinor) {
+            Log::warning('Webhook amount does not match the payment', [
+                'connector' => $connector->getName(),
+                'expected_minor' => $expectedMinor,
+                'notified_minor' => $notified,
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 
     /**

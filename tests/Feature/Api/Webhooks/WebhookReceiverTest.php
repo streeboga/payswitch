@@ -86,7 +86,7 @@ test('processes payment status update from webhook and sets amount_received', fu
     $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", $body, [
         'Content-HMAC' => base64_encode(hash_hmac('sha256', (string) json_encode($body), 'sekret', true)),
     ])->assertOk()
-        ->assertJson(['status' => 'ok']);
+        ->assertJson(['code' => 0]);
 
     $fresh = $payment->fresh();
     expect($fresh->status)->toBe(PaymentStatus::Succeeded)
@@ -339,4 +339,96 @@ test('cloudpayments webhook: valid HMAC passes, wrong and absent are refused', f
     $this->postJson($url, $body, ['Content-HMAC' => $hmac])->assertOk();
     $this->postJson($url, $body, ['Content-HMAC' => base64_encode('nope')])->assertStatus(401);
     $this->postJson($url, $body)->assertStatus(401);
+});
+
+/**
+ * CloudPayments decides whether to charge the card by reading our answer to the check
+ * notification. A 200 is not enough: without `code` the payer is told the payment cannot
+ * be accepted, which is exactly how a live test run failed before this was fixed.
+ *
+ * @see https://developers.cloudpayments.ru/#uvedomleniya
+ */
+function cloudPaymentsCheck(object $test, PaymentIntent $payment, string $amount): \Illuminate\Testing\TestResponse
+{
+    $test->mca->update([
+        'connector_name' => 'cloudpayments',
+        'connector_account_details' => ['public_id' => 'pk', 'api_secret' => 'sekret'],
+    ]);
+
+    // Status=Completed with no AuthCode is a check notification, and CloudPayments quotes
+    // the amount in rubles. Sent as a form body, which is what the widget path produces.
+    $params = [
+        'TransactionId' => 1234,
+        'Amount' => $amount,
+        'Currency' => 'RUB',
+        'InvoiceId' => $payment->key,
+        'Status' => 'Completed',
+    ];
+
+    // Both, deliberately: Symfony fills the request bag from $params and never from the
+    // raw body for a form POST, while the signature is over the body the way the provider
+    // sends it. Passing only one of the two silently tests nothing.
+    $body = http_build_query($params);
+
+    return $test->call(
+        'POST',
+        "/api/v1/webhooks/{$test->merchant->key}/{$test->mca->key}",
+        $params,
+        [],
+        [],
+        [
+            'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+            'HTTP_CONTENT_HMAC' => base64_encode(hash_hmac('sha256', $body, 'sekret', true)),
+        ],
+        $body,
+    );
+}
+
+test('answers the CloudPayments check with code 0 when the amount is the one we billed', function () {
+    $payment = PaymentIntent::create([
+        'merchant_account_id' => $this->merchant->id,
+        'amount' => 13700,
+        'currency' => 'RUB',
+        'status' => PaymentStatus::RequiresCustomerAction,
+        'capture_method' => CaptureMethod::Automatic,
+        'attempt_count' => 1,
+    ]);
+
+    cloudPaymentsCheck($this, $payment, '137.00')
+        ->assertOk()
+        ->assertExactJson(['code' => 0]);
+
+    // A check must not move the payment on its own — that is the pay notification's job.
+    expect($payment->fresh()->status)->toBe(PaymentStatus::RequiresCustomerAction);
+});
+
+test('refuses the CloudPayments check when the payer changed the amount', function () {
+    $payment = PaymentIntent::create([
+        'merchant_account_id' => $this->merchant->id,
+        'amount' => 13700,
+        'currency' => 'RUB',
+        'status' => PaymentStatus::RequiresCustomerAction,
+        'capture_method' => CaptureMethod::Automatic,
+        'attempt_count' => 1,
+    ]);
+
+    cloudPaymentsCheck($this, $payment, '1.00')
+        ->assertOk()
+        ->assertExactJson(['code' => 12]);
+});
+
+test('refuses the CloudPayments check for a payment that is not ours', function () {
+    $payment = PaymentIntent::create([
+        'merchant_account_id' => $this->merchant->id,
+        'amount' => 13700,
+        'currency' => 'RUB',
+        'status' => PaymentStatus::RequiresCustomerAction,
+        'capture_method' => CaptureMethod::Automatic,
+        'attempt_count' => 1,
+    ]);
+    $payment->key = 'pay_01NOTOURS';
+
+    cloudPaymentsCheck($this, $payment, '137.00')
+        ->assertOk()
+        ->assertExactJson(['code' => 13]);
 });

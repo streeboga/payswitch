@@ -31,6 +31,9 @@ final class WebhookReceiverController
     {
         $result = $this->webhookReceiverService->handle($request, $merchantKey, $mcaKey);
 
-        return response()->json(['status' => $result['status']], $result['code']);
+        // Some providers read the body and act on it — CloudPayments will not charge the
+        // card unless the check notification is answered in its own dialect. The driver
+        // supplies that body; everyone else gets the plain acknowledgement.
+        return response()->json($result['ack'] ?? ['status' => $result['status']], $result['code']);
     }
 }
