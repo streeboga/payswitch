@@ -48,7 +48,15 @@ export interface PaymentWidget {
   update(options: Record<string, unknown>): void;
 }
 
-export type WidgetEvent = 'ready' | 'change' | 'redirect' | 'error';
+/**
+ * `cancel` — плательщик ушёл из окна провайдера, не заплатив.
+ *
+ * Само по себе возвращение к списку способов его не спасает: интент уже
+ * перешёл в requires_customer_action и второй confirm по нему отклоняется.
+ * Новый платёж завести может только хозяин страницы, поэтому виджет
+ * сообщает о выходе, а не молчит.
+ */
+export type WidgetEvent = 'ready' | 'change' | 'redirect' | 'error' | 'cancel';
 export type WidgetEventHandler = (data: unknown) => void;
 
 export interface ConfirmPaymentParams {

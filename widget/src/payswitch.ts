@@ -198,6 +198,7 @@ class PaymentWidgetImpl implements PaymentWidget {
   private handleExternalDismissed = (): void => {
     this.result = null;
     this.render();
+    this.emit('cancel', {});
   };
 
   private handleExternalSuccess = (): void => {

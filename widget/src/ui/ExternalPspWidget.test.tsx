@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderWidget } from './PaymentWidget';
 import { getTranslations } from '../i18n';
+import { createPayswitchInstance } from '../payswitch';
 import type { PaymentWidgetProps } from './PaymentWidget';
 
 /**
@@ -118,6 +119,23 @@ describe('ExternalPspWidget', () => {
     await flush();
 
     expect(onExternalDismissed).toHaveBeenCalledTimes(1);
+  });
+
+  it('о выходе из окна виджет сообщает наружу: интент уже не переиспользовать', async () => {
+    stubScriptLoading('load');
+    stubCloudPayments('dismiss');
+
+    const seen: string[] = [];
+    const instance = createPayswitchInstance('pk_test', 'https://api.example.com');
+    const widget = instance.widgets({ clientSecret: 'pay_x_secret_y' }).create('payment');
+    widget.on('cancel', () => seen.push('cancel'));
+
+    // Дёргаем тот же путь, что и настоящее закрытие окна провайдера.
+    (widget as unknown as { result: unknown; container: HTMLElement }).container =
+      document.createElement('div');
+    (widget as unknown as { handleExternalDismissed: () => void }).handleExternalDismissed();
+
+    expect(seen).toEqual(['cancel']);
   });
 
   it('скрипт провайдера не загрузился — сообщение и выход, а не крутилка', async () => {
