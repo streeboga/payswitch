@@ -55,6 +55,23 @@ final class BusinessProfileController extends Controller
     }
 
     /**
+     * Get the merchant's business profile.
+     *
+     * Addressed by merchant key, like the update below. Read it before setting
+     * a webhook address: a merchant may serve several consumers and the profile
+     * holds only one address.
+     */
+    #[PathParameter('merchantKey', description: 'Merchant account public key', example: 'merchant_01jd5x7k3m9p2q4r6s8t0v')]
+    #[Response(200, description: 'Business profile details')]
+    #[Response(404, description: 'Merchant or profile not found')]
+    public function showByMerchant(string $merchantKey, Request $request): JsonResponse
+    {
+        $profile = $this->merchantService->findProfileByMerchant($merchantKey);
+
+        return (new BusinessProfileResource($profile))->toResponse($request);
+    }
+
+    /**
      * Update the merchant's business profile.
      *
      * Sets the webhook address the merchant's payment events are delivered to.

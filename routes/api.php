@@ -193,6 +193,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('/merchants/{merchantKey}', [Admin\MerchantAccountController::class, 'show']);
         Route::post('/profiles', [Admin\BusinessProfileController::class, 'store']);
         Route::get('/profiles/{profileKey}', [Admin\BusinessProfileController::class, 'show']);
+        Route::get('/merchants/{merchantKey}/profile', [Admin\BusinessProfileController::class, 'showByMerchant']);
         Route::patch('/merchants/{merchantKey}/profile', [Admin\BusinessProfileController::class, 'updateByMerchant']);
         Route::post('/merchants/{merchantKey}/api-keys', [Admin\ApiKeyController::class, 'store']);
         Route::delete('/merchants/{merchantKey}/api-keys/{keyId}', [Admin\ApiKeyController::class, 'destroy']);

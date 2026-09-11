@@ -89,3 +89,14 @@ test('чужой ключ подписи через API не перестави�
 
     expect($response->json('data.attributes.payment_response_hash_key'))->toBe($original);
 });
+
+test('профиль мерчанта читается по ключу мерчанта', function () {
+    $this->postJson('/api/v1/profiles', [
+        'merchant_id' => $this->merchant->key,
+        'webhook_url' => 'https://invoice.gnzs.pro/api/v1/webhooks/payswitch',
+    ], ['api-key' => 'admin_test_key'])->assertStatus(201);
+
+    $this->getJson("/api/v1/merchants/{$this->merchant->key}/profile", ['api-key' => 'admin_test_key'])
+        ->assertOk()
+        ->assertJsonPath('data.attributes.webhook_url', 'https://invoice.gnzs.pro/api/v1/webhooks/payswitch');
+});

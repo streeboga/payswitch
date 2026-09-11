@@ -105,6 +105,18 @@ final readonly class MerchantService
      */
     public function updateProfileByMerchant(string $merchantKey, array $attributes): BusinessProfile
     {
+        return $this->merchantRepository->updateProfile($this->findProfileByMerchant($merchantKey), $attributes);
+    }
+
+    /**
+     * Профиль мерчанта — прочитать, не меняя.
+     *
+     * Нужно тому, кто собирается поставить адрес вебхука: сперва посмотреть,
+     * не занят ли он чужим. Мерчант может быть общим на несколько потребителей,
+     * а адрес у профиля один.
+     */
+    public function findProfileByMerchant(string $merchantKey): BusinessProfile
+    {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
         $profile = $this->merchantRepository->findProfileByMerchant($merchant->id);
 
@@ -112,7 +124,7 @@ final readonly class MerchantService
             throw (new ModelNotFoundException)->setModel(BusinessProfile::class);
         }
 
-        return $this->merchantRepository->updateProfile($profile, $attributes);
+        return $profile;
     }
 
     /**
