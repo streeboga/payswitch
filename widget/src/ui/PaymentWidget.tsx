@@ -40,6 +40,8 @@ export interface PaymentWidgetProps {
   clientSecret?: string;
   onQrSuccess?: () => void;
   onQrError?: (message: string) => void;
+  onExternalSuccess?: () => void;
+  onExternalDismissed?: () => void;
 }
 
 export interface WidgetResult {
@@ -231,51 +233,157 @@ function EmbeddedPspWidget({ widgetData }: { widgetData: WidgetData }) {
 
 // ─── External PSP Widget (v2) ───────────────────────────────
 
-function ExternalPspWidget({ data }: { data: ExternalWidgetData }) {
+/**
+ * Сколько ждём, пока провайдер откроет своё окно.
+ *
+ * Скрипт провайдера может не загрузиться, загрузиться и не объявить свой
+ * объект, или объявить и ничего не открыть. Во всех трёх случаях раньше
+ * оставалась вечная крутилка: плательщик сидел в тупике без кнопки и без
+ * объяснения. У ожидания должен быть предел.
+ */
+const EXTERNAL_WIDGET_TIMEOUT_MS = 15000;
+
+/** Чем закончилась попытка открыть окно провайдера. */
+type ExternalOutcome = {
+  onOpened: () => void;
+  onSuccess: () => void;
+  /** Окно закрыли, не заплатив, — возвращаем к списку способов, а не в тупик. */
+  onDismissed: () => void;
+  onFailed: () => void;
+};
+
+function ExternalPspWidget({
+  data,
+  t,
+  onSuccess,
+  onDismissed,
+}: {
+  data: ExternalWidgetData;
+  t: WidgetTranslations;
+  onSuccess: () => void;
+  onDismissed: () => void;
+}) {
+  const [phase, setPhase] = useState<'loading' | 'open' | 'failed'>('loading');
+
   const containerRef = (el: HTMLDivElement | null) => {
     if (!el || el.dataset.loaded) return;
     el.dataset.loaded = '1';
 
+    // Предел ожидания общий для всех провайдеров: он ловит и «скрипт не
+    // загрузился», и «загрузился, но ничего не открыл».
+    const timer = setTimeout(() => settle(() => setPhase('failed')), EXTERNAL_WIDGET_TIMEOUT_MS);
+
+    // Два разных замка. Открытие окна только снимает таймер — исход придёт
+    // позже, когда плательщик закончит. Исход срабатывает один раз: провайдер
+    // зовёт и onFail, и onComplete на одном отказе.
+    let settled = false;
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn();
+    };
+
+    const outcome: ExternalOutcome = {
+      // Окно открылось — дальше ждём столько, сколько нужно плательщику.
+      onOpened: () => {
+        if (settled) return;
+        clearTimeout(timer);
+        setPhase('open');
+      },
+      onSuccess: () => settle(onSuccess),
+      onDismissed: () => settle(onDismissed),
+      onFailed: () => settle(() => setPhase('failed')),
+    };
+
     if (data.provider === 'cloudpayments') {
-      loadCloudPaymentsWidget(data.params);
+      loadCloudPaymentsWidget(data.params, outcome);
       return;
     }
 
     // Generic: load script with data-* attributes
     const script = document.createElement('script');
     script.src = data.scriptUrl;
+    script.onerror = () => outcome.onFailed();
+    script.onload = () => outcome.onOpened();
     for (const [key, value] of Object.entries(data.params ?? {})) {
       script.dataset[key] = String(value);
     }
     el.appendChild(script);
   };
 
+  const providerName = data.provider === 'cloudpayments' ? 'CloudPayments' : data.provider;
+
+  if (phase === 'failed') {
+    return (
+      <div style={{ minHeight: '120px' }}>
+        <div style={s.error}>{t.externalWidgetFailed}</div>
+        <button type="button" style={{ ...s.payBtn, marginTop: '12px' }} onClick={onDismissed}>
+          {t.chooseAnotherMethod}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div ref={containerRef} style={{ minHeight: '120px' }}>
       <div style={s.center}>
-        <div style={s.spinner} />
+        {phase === 'loading' && <div style={s.spinner} />}
         <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
-          {data.provider === 'cloudpayments' ? 'CloudPayments' : data.provider}
+          {phase === 'open' ? t.externalWidgetOpen : providerName}
         </div>
+        {phase === 'open' && (
+          <button
+            type="button"
+            onClick={onDismissed}
+            style={{
+              marginTop: '12px',
+              background: 'none',
+              border: 'none',
+              color: '#0066ff',
+              cursor: 'pointer',
+              fontSize: '13px',
+            }}
+          >
+            {t.chooseAnotherMethod}
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-function loadCloudPaymentsWidget(params: Record<string, unknown>): void {
+function loadCloudPaymentsWidget(params: Record<string, unknown>, outcome: ExternalOutcome): void {
   const scriptId = 'cp-widget-script';
   const launch = () => {
     const cp = (window as any).cp;
-    if (!cp) return;
+    // Скрипт отдали, объекта нет — раньше это молча съедалось и оставляло крутилку.
+    if (!cp) {
+      outcome.onFailed();
+      return;
+    }
+
+    outcome.onOpened();
+
     const widget = new cp.CloudPayments();
-    widget.pay('charge', {
-      publicId: params.publicId as string,
-      description: (params.description as string) || '',
-      amount: params.amount as number,
-      currency: (params.currency as string) || 'RUB',
-      invoiceId: params.invoiceId as string,
-      skin: 'mini',
-    }, null);
+    widget.pay(
+      'charge',
+      {
+        publicId: params.publicId as string,
+        description: (params.description as string) || '',
+        amount: params.amount as number,
+        currency: (params.currency as string) || 'RUB',
+        invoiceId: params.invoiceId as string,
+        skin: 'mini',
+      },
+      // Раньше сюда уходил null: закрытие окна, отказ и успех до нас не доходили.
+      {
+        onSuccess: () => outcome.onSuccess(),
+        onFail: () => outcome.onDismissed(),
+        onComplete: (result: { success?: boolean } | null) =>
+          result?.success ? outcome.onSuccess() : outcome.onDismissed(),
+      },
+    );
   };
 
   if (document.getElementById(scriptId)) {
@@ -287,6 +395,7 @@ function loadCloudPaymentsWidget(params: Record<string, unknown>): void {
   script.id = scriptId;
   script.src = 'https://widget.cloudpayments.ru/bundles/cloudpayments.js';
   script.onload = launch;
+  script.onerror = () => outcome.onFailed();
   document.head.appendChild(script);
 }
 
@@ -426,6 +535,7 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
     t, locale,
     api, paymentKey, clientSecret,
     onQrSuccess, onQrError,
+    onExternalSuccess, onExternalDismissed,
   } = props;
 
   injectKeyframes();
@@ -478,7 +588,12 @@ function PaymentWidgetUI(props: PaymentWidgetProps) {
     if (result.status === 'requires_external_widget' && result.externalWidget) {
       return (
         <div style={s.widget}>
-          <ExternalPspWidget data={result.externalWidget} />
+          <ExternalPspWidget
+            data={result.externalWidget}
+            t={t}
+            onSuccess={onExternalSuccess ?? (() => {})}
+            onDismissed={onExternalDismissed ?? (() => {})}
+          />
         </div>
       );
     }

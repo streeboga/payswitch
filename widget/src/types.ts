@@ -29,6 +29,9 @@ export interface WidgetTranslations {
   qrExpired: string;
   qrPaymentFailed: string;
   formRedirecting: string;
+  externalWidgetOpen: string;
+  externalWidgetFailed: string;
+  chooseAnotherMethod: string;
 }
 
 export interface WidgetCollection {

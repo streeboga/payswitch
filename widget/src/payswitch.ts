@@ -194,6 +194,18 @@ class PaymentWidgetImpl implements PaymentWidget {
     this.emit('change', { status: 'succeeded' });
   };
 
+  /** Окно провайдера закрыли, не заплатив, — обратно к списку способов. */
+  private handleExternalDismissed = (): void => {
+    this.result = null;
+    this.render();
+  };
+
+  private handleExternalSuccess = (): void => {
+    this.result = { status: 'succeeded' };
+    this.render();
+    this.emit('change', { status: 'succeeded' });
+  };
+
   private handleQrError = (message: string): void => {
     this.result = { status: 'error', error: message };
     this.render();
@@ -233,6 +245,8 @@ class PaymentWidgetImpl implements PaymentWidget {
       clientSecret: this.clientSecret,
       onQrSuccess: this.handleQrSuccess,
       onQrError: this.handleQrError,
+      onExternalSuccess: this.handleExternalSuccess,
+      onExternalDismissed: this.handleExternalDismissed,
     });
   }
 

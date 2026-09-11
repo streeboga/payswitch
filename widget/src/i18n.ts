@@ -14,6 +14,9 @@ const translations: Record<string, WidgetTranslations> = {
     qrExpired: 'QR code expired',
     qrPaymentFailed: 'Payment failed',
     formRedirecting: 'Redirecting...',
+    externalWidgetOpen: 'The payment window is open. Finish the payment there.',
+    externalWidgetFailed: 'The payment provider did not respond. Try again or pick another method.',
+    chooseAnotherMethod: 'Choose another method',
   },
   ru: {
     pay: 'Оплатить',
@@ -28,6 +31,9 @@ const translations: Record<string, WidgetTranslations> = {
     qrExpired: 'QR-код истёк',
     qrPaymentFailed: 'Оплата не прошла',
     formRedirecting: 'Перенаправление...',
+    externalWidgetOpen: 'Окно оплаты открыто. Завершите оплату в нём.',
+    externalWidgetFailed: 'Платёжный провайдер не ответил. Попробуйте ещё раз или выберите другой способ.',
+    chooseAnotherMethod: 'Выбрать другой способ',
   },
 };
 
