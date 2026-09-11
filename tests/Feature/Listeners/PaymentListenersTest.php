@@ -111,3 +111,12 @@ test('webhook event content contains payment details', function () {
         ->toHaveKey('status')
         ->toHaveKey('amount');
 });
+
+test('dispatching PaymentStatusChanged runs each listener exactly once', function () {
+    Queue::fake();
+
+    PaymentStatusChanged::dispatch($this->payment, 'processing');
+
+    expect(WebhookEvent::count())->toBe(1);
+    expect(Activity::where('log_name', 'payment')->count())->toBe(1);
+});

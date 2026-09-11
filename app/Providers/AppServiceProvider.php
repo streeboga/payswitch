@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Events\PaymentStatusChanged;
-use App\Listeners\DepositToWallet;
-use App\Listeners\LogPaymentAudit;
-use App\Listeners\SendWebhookNotification;
 use App\Policies\AnalyticsPolicy;
 use App\Policies\ApiKeyPolicy;
 use App\Policies\BusinessProfilePolicy;
@@ -28,7 +24,6 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -52,10 +47,8 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureRateLimiting();
         $this->registerMerchantPolicies();
-
-        Event::listen(PaymentStatusChanged::class, LogPaymentAudit::class);
-        Event::listen(PaymentStatusChanged::class, SendWebhookNotification::class);
-        Event::listen(PaymentStatusChanged::class, DepositToWallet::class);
+        // ponytail: listeners in app/Listeners are auto-discovered by Laravel.
+        // Registering them here too fires every listener twice.
     }
 
     /**
