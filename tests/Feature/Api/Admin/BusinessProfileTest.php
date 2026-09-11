@@ -48,3 +48,44 @@ test('auto-generates payment_response_hash_key if not provided', function () {
     $response->assertStatus(201);
     expect($response->json('data.attributes.payment_response_hash_key'))->not->toBeNull();
 });
+
+test('адрес вебхука ставится по ключу мерчанта и отдаёт ключ подписи', function () {
+    $this->postJson('/api/v1/profiles', [
+        'merchant_id' => $this->merchant->key,
+    ], ['api-key' => 'admin_test_key'])->assertStatus(201);
+
+    $response = $this->patchJson("/api/v1/merchants/{$this->merchant->key}/profile", [
+        'webhook_url' => 'https://api.gnzs.pro/internal/webhooks/payswitch/abc',
+    ], ['api-key' => 'admin_test_key']);
+
+    $response->assertOk()
+        ->assertJsonPath('data.attributes.webhook_url', 'https://api.gnzs.pro/internal/webhooks/payswitch/abc');
+
+    expect($response->json('data.attributes.payment_response_hash_key'))->toHaveLength(64);
+
+    $this->assertDatabaseHas('business_profiles', [
+        'merchant_account_id' => $this->merchant->id,
+        'webhook_url' => 'https://api.gnzs.pro/internal/webhooks/payswitch/abc',
+    ]);
+});
+
+test('мерчанту без профиля адрес вебхука не поставить', function () {
+    $this->patchJson("/api/v1/merchants/{$this->merchant->key}/profile", [
+        'webhook_url' => 'https://example.com/hook',
+    ], ['api-key' => 'admin_test_key'])->assertNotFound();
+});
+
+test('чужой ключ подписи через API не переставить', function () {
+    $create = $this->postJson('/api/v1/profiles', [
+        'merchant_id' => $this->merchant->key,
+    ], ['api-key' => 'admin_test_key']);
+
+    $original = $create->json('data.attributes.payment_response_hash_key');
+
+    $response = $this->patchJson("/api/v1/merchants/{$this->merchant->key}/profile", [
+        'webhook_url' => 'https://example.com/hook',
+        'payment_response_hash_key' => str_repeat('a', 64),
+    ], ['api-key' => 'admin_test_key']);
+
+    expect($response->json('data.attributes.payment_response_hash_key'))->toBe($original);
+});

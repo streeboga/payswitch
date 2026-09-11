@@ -41,16 +41,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Wallets Service
-    |--------------------------------------------------------------------------
-    |
-    | Internal API of the platform wallets service. A payment carrying
-    | `wallet_key` in its metadata credits that wallet once it succeeds.
-    |
-    */
-
-    /*
-    |--------------------------------------------------------------------------
     | Unsigned Webhooks
     |--------------------------------------------------------------------------
     |
@@ -61,10 +51,5 @@ return [
     */
 
     'allow_unsigned_webhooks' => (bool) env('PAYSWITCH_ALLOW_UNSIGNED_WEBHOOKS', false),
-
-    'wallets' => [
-        'url' => env('WALLETS_SERVICE_URL'),
-        'internal_secret' => env('WALLETS_INTERNAL_SECRET'),
-    ],
 
 ];

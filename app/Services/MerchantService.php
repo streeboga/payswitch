@@ -13,6 +13,7 @@ use App\DataTransferObjects\Admin\UpdateOrganizationData;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -90,6 +91,28 @@ final readonly class MerchantService
             'name' => $dto->name ?? '',
             'webhook_url' => $dto->webhook_url,
         ]);
+    }
+
+    /**
+     * Профиль мерчанта по ключу самого мерчанта.
+     *
+     * Адресуется мерчантом, а не ключом профиля: адрес вебхука меняет тот,
+     * кто мерчанта завёл, а ключ профиля ему взять неоткуда — при создании
+     * мерчанта профиль заводится отдельным вызовом. Тот же
+     * findProfileByMerchant, которым доставка вебхуков выбирает профиль.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateProfileByMerchant(string $merchantKey, array $attributes): BusinessProfile
+    {
+        $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
+        $profile = $this->merchantRepository->findProfileByMerchant($merchant->id);
+
+        if (! $profile) {
+            throw (new ModelNotFoundException)->setModel(BusinessProfile::class);
+        }
+
+        return $this->merchantRepository->updateProfile($profile, $attributes);
     }
 
     /**
