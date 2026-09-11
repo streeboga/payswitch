@@ -450,7 +450,10 @@ test('verifyWebhookSignature validates token correctly', function () {
     $tokenParams = $params;
     $tokenParams['Password'] = 'test_password';
     ksort($tokenParams);
-    $values = implode('', array_values(array_map('strval', $tokenParams)));
+    $values = implode('', array_map(
+        fn ($v) => is_bool($v) ? ($v ? 'true' : 'false') : (string) $v,
+        array_values($tokenParams),
+    ));
     $expectedToken = hash('sha256', $values);
 
     $params['Token'] = $expectedToken;
@@ -458,6 +461,48 @@ test('verifyWebhookSignature validates token correctly', function () {
     $payload = json_encode($params);
 
     expect($connector->verifyWebhookSignature($payload, []))->toBeTrue();
+});
+
+test('token matches the worked example in the T-Bank notification docs', function () {
+    // https://developer.tbank.ru/eacq/intro/developer/notification — note Success arrives as a
+    // JSON boolean and is concatenated as "true".
+    $params = [
+        'TerminalKey' => '1234567890DEMO',
+        'OrderId' => '000000',
+        'Success' => true,
+        'Status' => 'AUTHORIZED',
+        'PaymentId' => '0000000',
+        'ErrorCode' => '0',
+        'Amount' => '1111',
+        'CardId' => '000000',
+        'Pan' => '200000******0000',
+        'ExpDate' => '1111',
+        'RebillId' => '000000',
+    ];
+    $params['Token'] = '1c0964277d0213349243065a0d5b838b8e90d2d25f740d0f2767836e710e80c8';
+
+    $connector = tbankConnector(['password' => '11111111111']);
+
+    expect($connector->verifyWebhookSignature((string) json_encode($params), []))->toBeTrue();
+});
+
+test('verifyWebhookSignature rejects a flipped Success flag', function () {
+    $params = [
+        'TerminalKey' => '1234567890DEMO',
+        'OrderId' => '000000',
+        'Success' => false,
+        'Status' => 'AUTHORIZED',
+        'PaymentId' => '0000000',
+        'ErrorCode' => '0',
+        'Amount' => '1111',
+        'CardId' => '000000',
+        'Pan' => '200000******0000',
+        'ExpDate' => '1111',
+        'RebillId' => '000000',
+        'Token' => '1c0964277d0213349243065a0d5b838b8e90d2d25f740d0f2767836e710e80c8',
+    ];
+
+    expect(tbankConnector(['password' => '11111111111'])->verifyWebhookSignature((string) json_encode($params), []))->toBeFalse();
 });
 
 test('verifyWebhookSignature rejects invalid token', function () {
@@ -616,7 +661,10 @@ test('verifyWebhookSignature ignores nested objects in token generation', functi
     $tokenParams = $scalarParams;
     $tokenParams['Password'] = 'test_password';
     ksort($tokenParams);
-    $values = implode('', array_values(array_map('strval', $tokenParams)));
+    $values = implode('', array_map(
+        fn ($v) => is_bool($v) ? ($v ? 'true' : 'false') : (string) $v,
+        array_values($tokenParams),
+    ));
     $expectedToken = hash('sha256', $values);
 
     // Add nested objects AFTER computing the token — they should be ignored

@@ -218,6 +218,25 @@ test('verifyWebhookSignature rejects invalid signature', function () {
     expect($connector->verifyWebhookSignature($payload, ['content-hmac' => 'invalid_base64_hmac']))->toBeFalse();
 });
 
+test('verifyWebhookSignature rejects a missing Content-HMAC header by default', function () {
+    config()->set('payswitch.allow_unsigned_webhooks', false);
+
+    expect(cloudPaymentsConnector()->verifyWebhookSignature('{"Amount":100}', []))->toBeFalse();
+});
+
+test('verifyWebhookSignature rejects a missing header regardless of APP_ENV', function () {
+    config()->set('payswitch.allow_unsigned_webhooks', false);
+    app()->detectEnvironment(fn () => 'local');
+
+    expect(cloudPaymentsConnector()->verifyWebhookSignature('{"Amount":100}', []))->toBeFalse();
+});
+
+test('verifyWebhookSignature allows a missing header only when the flag says so', function () {
+    config()->set('payswitch.allow_unsigned_webhooks', true);
+
+    expect(cloudPaymentsConnector()->verifyWebhookSignature('{"Amount":100}', []))->toBeTrue();
+});
+
 test('mapWebhookEventToStatus maps correctly', function () {
     $c = cloudPaymentsConnector();
 

@@ -65,7 +65,10 @@ test('refund.succeeded webhook updates refund status', function () {
 });
 
 test('payment webhook sets connector name on payment', function () {
-    $this->mca->update(['connector_name' => 'cloudpayments']);
+    $this->mca->update([
+        'connector_name' => 'cloudpayments',
+        'connector_account_details' => ['public_id' => 'pk', 'api_secret' => 'sekret'],
+    ]);
 
     $payment = PaymentIntent::create([
         'merchant_account_id' => $this->merchant->id,
@@ -76,9 +79,10 @@ test('payment webhook sets connector name on payment', function () {
         'attempt_count' => 1,
     ]);
 
-    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [
-        'type' => 'payment.succeeded',
-        'InvoiceId' => $payment->key,
+    $body = ['type' => 'payment.succeeded', 'InvoiceId' => $payment->key];
+
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", $body, [
+        'Content-HMAC' => base64_encode(hash_hmac('sha256', (string) json_encode($body), 'sekret', true)),
     ])->assertOk()
         ->assertJson(['status' => 'ok']);
 

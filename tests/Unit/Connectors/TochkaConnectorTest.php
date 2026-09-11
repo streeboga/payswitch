@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\Drivers\TochkaConnector;
@@ -449,10 +450,108 @@ test('extractPaymentIdFromWebhook returns null when paymentLinkId missing', func
     expect($paymentId)->toBeNull();
 });
 
-test('verifyWebhookSignature returns true (MVP)', function () {
-    $connector = tochkaConnector();
+// --- Webhook signature (RS256 JWT verified with Tochka's public key) ---
 
-    expect($connector->verifyWebhookSignature('{"test": true}', []))->toBeTrue();
+function tochkaKeypair(): array
+{
+    static $pair = null;
+    if ($pair !== null) {
+        return $pair;
+    }
+
+    $res = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+    openssl_pkey_export($res, $privatePem);
+    $details = openssl_pkey_get_details($res);
+
+    $b64 = fn (string $bin) => rtrim(strtr(base64_encode($bin), '+/', '-_'), '=');
+    $jwk = json_encode(['kty' => 'RSA', 'e' => $b64($details['rsa']['e']), 'n' => $b64($details['rsa']['n'])]);
+
+    return $pair = [$privatePem, $jwk];
+}
+
+function tochkaJwt(array $claims, ?string $privatePem = null, string $alg = 'RS256'): string
+{
+    [$defaultPem] = tochkaKeypair();
+    $privatePem ??= $defaultPem;
+
+    $b64 = fn (string $bin) => rtrim(strtr(base64_encode($bin), '+/', '-_'), '=');
+    $signingInput = $b64((string) json_encode(['alg' => $alg, 'typ' => 'JWT'])).'.'.$b64((string) json_encode($claims));
+
+    openssl_sign($signingInput, $signature, $privatePem, OPENSSL_ALGO_SHA256);
+
+    return $signingInput.'.'.$b64($signature);
+}
+
+function tochkaWebhookConnector(): TochkaConnector
+{
+    [, $jwk] = tochkaKeypair();
+
+    return tochkaConnector(['webhook_public_key' => $jwk]);
+}
+
+test('verifyWebhookSignature accepts a correctly signed JWT', function () {
+    $jwt = tochkaJwt(['webhookType' => 'acquiringInternetPayment', 'paymentLinkId' => 'pay_123', 'status' => 'APPROVED']);
+
+    expect(tochkaWebhookConnector()->verifyWebhookSignature($jwt, []))->toBeTrue();
+});
+
+test('verified claims feed the event type and payment id', function () {
+    $connector = tochkaWebhookConnector();
+    $connector->verifyWebhookSignature(
+        tochkaJwt(['webhookType' => 'acquiringInternetPayment', 'paymentLinkId' => 'pay_123']),
+        [],
+    );
+
+    expect($connector->extractPaymentIdFromWebhook([]))->toBe('pay_123')
+        ->and($connector->mapWebhookEventToStatus(''))->toBe(PaymentStatus::Succeeded);
+});
+
+test('verifyWebhookSignature rejects a JWT signed with another key', function () {
+    $res = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+    openssl_pkey_export($res, $attackerPem);
+
+    $jwt = tochkaJwt(['webhookType' => 'acquiringInternetPayment', 'paymentLinkId' => 'pay_123'], $attackerPem);
+
+    expect(tochkaWebhookConnector()->verifyWebhookSignature($jwt, []))->toBeFalse();
+});
+
+test('verifyWebhookSignature rejects a tampered payload', function () {
+    $jwt = tochkaJwt(['webhookType' => 'acquiringInternetPayment', 'paymentLinkId' => 'pay_123']);
+    [$header, , $signature] = explode('.', $jwt);
+    $forgedClaims = rtrim(strtr(base64_encode((string) json_encode([
+        'webhookType' => 'acquiringInternetPayment',
+        'paymentLinkId' => 'pay_attacker',
+    ])), '+/', '-_'), '=');
+
+    expect(tochkaWebhookConnector()->verifyWebhookSignature("{$header}.{$forgedClaims}.{$signature}", []))->toBeFalse();
+});
+
+test('verifyWebhookSignature rejects alg none', function () {
+    $b64 = fn (string $bin) => rtrim(strtr(base64_encode($bin), '+/', '-_'), '=');
+    $jwt = $b64((string) json_encode(['alg' => 'none', 'typ' => 'JWT']))
+        .'.'.$b64((string) json_encode(['webhookType' => 'acquiringInternetPayment', 'paymentLinkId' => 'x']))
+        .'.';
+
+    expect(tochkaWebhookConnector()->verifyWebhookSignature($jwt, []))->toBeFalse();
+});
+
+test('verifyWebhookSignature rejects a missing or malformed signature', function () {
+    $connector = tochkaWebhookConnector();
+
+    expect($connector->verifyWebhookSignature('', []))->toBeFalse()
+        ->and($connector->verifyWebhookSignature('{"paymentLinkId":"pay_123"}', []))->toBeFalse();
+});
+
+test('verifyWebhookSignature falls back to the published key when none is pinned', function () {
+    [$privatePem, $jwk] = tochkaKeypair();
+    Cache::forget('tochka:webhook_jwk');
+    Http::fake(['enter.tochka.com/doc/openapi/static/keys/public' => Http::response($jwk)]);
+
+    $jwt = tochkaJwt(['webhookType' => 'acquiringInternetPayment', 'paymentLinkId' => 'pay_123'], $privatePem);
+
+    expect(tochkaConnector()->verifyWebhookSignature($jwt, []))->toBeTrue();
+
+    Cache::forget('tochka:webhook_jwk');
 });
 
 // --- Webhook fixture ---

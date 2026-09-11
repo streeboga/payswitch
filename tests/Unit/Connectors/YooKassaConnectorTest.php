@@ -214,8 +214,31 @@ test('extractPaymentIdFromWebhook extracts payment_id', function () {
     expect($c->extractPaymentIdFromWebhook(['object' => []]))->toBeNull();
 });
 
-test('verifyWebhookSignature returns true', function () {
-    expect(yooKassaConnector()->verifyWebhookSignature('payload', []))->toBeTrue();
+// --- Webhook authenticity (YooKassa signs nothing; the source IP is all there is) ---
+
+test('verifyWebhookSignature accepts notifications from published YooKassa addresses', function (string $ip) {
+    expect(yooKassaConnector()->verifyWebhookSignature('{}', [YooKassaConnector::SOURCE_IP_HEADER => $ip]))->toBeTrue();
+})->with(['185.71.76.5', '185.71.77.30', '77.75.153.100', '77.75.156.11', '77.75.156.35', '77.75.154.200', '2a02:5180::1']);
+
+test('verifyWebhookSignature rejects notifications from anywhere else', function (string $ip) {
+    expect(yooKassaConnector()->verifyWebhookSignature('{}', [YooKassaConnector::SOURCE_IP_HEADER => $ip]))->toBeFalse();
+})->with(['1.2.3.4', '185.71.76.32', '77.75.156.12', '77.75.154.127', '2a03:5180::1', '127.0.0.1']);
+
+test('verifyWebhookSignature rejects a notification with no source address', function () {
+    expect(yooKassaConnector()->verifyWebhookSignature('{}', []))->toBeFalse();
+});
+
+test('verifyWebhookSignature honours a webhook_ips override', function () {
+    $connector = new YooKassaConnector(['shop_id' => '1', 'secret_key' => 's', 'webhook_ips' => ['10.0.0.0/8']]);
+
+    expect($connector->verifyWebhookSignature('{}', [YooKassaConnector::SOURCE_IP_HEADER => '10.1.2.3']))->toBeTrue()
+        ->and($connector->verifyWebhookSignature('{}', [YooKassaConnector::SOURCE_IP_HEADER => '185.71.76.5']))->toBeFalse();
+});
+
+test('verifyWebhookSignature rejects everything when the override is empty', function () {
+    $connector = new YooKassaConnector(['shop_id' => '1', 'secret_key' => 's', 'webhook_ips' => []]);
+
+    expect($connector->verifyWebhookSignature('{}', [YooKassaConnector::SOURCE_IP_HEADER => '185.71.76.5']))->toBeFalse();
 });
 
 test('purchase uses payment_id as Idempotence-Key', function () {

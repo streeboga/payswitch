@@ -450,10 +450,89 @@ test('extractPaymentIdFromWebhook falls back to orderNumber', function () {
     expect($paymentId)->toBe('pay_01ABC');
 });
 
-test('verifyWebhookSignature always returns true', function () {
-    $connector = rbsConnector();
+// --- Webhook signature (RBS callback checksum, symmetric HMAC-SHA256) ---
 
-    expect($connector->verifyWebhookSignature('any payload', []))->toBeTrue();
+function rbsCallback(array $params, string $secret): string
+{
+    ksort($params, SORT_STRING);
+    $signed = '';
+    foreach ($params as $name => $value) {
+        $signed .= $name.';'.$value.';';
+    }
+    $params['checksum'] = strtoupper(hash_hmac('sha256', $signed, $secret));
+
+    return http_build_query($params);
+}
+
+test('verifyWebhookSignature accepts a correctly signed callback', function () {
+    $connector = rbsConnector(['callback_secret' => 'shared_key']);
+
+    $payload = rbsCallback([
+        'mdOrder' => '3ff6962a-7dcc-4283-ab50-a6d7dd3386fe',
+        'orderNumber' => '10747',
+        'operation' => 'deposited',
+        'status' => '1',
+        'amount' => '123456',
+    ], 'shared_key');
+
+    expect($connector->verifyWebhookSignature($payload, []))->toBeTrue();
+});
+
+test('verifyWebhookSignature matches the checksum from the gateway docs', function () {
+    // Docs build "amount;123456;mdOrder;...;operation;deposited;orderNumber;10747;status;1;"
+    $expectedSigned = 'amount;123456;mdOrder;3ff6962a-7dcc-4283-ab50-a6d7dd3386fe;operation;deposited;orderNumber;10747;status;1;';
+    $checksum = strtoupper(hash_hmac('sha256', $expectedSigned, 'shared_key'));
+
+    $payload = http_build_query([
+        'status' => '1',
+        'amount' => '123456',
+        'checksum' => $checksum,
+        'sign_alias' => 'ignored',
+        'orderNumber' => '10747',
+        'mdOrder' => '3ff6962a-7dcc-4283-ab50-a6d7dd3386fe',
+        'operation' => 'deposited',
+    ]);
+
+    expect(rbsConnector(['callback_secret' => 'shared_key'])->verifyWebhookSignature($payload, []))->toBeTrue();
+});
+
+test('verifyWebhookSignature rejects a wrong checksum', function () {
+    $payload = rbsCallback([
+        'mdOrder' => 'abc',
+        'orderNumber' => '1',
+        'operation' => 'deposited',
+        'status' => '1',
+    ], 'shared_key');
+
+    $tampered = preg_replace('/checksum=[A-F0-9]+/', 'checksum='.str_repeat('A', 64), $payload);
+
+    expect(rbsConnector(['callback_secret' => 'shared_key'])->verifyWebhookSignature($tampered, []))->toBeFalse();
+});
+
+test('verifyWebhookSignature rejects a tampered amount', function () {
+    $payload = rbsCallback([
+        'amount' => '100',
+        'mdOrder' => 'abc',
+        'orderNumber' => '1',
+        'operation' => 'deposited',
+        'status' => '1',
+    ], 'shared_key');
+
+    $tampered = str_replace('amount=100', 'amount=999999', $payload);
+
+    expect(rbsConnector(['callback_secret' => 'shared_key'])->verifyWebhookSignature($tampered, []))->toBeFalse();
+});
+
+test('verifyWebhookSignature rejects a callback with no checksum', function () {
+    $payload = http_build_query(['mdOrder' => 'abc', 'orderNumber' => '1', 'operation' => 'deposited', 'status' => '1']);
+
+    expect(rbsConnector(['callback_secret' => 'shared_key'])->verifyWebhookSignature($payload, []))->toBeFalse();
+});
+
+test('verifyWebhookSignature rejects everything when no callback secret is configured', function () {
+    $payload = rbsCallback(['mdOrder' => 'abc', 'status' => '1'], 'shared_key');
+
+    expect(rbsConnector()->verifyWebhookSignature($payload, []))->toBeFalse();
 });
 
 // --- Webhook fixture ---

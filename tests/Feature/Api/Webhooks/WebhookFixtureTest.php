@@ -14,6 +14,15 @@ use Tests\Helpers\ConnectorTestData;
 
 uses(RefreshDatabase::class);
 
+/** CloudPayments signs the raw body; these fixtures have to carry a real Content-HMAC. */
+function cpHmac(array $body, string $secret = 'secret'): array
+{
+    return ['Content-HMAC' => base64_encode(hash_hmac('sha256', (string) json_encode($body), $secret, true))];
+}
+
+/** YooKassa signs nothing — a notification is authentic by its source address. */
+const YOOKASSA_PEER = ['REMOTE_ADDR' => '185.71.76.5'];
+
 beforeEach(function () {
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
@@ -42,10 +51,10 @@ test('cloudpayments: payment.succeeded webhook updates payment status', function
     $fixture = ConnectorTestData::webhookFixture('cloudpayments_payment_succeeded');
     $fixture['InvoiceId'] = $payment->key;
 
-    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", array_merge(
-        $fixture,
-        ['type' => 'payment.succeeded'],
-    ))->assertOk();
+    $body = array_merge($fixture, ['type' => 'payment.succeeded']);
+
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", $body, cpHmac($body))
+        ->assertOk();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
 });
@@ -72,10 +81,10 @@ test('cloudpayments: payment.canceled webhook updates payment status', function 
     $fixture = ConnectorTestData::webhookFixture('cloudpayments_payment_canceled');
     $fixture['InvoiceId'] = $payment->key;
 
-    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", array_merge(
-        $fixture,
-        ['type' => 'payment.canceled'],
-    ))->assertOk();
+    $body = array_merge($fixture, ['type' => 'payment.canceled']);
+
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", $body, cpHmac($body))
+        ->assertOk();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Cancelled);
 });
@@ -106,7 +115,7 @@ test('cloudpayments: real webhook without type field uses Status fallback', func
     $fixture['AuthCode'] = 'A1B2C3';
     $fixture['GatewayName'] = 'Test';
 
-    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", $fixture)
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", $fixture, cpHmac($fixture))
         ->assertOk();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
@@ -136,7 +145,7 @@ test('cloudpayments: check notification does NOT update payment status', functio
     // Check notification: Status=Completed but NO AuthCode — should not update status
     unset($fixture['AuthCode'], $fixture['GatewayName']);
 
-    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", $fixture)
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", $fixture, cpHmac($fixture))
         ->assertOk();
 
     // Status should NOT change — still requires_customer_action
@@ -165,10 +174,11 @@ test('yookassa: payment.succeeded webhook updates payment status', function () {
     $fixture = ConnectorTestData::webhookFixture('yookassa_payment_succeeded');
     $fixture['object']['metadata']['payment_id'] = $payment->key;
 
-    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", array_merge(
-        $fixture,
-        ['type' => 'payment.succeeded'],
-    ))->assertOk();
+    $this->withServerVariables(YOOKASSA_PEER)
+        ->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", array_merge(
+            $fixture,
+            ['type' => 'payment.succeeded'],
+        ))->assertOk();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
 });
@@ -195,10 +205,11 @@ test('yookassa: payment.canceled webhook updates payment status', function () {
     $fixture = ConnectorTestData::webhookFixture('yookassa_payment_canceled');
     $fixture['object']['metadata']['payment_id'] = $payment->key;
 
-    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", array_merge(
-        $fixture,
-        ['type' => 'payment.canceled'],
-    ))->assertOk();
+    $this->withServerVariables(YOOKASSA_PEER)
+        ->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", array_merge(
+            $fixture,
+            ['type' => 'payment.canceled'],
+        ))->assertOk();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Cancelled);
 });

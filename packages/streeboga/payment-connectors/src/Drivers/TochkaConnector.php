@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Streeboga\PaymentConnectors\Drivers;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\DirectMethod;
@@ -23,15 +24,29 @@ use Streeboga\PaymentData\Enums\SessionResultType;
  */
 final class TochkaConnector implements ConnectorInterface
 {
+    /** @see https://developers.tochka.com/docs/tochka-api/opisanie-metodov/vebhuki */
+    private const PUBLIC_KEY_URL = 'https://enter.tochka.com/doc/openapi/static/keys/public';
+
+    /** DER encoding of OID 1.2.840.113549.1.1.1 (rsaEncryption). */
+    private const OID_RSA_ENCRYPTION = "\x06\x09\x2a\x86\x48\x86\xf7\x0d\x01\x01\x01";
+
     private string $token;
 
     private string $customerCode;
 
     private string $baseUrl;
 
+    /** @var array<string, mixed> */
+    private array $credentials;
+
+    /** Claims of the last webhook that passed verifyWebhookSignature(). */
+    /** @var array<string, mixed> */
+    private array $webhookClaims = [];
+
     /** @param array<string, mixed> $credentials */
     public function __construct(array $credentials)
     {
+        $this->credentials = $credentials;
         $this->token = $credentials['token'] ?? '';
         $this->customerCode = $credentials['customer_code'] ?? '';
         $this->baseUrl = $credentials['base_url'] ?? 'https://enter.tochka.com/uapi';
@@ -177,17 +192,54 @@ final class TochkaConnector implements ConnectorInterface
         }
     }
 
+    /**
+     * A Tochka webhook body is a bare RS256 JWT string, verified with Tochka's public key.
+     *
+     * @see https://developers.tochka.com/docs/tochka-api/opisanie-metodov/vebhuki
+     */
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
-        // Tochka webhooks are JWT-encoded (RS256) and should be verified
-        // with the public key at https://enter.tochka.com/doc/openapi/static/keys/public.
-        // For MVP: accept webhooks and verify by polling status (same approach as YooKassa).
-        // The webhook URL is secret + TLS, which provides baseline security.
+        $parts = explode('.', trim($payload));
+        if (count($parts) !== 3) {
+            return false;
+        }
+
+        [$rawHeader, $rawClaims, $rawSignature] = $parts;
+
+        $header = json_decode((string) self::base64UrlDecode($rawHeader), true);
+        // Pin the algorithm: without this "alg": "none" would sail through.
+        if (! is_array($header) || ($header['alg'] ?? null) !== 'RS256') {
+            return false;
+        }
+
+        $signature = self::base64UrlDecode($rawSignature);
+        $publicKey = $this->webhookPublicKey();
+        if ($signature === false || $publicKey === null) {
+            return false;
+        }
+
+        if (openssl_verify($rawHeader.'.'.$rawClaims, $signature, $publicKey, OPENSSL_ALGO_SHA256) !== 1) {
+            return false;
+        }
+
+        $claims = json_decode((string) self::base64UrlDecode($rawClaims), true);
+        if (! is_array($claims)) {
+            return false;
+        }
+
+        $this->webhookClaims = $claims;
+
         return true;
     }
 
     public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
     {
+        // The receiver reads the event name off the decoded JSON body; a Tochka body is a JWT,
+        // so it arrives empty and the name comes from the verified claims instead.
+        if ($eventType === '') {
+            $eventType = (string) ($this->webhookClaims['webhookType'] ?? '');
+        }
+
         return match ($eventType) {
             'acquiringInternetPayment' => PaymentStatus::Succeeded,
             'incomingSbpPayment' => PaymentStatus::Succeeded,
@@ -197,7 +249,7 @@ final class TochkaConnector implements ConnectorInterface
 
     public function extractPaymentIdFromWebhook(array $payload): ?string
     {
-        return $payload['paymentLinkId'] ?? null;
+        return $payload['paymentLinkId'] ?? $this->webhookClaims['paymentLinkId'] ?? null;
     }
 
     public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
@@ -304,5 +356,96 @@ final class TochkaConnector implements ConnectorInterface
                 'data' => [],
             ];
         }
+    }
+
+    /**
+     * Tochka's webhook signing key: a PEM in the connector credentials if one is pinned there,
+     * otherwise the JWK Tochka publishes (cached — it changes about never, but not never).
+     */
+    private function webhookPublicKey(): ?string
+    {
+        $pinned = $this->credentials['webhook_public_key'] ?? null;
+        if (is_string($pinned) && $pinned !== '') {
+            return str_contains($pinned, 'BEGIN') ? $pinned : self::jwkToPem($pinned);
+        }
+
+        $jwk = Cache::remember('tochka:webhook_jwk', now()->addDay(), function (): ?string {
+            $response = Http::timeout(10)->get(self::PUBLIC_KEY_URL);
+
+            return $response->successful() ? $response->body() : null;
+        });
+
+        return is_string($jwk) ? self::jwkToPem($jwk) : null;
+    }
+
+    /**
+     * Turn an RSA JWK into a PEM public key.
+     *
+     * ponytail: hand-rolled DER instead of pulling in firebase/php-jwt for one key shape.
+     * If a second JWT provider shows up, take the library.
+     */
+    private static function jwkToPem(string $json): ?string
+    {
+        $jwk = json_decode($json, true);
+        if (! is_array($jwk) || ($jwk['kty'] ?? null) !== 'RSA') {
+            return null;
+        }
+
+        $modulus = self::base64UrlDecode((string) ($jwk['n'] ?? ''));
+        $exponent = self::base64UrlDecode((string) ($jwk['e'] ?? ''));
+        if ($modulus === false || $exponent === false || $modulus === '' || $exponent === '') {
+            return null;
+        }
+
+        $rsaKey = self::derSequence(self::derInteger($modulus).self::derInteger($exponent));
+        $algorithm = self::derSequence(self::OID_RSA_ENCRYPTION."\x05\x00");
+        $spki = self::derSequence($algorithm.self::derBitString($rsaKey));
+
+        return "-----BEGIN PUBLIC KEY-----\n"
+            .chunk_split(base64_encode($spki), 64, "\n")
+            ."-----END PUBLIC KEY-----\n";
+    }
+
+    private static function derLength(int $length): string
+    {
+        if ($length < 0x80) {
+            return chr($length);
+        }
+
+        $bytes = ltrim(pack('N', $length), "\x00");
+
+        return chr(0x80 | strlen($bytes)).$bytes;
+    }
+
+    private static function derInteger(string $bytes): string
+    {
+        $bytes = ltrim($bytes, "\x00");
+        if ($bytes === '') {
+            $bytes = "\x00";
+        }
+        if (ord($bytes[0]) > 0x7F) {
+            $bytes = "\x00".$bytes;
+        }
+
+        return "\x02".self::derLength(strlen($bytes)).$bytes;
+    }
+
+    private static function derSequence(string $contents): string
+    {
+        return "\x30".self::derLength(strlen($contents)).$contents;
+    }
+
+    private static function derBitString(string $contents): string
+    {
+        $contents = "\x00".$contents;
+
+        return "\x03".self::derLength(strlen($contents)).$contents;
+    }
+
+    private static function base64UrlDecode(string $value): string|false
+    {
+        $padded = $value.str_repeat('=', (4 - strlen($value) % 4) % 4);
+
+        return base64_decode(strtr($padded, '-_', '+/'), true);
     }
 }

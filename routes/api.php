@@ -167,7 +167,8 @@ Route::prefix('v1')->group(function () {
 
 Route::prefix('v1')->middleware('json-api')->group(function () {
     // Incoming PSP webhooks (no auth)
-    Route::post('/webhooks/{merchantKey}/{mcaKey}', [WebhookReceiverController::class, 'handle'])
+    // GET as well as POST: RBS (Sberbank/Alfa-Bank) sends its callback as a signed GET.
+    Route::match(['get', 'post'], '/webhooks/{merchantKey}/{mcaKey}', [WebhookReceiverController::class, 'handle'])
         ->withoutMiddleware(['auth.api_key']);
 
     Route::get('/health', function () {

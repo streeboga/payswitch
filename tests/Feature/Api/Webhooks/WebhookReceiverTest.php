@@ -67,7 +67,10 @@ test('rejects webhook from stripe connector without signature header', function 
 });
 
 test('processes payment status update from webhook and sets amount_received', function () {
-    $this->mca->update(['connector_name' => 'cloudpayments']);
+    $this->mca->update([
+        'connector_name' => 'cloudpayments',
+        'connector_account_details' => ['public_id' => 'pk', 'api_secret' => 'sekret'],
+    ]);
 
     $payment = PaymentIntent::create([
         'merchant_account_id' => $this->merchant->id,
@@ -78,9 +81,10 @@ test('processes payment status update from webhook and sets amount_received', fu
         'attempt_count' => 1,
     ]);
 
-    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [
-        'type' => 'payment.succeeded',
-        'InvoiceId' => $payment->key,
+    $body = ['type' => 'payment.succeeded', 'InvoiceId' => $payment->key];
+
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", $body, [
+        'Content-HMAC' => base64_encode(hash_hmac('sha256', (string) json_encode($body), 'sekret', true)),
     ])->assertOk()
         ->assertJson(['status' => 'ok']);
 
@@ -234,4 +238,105 @@ test('cancelled webhook transitions requires_confirmation payment to cancelled',
         'status' => 'cancelled',
         'amount' => 7500,
     ]);
+});
+
+// --- Signature verification per connector: valid -> 200, wrong -> 401, absent -> 401 ---
+
+function receiverRsaKeypair(): array
+{
+    static $pair = null;
+    if ($pair !== null) {
+        return $pair;
+    }
+
+    $res = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+    openssl_pkey_export($res, $privatePem);
+    $rsa = openssl_pkey_get_details($res)['rsa'];
+    $b64 = fn (string $bin) => rtrim(strtr(base64_encode($bin), '+/', '-_'), '=');
+
+    return $pair = [$privatePem, (string) json_encode(['kty' => 'RSA', 'e' => $b64($rsa['e']), 'n' => $b64($rsa['n'])])];
+}
+
+function receiverJwt(array $claims, string $privatePem): string
+{
+    $b64 = fn (string $bin) => rtrim(strtr(base64_encode($bin), '+/', '-_'), '=');
+    $input = $b64((string) json_encode(['alg' => 'RS256', 'typ' => 'JWT'])).'.'.$b64((string) json_encode($claims));
+    openssl_sign($input, $signature, $privatePem, OPENSSL_ALGO_SHA256);
+
+    return $input.'.'.$b64($signature);
+}
+
+test('rbs callback: valid checksum passes, wrong and absent are refused', function () {
+    $this->mca->update([
+        'connector_name' => 'sberbank',
+        'connector_account_details' => ['username' => 'u', 'password' => 'p', 'callback_secret' => 'shared_key'],
+    ]);
+    $url = "/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}";
+
+    $params = ['mdOrder' => 'abc', 'operation' => 'deposited', 'orderNumber' => 'pay_1', 'status' => '1'];
+    ksort($params, SORT_STRING);
+    $signed = '';
+    foreach ($params as $k => $v) {
+        $signed .= "{$k};{$v};";
+    }
+    $checksum = strtoupper(hash_hmac('sha256', $signed, 'shared_key'));
+
+    $this->getJson($url.'?'.http_build_query($params + ['checksum' => $checksum]))->assertOk();
+    $this->getJson($url.'?'.http_build_query($params + ['checksum' => str_repeat('A', 64)]))->assertStatus(401);
+    $this->getJson($url.'?'.http_build_query($params))->assertStatus(401);
+});
+
+test('tochka webhook: valid JWT passes, wrong key and absent signature are refused', function () {
+    [$privatePem, $jwk] = receiverRsaKeypair();
+
+    $this->mca->update([
+        'connector_name' => 'tochka',
+        'connector_account_details' => ['token' => 't', 'customer_code' => 'c', 'webhook_public_key' => $jwk],
+    ]);
+    $url = "/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}";
+    $claims = ['webhookType' => 'acquiringInternetPayment', 'paymentLinkId' => 'pay_1', 'status' => 'APPROVED'];
+
+    $post = fn (string $body) => $this->call(
+        'POST', $url, [], [], [], ['CONTENT_TYPE' => 'text/plain', 'HTTP_ACCEPT' => 'application/json'], $body,
+    );
+
+    $post(receiverJwt($claims, $privatePem))->assertOk();
+
+    $other = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+    openssl_pkey_export($other, $otherPem);
+    $post(receiverJwt($claims, $otherPem))->assertStatus(401);
+
+    $post('')->assertStatus(401);
+});
+
+test('yookassa webhook: published address passes, any other and none are refused', function () {
+    $this->mca->update([
+        'connector_name' => 'yookassa',
+        'connector_account_details' => ['shop_id' => '1', 'secret_key' => 's'],
+    ]);
+    $url = "/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}";
+    $body = ['type' => 'notification', 'event' => 'payment.succeeded'];
+
+    $this->withServerVariables(['REMOTE_ADDR' => '185.71.76.5'])->postJson($url, $body)->assertOk();
+    $this->withServerVariables(['REMOTE_ADDR' => '1.2.3.4'])->postJson($url, $body)->assertStatus(401);
+    // A forged header must not stand in for the peer address.
+    $this->withServerVariables(['REMOTE_ADDR' => '1.2.3.4'])
+        ->postJson($url, $body, ['x-payswitch-source-ip' => '185.71.76.5'])
+        ->assertStatus(401);
+});
+
+test('cloudpayments webhook: valid HMAC passes, wrong and absent are refused', function () {
+    $this->mca->update([
+        'connector_name' => 'cloudpayments',
+        'connector_account_details' => ['public_id' => 'pk', 'api_secret' => 'sekret'],
+    ]);
+    config()->set('payswitch.allow_unsigned_webhooks', false);
+    $url = "/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}";
+
+    $body = ['Status' => 'Completed', 'InvoiceId' => 'pay_1'];
+    $hmac = base64_encode(hash_hmac('sha256', (string) json_encode($body), 'sekret', true));
+
+    $this->postJson($url, $body, ['Content-HMAC' => $hmac])->assertOk();
+    $this->postJson($url, $body, ['Content-HMAC' => base64_encode('nope')])->assertStatus(401);
+    $this->postJson($url, $body)->assertStatus(401);
 });

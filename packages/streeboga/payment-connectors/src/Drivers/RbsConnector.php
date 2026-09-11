@@ -202,11 +202,46 @@ final class RbsConnector implements ConnectorInterface
         }
     }
 
+    /**
+     * RBS callback checksum, symmetric scheme (HMAC-SHA256 on a key shared with the gateway).
+     *
+     * Gateway spec: drop `checksum` and `sign_alias` from the callback params, sort the rest
+     * by parameter name, join them as "name;value;" (the string ends with ";"), HMAC-SHA256
+     * it with the shared callback key and compare the uppercase hex digest.
+     *
+     * @see https://securepayments.sberbank.ru/wiki/doku.php/integration:api:callback:start
+     *
+     * ponytail: symmetric scheme only. The gateway also offers asymmetric (SHA512withRSA);
+     * add it here if a merchant is issued an RSA callback key instead of a shared one.
+     */
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
-        // RBS callbacks are unreliable — polling via getOrderStatusExtended.do is the
-        // primary status resolution mechanism. Accept all callbacks.
-        return true;
+        $secret = (string) ($this->credentials['callback_secret'] ?? '');
+        if ($secret === '') {
+            return false;
+        }
+
+        parse_str($payload, $params);
+
+        $received = $params['checksum'] ?? '';
+        if (! is_string($received) || $received === '') {
+            return false;
+        }
+
+        unset($params['checksum'], $params['sign_alias']);
+        ksort($params, SORT_STRING);
+
+        $signed = '';
+        foreach ($params as $name => $value) {
+            if (! is_scalar($value)) {
+                return false;
+            }
+            $signed .= $name.';'.$value.';';
+        }
+
+        $expected = strtoupper(hash_hmac('sha256', $signed, $secret));
+
+        return hash_equals($expected, strtoupper($received));
     }
 
     public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus

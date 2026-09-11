@@ -11,18 +11,44 @@ use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
+use Symfony\Component\HttpFoundation\IpUtils;
 
 final class YooKassaConnector implements ConnectorInterface
 {
+    /**
+     * Pseudo-header the webhook receiver puts the real peer address in. It is written after
+     * the request headers are collected, so a client cannot forge it.
+     */
+    public const SOURCE_IP_HEADER = 'x-payswitch-source-ip';
+
+    /**
+     * Addresses YooKassa sends notifications from.
+     *
+     * @see https://yookassa.ru/developers/using-api/webhooks
+     */
+    private const NOTIFICATION_IPS = [
+        '185.71.76.0/27',
+        '185.71.77.0/27',
+        '77.75.153.0/25',
+        '77.75.156.11',
+        '77.75.156.35',
+        '77.75.154.128/25',
+        '2a02:5180::/32',
+    ];
+
     private string $shopId;
 
     private string $secretKey;
 
+    /** @var array<string, mixed> */
+    private array $credentials;
+
     private string $baseUrl = 'https://api.yookassa.ru/v3';
 
-    /** @param  array<string, string>  $credentials */
+    /** @param  array<string, mixed>  $credentials */
     public function __construct(array $credentials)
     {
+        $this->credentials = $credentials;
         $this->shopId = $credentials['shop_id'] ?? '';
         $this->secretKey = $credentials['secret_key'] ?? $credentials['api_key'] ?? '';
     }
@@ -91,12 +117,29 @@ final class YooKassaConnector implements ConnectorInterface
         return $this->makeRequest('POST', "/payments/{$txnId}/cancel", [], $idempotencyKey);
     }
 
+    /**
+     * YooKassa does not sign notifications at all — the documented way to authenticate one
+     * is the source IP. So this checks the IP and refuses anything outside the published
+     * ranges; `webhook_ips` in the connector credentials overrides the defaults.
+     *
+     * @see https://yookassa.ru/developers/using-api/webhooks
+     */
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
-        // YooKassa uses IP whitelist for webhook verification, not signatures.
-        // In production, verify source IP is in YooKassa range.
-        // For now, accept all — webhook URL is secret + TLS.
-        return true;
+        $ip = $headers[self::SOURCE_IP_HEADER] ?? null;
+        if (! is_string($ip) || $ip === '') {
+            return false;
+        }
+
+        $allowed = $this->credentials['webhook_ips'] ?? self::NOTIFICATION_IPS;
+        if (is_string($allowed)) {
+            $allowed = preg_split('/[\s,]+/', $allowed, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        }
+        if (! is_array($allowed) || $allowed === []) {
+            return false;
+        }
+
+        return IpUtils::checkIp($ip, array_values(array_map('strval', $allowed)));
     }
 
     public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus

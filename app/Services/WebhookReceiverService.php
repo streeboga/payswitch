@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
+use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\RefundStatus;
@@ -46,7 +47,16 @@ final readonly class WebhookReceiverService
             ->map(fn (array $values) => $values[0] ?? null)
             ->toArray();
 
-        if (! $connector->verifyWebhookSignature($request->getContent(), $headers)) {
+        // Written last so a client sending this header cannot forge its own source address.
+        $headers[YooKassaConnector::SOURCE_IP_HEADER] = $request->ip();
+
+        // What the provider signed: the body for a POST, the query string for a GET
+        // callback (RBS sends one of those, and it has no body at all).
+        $raw = $request->isMethod('GET')
+            ? ($request->getQueryString() ?? '')
+            : $request->getContent();
+
+        if (! $connector->verifyWebhookSignature($raw, $headers)) {
             Log::warning('Webhook signature verification failed', [
                 'merchant_key' => $merchantKey,
                 'mca_key' => $mcaKey,

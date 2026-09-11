@@ -122,6 +122,15 @@ final class RobokassaConnector implements ConnectorInterface
         );
     }
 
+    /**
+     * Robokassa's own ResultURL scheme, not a home-grown one: md5("OutSum:InvId:Password2"
+     * plus every Shp_ param in alphabetical order as ":Shp_key=value"). MD5 rather than an
+     * HMAC because that is what Robokassa prescribes and what its cabinet defaults to
+     * (the cabinet can also be switched to sha1/sha256/sha384/sha512/ripemd160 — if a
+     * merchant does that, this needs the matching algorithm).
+     *
+     * @see https://docs.robokassa.ru/pay-interface/
+     */
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         parse_str($payload, $data);

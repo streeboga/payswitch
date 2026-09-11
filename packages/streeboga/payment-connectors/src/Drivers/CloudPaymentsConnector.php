@@ -100,11 +100,19 @@ final class CloudPaymentsConnector implements ConnectorInterface
         ]);
     }
 
+    /**
+     * CloudPayments signs the raw body with HMAC-SHA256 over the API secret, base64, in
+     * the Content-HMAC header.
+     *
+     * @see https://developers.cloudpayments.ru/#proverka-uvedomleniy
+     */
     public function verifyWebhookSignature(string $payload, array $headers): bool
     {
         $hmac = $headers['content-hmac'] ?? null;
         if (! $hmac) {
-            return ! app()->environment('production');
+            // Was `! app()->environment('production')`, which silently opened every
+            // stand that happened not to be flagged production. Now it takes saying so.
+            return (bool) config('payswitch.allow_unsigned_webhooks', false);
         }
 
         $apiSecret = $this->credentials['api_secret'] ?? $this->credentials['api_key'] ?? '';

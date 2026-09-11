@@ -49,6 +49,19 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Unsigned Webhooks
+    |--------------------------------------------------------------------------
+    |
+    | Lets connectors whose provider may omit a signature header accept a webhook
+    | without one. Off unless someone says otherwise: APP_ENV is not a security
+    | boundary, a live stand can be flagged anything.
+    |
+    */
+
+    'allow_unsigned_webhooks' => (bool) env('PAYSWITCH_ALLOW_UNSIGNED_WEBHOOKS', false),
+
     'wallets' => [
         'url' => env('WALLETS_SERVICE_URL'),
         'internal_secret' => env('WALLETS_INTERNAL_SECRET'),

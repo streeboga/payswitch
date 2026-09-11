@@ -270,6 +270,15 @@ final class TBankConnector implements ConnectorInterface
      *
      * @param  array<string, mixed>  $params
      */
+    /**
+     * T-Bank's own token scheme, not a home-grown one: add Password, drop Token and nested
+     * objects, sort by key, concatenate the values, SHA-256 the result. It is not an HMAC
+     * because T-Bank does not specify one.
+     *
+     * @see https://developer.tbank.ru/eacq/intro/developer/notification
+     *
+     * @param  array<string, mixed>  $params
+     */
     private function generateToken(array $params): string
     {
         $params['Password'] = $this->credentials['password'] ?? '';
@@ -280,7 +289,12 @@ final class TBankConnector implements ConnectorInterface
 
         ksort($params);
 
-        $values = implode('', array_values(array_map('strval', $params)));
+        // Booleans go in as "true"/"false" — the notification's Success field is a JSON
+        // boolean, and strval() would turn it into "1"/"" and fail every check.
+        $values = implode('', array_map(
+            fn ($value) => is_bool($value) ? ($value ? 'true' : 'false') : (string) $value,
+            array_values($params),
+        ));
 
         return hash('sha256', $values);
     }
