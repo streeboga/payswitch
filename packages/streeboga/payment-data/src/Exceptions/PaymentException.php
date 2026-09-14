@@ -8,6 +8,9 @@ use Exception;
 
 class PaymentException extends Exception
 {
+    /**
+     * @param  array<string, mixed>  $meta  Уходит клиенту в errors[].meta (JSON:API)
+     */
     public function __construct(
         string $message,
         public readonly string $errorCode,
@@ -15,6 +18,7 @@ class PaymentException extends Exception
         public readonly int $httpStatus = 400,
         int $code = 0,
         ?\Throwable $previous = null,
+        public readonly array $meta = [],
     ) {
         parent::__construct($message, $code, $previous);
     }

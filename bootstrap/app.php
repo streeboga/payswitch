@@ -78,6 +78,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         'code' => $e->errorCode,
                         'title' => 'Payment Error',
                         'detail' => $e->getMessage(),
+                        ...($e->meta !== [] ? ['meta' => $e->meta] : []),
                     ]],
                 ], $e->httpStatus)->header('Content-Type', 'application/vnd.api+json');
             }
