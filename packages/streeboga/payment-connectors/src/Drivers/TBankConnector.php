@@ -96,10 +96,17 @@ final class TBankConnector implements ConnectorInterface
 
     public function capture(array $params): array
     {
-        return $this->makeRequest('Confirm', [
+        $requestParams = [
             'TerminalKey' => $this->terminalKey(),
             'PaymentId' => $params['transaction_id'] ?? '',
-        ]);
+        ];
+
+        // Без Amount Confirm списывает всю авторизацию, а payswitch пишет частичное списание.
+        if (! empty($params['amount'])) {
+            $requestParams['Amount'] = $params['amount'];
+        }
+
+        return $this->makeRequest('Confirm', $requestParams);
     }
 
     public function refund(array $params): array
