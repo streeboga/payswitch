@@ -8,6 +8,7 @@ use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\RoutingRuleRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\ValidationException;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\RoutingRule;
 
@@ -50,8 +51,7 @@ final readonly class RoutingRuleService
     public function create(int|string $merchantId, array $data): RoutingRule
     {
         if (isset($data['business_profile_id']) && $data['business_profile_id']) {
-            $profile = $this->merchantRepository->findProfileByKey($data['business_profile_id']);
-            $data['business_profile_id'] = $profile->id;
+            $data['business_profile_id'] = $this->resolveProfileId($data['business_profile_id'], $merchantId);
         }
 
         return $this->routingRuleRepository->create([
@@ -73,8 +73,7 @@ final readonly class RoutingRuleService
         $rule = $this->routingRuleRepository->findByKey($ruleKey, $merchantId);
 
         if (isset($data['business_profile_id'])) {
-            $profile = $this->merchantRepository->findProfileByKey($data['business_profile_id']);
-            $data['business_profile_id'] = $profile->id;
+            $data['business_profile_id'] = $this->resolveProfileId($data['business_profile_id'], $merchantId);
         }
 
         $this->routingRuleRepository->update($rule, $data);
@@ -88,5 +87,15 @@ final readonly class RoutingRuleService
     {
         $rule = $this->routingRuleRepository->findByKey($ruleKey, $merchantId);
         $this->routingRuleRepository->delete($rule);
+    }
+
+    /**
+     * Чужой профиль не принимается: иначе правило мерчанта A привязывается
+     * к профилю мерчанта B.
+     */
+    private function resolveProfileId(string $profileKey, int|string $merchantId): int
+    {
+        return $this->merchantRepository->findProfileByMerchantAndKey($merchantId, $profileKey)->id
+            ?? throw ValidationException::withMessages(['business_profile_id' => 'Профиль не найден у этого мерчанта.']);
     }
 }

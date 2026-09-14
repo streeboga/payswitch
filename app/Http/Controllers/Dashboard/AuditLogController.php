@@ -12,6 +12,7 @@ use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Group('Dashboard Audit Log', description: 'Audit trail of all system actions', weight: 21)]
@@ -35,6 +36,9 @@ final class AuditLogController extends Controller
     #[Response(200, description: 'Paginated audit log')]
     public function index(Request $request): JsonResponse
     {
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('audit-log.viewAny', [$merchantId]);
+
         $filters = [
             'causer_id' => $request->input('filter.causer_id'),
             'event' => $request->input('filter.event'),
@@ -44,7 +48,7 @@ final class AuditLogController extends Controller
         ];
 
         $perPage = min((int) $request->input('page.size', 20), 100);
-        $paginator = $this->auditLogService->getPaginated($filters, $perPage);
+        $paginator = $this->auditLogService->getPaginated($merchantId, $filters, $perPage);
 
         return AuditLogResource::jsonApiCollection($paginator, $request);
     }
@@ -57,12 +61,15 @@ final class AuditLogController extends Controller
     #[Response(200, description: 'CSV file stream')]
     public function export(Request $request): StreamedResponse
     {
+        $merchantId = $request->attributes->get('merchant_id');
+        Gate::authorize('audit-log.export', [$merchantId]);
+
         $filters = [
             'from' => $request->input('filter.from'),
             'to' => $request->input('filter.to'),
         ];
 
-        $cursor = $this->auditLogService->getCursorForExport($filters);
+        $cursor = $this->auditLogService->getCursorForExport($merchantId, $filters);
 
         return response()->streamDownload(function () use ($cursor) {
             $out = fopen('php://output', 'w');

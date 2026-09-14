@@ -200,18 +200,20 @@ valid = signature == request.headers['x-webhook-signature-512']`
                   <CopyButton value={firstProfile.webhook_url} />
                 </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium">{t('integration.signingKey')}</p>
-                <div className="flex items-center gap-2">
-                  <code className="bg-muted rounded px-2 py-1 text-sm">
-                    {firstProfile.payment_response_hash_key.slice(0, 8)}...
-                  </code>
-                  <CopyButton value={firstProfile.payment_response_hash_key} />
+              {firstProfile.payment_response_hash_key && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{t('integration.signingKey')}</p>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-muted rounded px-2 py-1 text-sm">
+                      {firstProfile.payment_response_hash_key.slice(0, 8)}...
+                    </code>
+                    <CopyButton value={firstProfile.payment_response_hash_key} />
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    {t('integration.signingKeyHint')}
+                  </p>
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  {t('integration.signingKeyHint')}
-                </p>
-              </div>
+              )}
             </>
           ) : (
             <p className="text-muted-foreground text-sm">

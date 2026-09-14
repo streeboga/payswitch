@@ -31,7 +31,8 @@ final class DashboardMerchantController extends Controller
     #[Response(200, description: 'Merchant list')]
     public function index(Request $request): JsonResponse
     {
-        $merchants = $this->merchantService->listAllMerchants();
+        $user = $request->user() ?? abort(401);
+        $merchants = $this->merchantService->listMerchantsForUser($user->id);
 
         return MerchantAccountResource::jsonApiList($merchants, $request);
     }
@@ -47,6 +48,7 @@ final class DashboardMerchantController extends Controller
     public function show(string $merchantKey, Request $request): JsonResponse
     {
         $merchant = $this->merchantService->findMerchant($merchantKey);
+        Gate::authorize('merchant-account.view', [$merchant->id]);
 
         return (new MerchantAccountResource($merchant))->toResponse($request);
     }
@@ -60,7 +62,10 @@ final class DashboardMerchantController extends Controller
     #[Response(422, description: 'Validation error')]
     public function store(StoreDashboardMerchantRequest $request): JsonResponse
     {
-        $merchant = $this->merchantService->createMerchantAccount($request->toDto());
+        $dto = $request->toDto();
+        Gate::authorize('merchant-account.create', [$this->merchantService->findOrganization($dto->organization_id)->id]);
+
+        $merchant = $this->merchantService->createMerchantAccount($dto);
 
         return (new MerchantAccountResource($merchant))
             ->withStatus(201)

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Streeboga\PaymentData\Models\BusinessProfile;
 
 final readonly class BusinessProfileService
@@ -23,18 +24,13 @@ final readonly class BusinessProfileService
     }
 
     /**
-     * @return Collection<int, BusinessProfile>
+     * Профиль ищется только среди профилей мерчанта: ключ профиля — не
+     * секрет, и поиск по нему одному отдавал admin мерчанта A профиль B.
      */
-    public function listByMerchantKey(string $merchantKey): Collection
+    public function findByKey(string $profileKey, int|string $merchantId): BusinessProfile
     {
-        $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
-
-        return $this->merchantRepository->listProfilesByMerchant($merchant->id);
-    }
-
-    public function findByKey(string $profileKey): BusinessProfile
-    {
-        return $this->merchantRepository->findProfileByKey($profileKey);
+        return $this->merchantRepository->findProfileByMerchantAndKey($merchantId, $profileKey)
+            ?? throw (new ModelNotFoundException)->setModel(BusinessProfile::class, [$profileKey]);
     }
 
     public function create(int|string $merchantId, ?string $name, ?string $webhookUrl): BusinessProfile
@@ -49,16 +45,13 @@ final readonly class BusinessProfileService
     /**
      * @param  array<string, mixed>  $attributes
      */
-    public function update(string $profileKey, array $attributes): BusinessProfile
+    public function update(string $profileKey, int|string $merchantId, array $attributes): BusinessProfile
     {
-        $profile = $this->merchantRepository->findProfileByKey($profileKey);
-
-        return $this->merchantRepository->updateProfile($profile, $attributes);
+        return $this->merchantRepository->updateProfile($this->findByKey($profileKey, $merchantId), $attributes);
     }
 
-    public function delete(string $profileKey): void
+    public function delete(string $profileKey, int|string $merchantId): void
     {
-        $profile = $this->merchantRepository->findProfileByKey($profileKey);
-        $this->merchantRepository->deleteProfile($profile);
+        $this->merchantRepository->deleteProfile($this->findByKey($profileKey, $merchantId));
     }
 }

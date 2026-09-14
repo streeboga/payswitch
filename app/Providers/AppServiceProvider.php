@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Policies\AnalyticsPolicy;
 use App\Policies\ApiKeyPolicy;
+use App\Policies\AuditLogPolicy;
 use App\Policies\BusinessProfilePolicy;
 use App\Policies\ConnectorHealthPolicy;
 use App\Policies\ConnectorPolicy;
@@ -91,6 +92,7 @@ class AppServiceProvider extends ServiceProvider
             'dispute' => DisputePolicy::class,
             'webhook-event' => WebhookEventPolicy::class,
             'api-key' => ApiKeyPolicy::class,
+            'audit-log' => AuditLogPolicy::class,
             'business-profile' => BusinessProfilePolicy::class,
             'analytics' => AnalyticsPolicy::class,
             'user-role' => UserRolePolicy::class,

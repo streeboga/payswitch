@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Builders;
 
+use App\Models\UserRole;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -27,6 +28,13 @@ final class OrganizationQueryBuilder
     public function whereKey(string $key): self
     {
         $this->query->where('key', $key);
+
+        return $this;
+    }
+
+    public function forUser(int $userId): self
+    {
+        $this->query->whereIn('id', UserRole::query()->select('organization_id')->where('user_id', $userId));
 
         return $this;
     }

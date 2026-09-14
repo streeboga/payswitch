@@ -182,20 +182,25 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
         return $this->connectorQuery()->forMerchant($merchantAccountId)->whereKey($connectorKey)->first();
     }
 
+    public function findProfileByMerchantAndKey(int|string $merchantAccountId, string $profileKey): ?BusinessProfile
+    {
+        return $this->profileQuery()->withMerchantAccount()->withCounts()->forMerchant($merchantAccountId)->whereKey($profileKey)->first();
+    }
+
     /**
      * @return Collection<int, Organization>
      */
-    public function listOrganizations(): Collection
+    public function listOrganizationsForUser(int $userId): Collection
     {
-        return $this->orgQuery()->withMerchantCount()->latest()->get();
+        return $this->orgQuery()->forUser($userId)->withMerchantCount()->latest()->get();
     }
 
     /**
      * @return Collection<int, MerchantAccount>
      */
-    public function listAllMerchants(): Collection
+    public function listMerchantsForUser(int $userId): Collection
     {
-        return $this->merchantQuery()->withOrganization()->withCounts()->latest()->get();
+        return $this->merchantQuery()->forUser($userId)->withOrganization()->withCounts()->latest()->get();
     }
 
     /**
