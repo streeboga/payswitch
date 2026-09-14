@@ -10,6 +10,7 @@ use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
@@ -184,6 +185,10 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
             ->whereIn('status', $statuses);
     }
 
+    /**
+     * @param  array<int, PaymentStatus>  $statuses
+     * @return Builder<PaymentIntent>
+     */
     public function findWithoutWebhookForCurrentStatus(array $statuses, \DateTimeInterface $from, \DateTimeInterface $to): Builder
     {
         return PaymentIntent::whereIn('status', $statuses)

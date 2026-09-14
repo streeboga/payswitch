@@ -79,6 +79,7 @@ interface PaymentIntentRepositoryInterface
      * которых нет ни одного платёжного webhook_events.
      *
      * @param  array<int, PaymentStatus>  $statuses
+     * @return Builder<PaymentIntent>
      */
     public function findWithoutWebhookForCurrentStatus(array $statuses, \DateTimeInterface $from, \DateTimeInterface $to): Builder;
 }

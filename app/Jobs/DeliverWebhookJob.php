@@ -143,7 +143,7 @@ final class DeliverWebhookJob implements ShouldQueue
             );
         }
 
-        Log::error('Webhook delivery permanently failed for event '.($event?->key ?? $this->webhookEventId), [
+        Log::error('Webhook delivery permanently failed for event '.($event->key ?? $this->webhookEventId), [
             'webhook_event_id' => $this->webhookEventId,
             'merchant_account_id' => $event?->merchant_account_id,
             'payment_id' => $event?->content['payment_id'] ?? null,
