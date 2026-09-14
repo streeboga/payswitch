@@ -152,7 +152,7 @@ final readonly class WebhookReceiverService
             $newStatus = $connector->mapPaymentStatusToInternal((string) $payload['Status']);
         }
 
-        if (! $newStatus || ! PaymentStateMachine::canTransition($payment->status, $newStatus)) {
+        if (! $newStatus) {
             return null;
         }
 
@@ -161,24 +161,45 @@ final readonly class WebhookReceiverService
             if (! $lockedPayment) {
                 return null;
             }
-            $previousStatus = $lockedPayment->status->value;
+            $from = $lockedPayment->status;
+            $updateData = ['status' => $newStatus, 'connector' => $connectorName];
 
-            if (PaymentStateMachine::canTransition($lockedPayment->status, $newStatus)) {
-                $updateData = [
-                    'status' => $newStatus,
+            // The provider reports money taken from the payer. That is a fact, not a request,
+            // and our own verdict on the payment does not undo it.
+            $charged = $newStatus === PaymentStatus::Succeeded || $newStatus === PaymentStatus::RequiresCapture;
+
+            if ($charged && $from === PaymentStatus::Cancelled) {
+                // Cancelled here, paid there: refund or deliver is the merchant's call.
+                $updateData['status'] = PaymentStatus::RequiresMerchantAction;
+                $updateData['error_code'] = 'paid_after_cancellation';
+                $updateData['error_message'] = 'The provider charged the payer after the payment was cancelled';
+                Log::error('Webhook confirms a charge on a cancelled payment', [
+                    'payment_id' => $lockedPayment->key,
                     'connector' => $connectorName,
-                ];
-                if ($newStatus === PaymentStatus::Succeeded) {
-                    $updateData['amount_received'] = $lockedPayment->amount;
-                }
-                $this->paymentRepository->update($lockedPayment, $updateData);
-
-                $lockedPayment->refresh();
-
-                return ['payment' => $lockedPayment, 'previousStatus' => $previousStatus];
+                ]);
+            } elseif ($charged && ! PaymentStateMachine::canTransition($from, $newStatus)
+                && PaymentStateMachine::canConfirmByProvider($from, $newStatus)) {
+                // 3DS or SBP outlasting the payment's lifetime, or a second try after a Fail.
+                $updateData['error_code'] = null;
+                $updateData['error_message'] = null;
+                Log::warning('Webhook confirms a late payment', [
+                    'payment_id' => $lockedPayment->key,
+                    'from' => $from->value,
+                    'to' => $newStatus->value,
+                    'connector' => $connectorName,
+                ]);
+            } elseif (! PaymentStateMachine::canTransition($from, $newStatus)) {
+                return null;
             }
 
-            return null;
+            if ($updateData['status'] === PaymentStatus::Succeeded) {
+                $updateData['amount_received'] = $lockedPayment->amount;
+            }
+            $this->paymentRepository->update($lockedPayment, $updateData);
+
+            $lockedPayment->refresh();
+
+            return ['payment' => $lockedPayment, 'previousStatus' => $from->value];
         });
 
         if ($result) {

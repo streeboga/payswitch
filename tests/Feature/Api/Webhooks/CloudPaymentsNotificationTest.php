@@ -6,6 +6,7 @@ use App\Events\PaymentStatusChanged;
 use App\Services\WebhookReceiverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -123,6 +124,52 @@ test('check is refused with 12 when the currency is not the one we billed', func
 
     cpNotify($this, cpCheckParams($payment, ['Currency' => 'KZT']))
         ->assertOk()->assertExactJson(['code' => 12]);
+});
+
+// --- Поздний успех: деньги у плательщика уже списаны ---
+
+test('pay on an expired or failed payment brings it to succeeded and tells the merchant', function (PaymentStatus $from) {
+    Event::fake([PaymentStatusChanged::class]);
+    Log::spy();
+    $payment = cpPayment($this->merchant, ['status' => $from]);
+
+    cpNotify($this, cpPayParams($payment))->assertOk()->assertExactJson(['code' => 0]);
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
+    Event::assertDispatched(PaymentStatusChanged::class, fn ($e) => $e->previousStatus === $from->value);
+    Log::shouldHaveReceived('warning')->withArgs(fn ($message) => str_contains($message, 'late'))->once();
+})->with([PaymentStatus::Expired, PaymentStatus::Failed]);
+
+test('authorized pay on an expired payment brings it to requires_capture', function () {
+    Event::fake([PaymentStatusChanged::class]);
+    $payment = cpPayment($this->merchant, ['status' => PaymentStatus::Expired, 'capture_method' => CaptureMethod::Manual]);
+
+    cpNotify($this, cpPayParams($payment, ['Status' => 'Authorized']))->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::RequiresCapture);
+    Event::assertDispatched(PaymentStatusChanged::class);
+});
+
+test('pay on a cancelled payment is put before the merchant', function () {
+    Event::fake([PaymentStatusChanged::class]);
+    Log::spy();
+    $payment = cpPayment($this->merchant, ['status' => PaymentStatus::Cancelled]);
+
+    cpNotify($this, cpPayParams($payment))->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::RequiresMerchantAction);
+    Event::assertDispatched(PaymentStatusChanged::class);
+    Log::shouldHaveReceived('error')->once();
+});
+
+test('a repeated pay on a succeeded payment changes nothing', function () {
+    Event::fake([PaymentStatusChanged::class]);
+    $payment = cpPayment($this->merchant, ['status' => PaymentStatus::Succeeded, 'amount_received' => 5000]);
+
+    cpNotify($this, cpPayParams($payment))->assertOk()->assertExactJson(['code' => 0]);
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
+    Event::assertNotDispatched(PaymentStatusChanged::class);
 });
 
 test('check with the billed amount and currency on a payable payment gets 0', function () {

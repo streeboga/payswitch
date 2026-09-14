@@ -161,6 +161,31 @@ test('terminal statuses have no outgoing transitions', function () {
     }
 });
 
+// --- Подтверждение провайдером ---
+
+test('provider confirmation brings an expired or failed payment to success', function (PaymentStatus $from) {
+    expect(PaymentStateMachine::canConfirmByProvider($from, PaymentStatus::Succeeded))->toBeTrue()
+        ->and(PaymentStateMachine::canConfirmByProvider($from, PaymentStatus::RequiresCapture))->toBeTrue()
+        ->and(PaymentStateMachine::canConfirmByProvider($from, PaymentStatus::RequiresMerchantAction))->toBeTrue()
+        // Общая таблица при этом не расширилась.
+        ->and(PaymentStateMachine::canTransition($from, PaymentStatus::Succeeded))->toBeFalse();
+})->with([PaymentStatus::Expired, PaymentStatus::Failed]);
+
+test('provider confirmation of a cancelled payment only asks the merchant', function () {
+    expect(PaymentStateMachine::canConfirmByProvider(PaymentStatus::Cancelled, PaymentStatus::Succeeded))->toBeFalse()
+        ->and(PaymentStateMachine::canConfirmByProvider(PaymentStatus::Cancelled, PaymentStatus::RequiresMerchantAction))->toBeTrue()
+        ->and(PaymentStateMachine::canConfirmByProvider(PaymentStatus::Succeeded, PaymentStatus::Succeeded))->toBeFalse();
+});
+
+test('requires_merchant_action is reachable from the open statuses', function (PaymentStatus $from) {
+    expect(PaymentStateMachine::canTransition($from, PaymentStatus::RequiresMerchantAction))->toBeTrue();
+})->with([
+    PaymentStatus::RequiresPaymentMethod,
+    PaymentStatus::RequiresConfirmation,
+    PaymentStatus::RequiresCustomerAction,
+    PaymentStatus::Processing,
+]);
+
 // --- assertTransition ---
 
 test('assertTransition passes on valid transition', function () {
