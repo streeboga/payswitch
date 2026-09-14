@@ -10,6 +10,12 @@ when:
   - event: [push, pull_request, manual]
     branch: main
 
+clone:
+  - name: clone
+    image: woodpeckerci/plugin-git:2.10.0
+    settings:
+      recursive: false   # в main указатель .claude/worktrees/testing-phase1 без .gitmodules, submodule update падает
+
 steps:
   - name: build-front
     image: node:22-bookworm
