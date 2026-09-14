@@ -14,6 +14,7 @@ use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -71,10 +72,23 @@ final readonly class MerchantService
     {
         $organization = $this->merchantRepository->findOrganizationByKey($dto->organization_id);
 
-        return $this->merchantRepository->createMerchantAccount([
-            'org_id' => $organization->id,
-            'name' => $dto->name,
-        ]);
+        // Мерчант без профиля не может провести ни одного платежа: оплата
+        // берёт профиль по умолчанию и без него отвечает «No business profile
+        // configured». Раньше профиль заводился отдельным вызовом, и кто его
+        // забывал, получал мерчанта-пустышку. Теперь одно без другого не бывает.
+        return DB::transaction(function () use ($organization, $dto) {
+            $merchant = $this->merchantRepository->createMerchantAccount([
+                'org_id' => $organization->id,
+                'name' => $dto->name,
+            ]);
+
+            $this->merchantRepository->createBusinessProfile([
+                'merchant_account_id' => $merchant->id,
+                'name' => 'default',
+            ]);
+
+            return $merchant;
+        });
     }
 
     public function findProfile(string $profileKey): BusinessProfile

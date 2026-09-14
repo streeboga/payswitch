@@ -26,6 +26,24 @@ test('can create merchant account', function () {
     expect($response->json('data.attributes.publishable_key'))->toStartWith('pk_');
 });
 
+// Мерчант, заведённый одним вызовом, сразу может принять платёж: профиль по
+// умолчанию появляется вместе с ним, без отдельного POST /profiles.
+test('creating a merchant creates its default business profile and it can take a payment', function () {
+    $merchantKey = $this->postJson('/api/v1/merchants', [
+        'name' => 'One Call Merchant',
+        'organization_id' => $this->org->key,
+    ], ['api-key' => 'admin_test_key'])->assertStatus(201)->json('data.id');
+
+    $this->getJson("/api/v1/merchants/{$merchantKey}/profile", ['api-key' => 'admin_test_key'])->assertOk();
+
+    $secret = $this->postJson("/api/v1/merchants/{$merchantKey}/api-keys", [
+        'name' => 'k', 'type' => 'secret',
+    ], ['api-key' => 'admin_test_key'])->assertStatus(201)->json('data.attributes.api_key');
+
+    $this->postJson('/api/v1/payments', ['amount' => 1000, 'currency' => 'RUB'], ['api-key' => $secret])
+        ->assertSuccessful();
+});
+
 test('can retrieve merchant account by key', function () {
     $createResponse = $this->postJson('/api/v1/merchants', [
         'name' => 'Fetch Merchant',

@@ -1,0 +1,8 @@
+# Планировщик Laravel для psapi.gnzs.pro (routes/console.php).
+# deploy/deploy.sh кладёт этот файл в /etc/cron.d/psapi-gnzs-pro.
+# От www-data: приложение работает от него, и storage принадлежит ему.
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HOME=/tmp
+
+* * * * * www-data cd /var/www/psapi.gnzs.pro && php artisan schedule:run --no-interaction >> storage/logs/schedule.log 2>&1
