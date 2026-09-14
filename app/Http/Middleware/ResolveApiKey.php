@@ -6,7 +6,9 @@ namespace App\Http\Middleware;
 
 use App\Enums\ApiKeyType;
 use Closure;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Streeboga\PaymentData\Exceptions\ApiAuthenticationException;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -15,6 +17,30 @@ use Symfony\Component\HttpFoundation\Response;
 final class ResolveApiKey
 {
     public function handle(Request $request, Closure $next): Response
+    {
+        // Лимит payswitch-api считается после аутентификации и неверные ключи
+        // не видит. Неудачные попытки считаются здесь, по IP.
+        $failuresKey = 'payswitch-api-auth-failures:'.$request->ip();
+        $maxFailures = (int) config('payswitch.rate_limit.unauthenticated', 30);
+
+        if (RateLimiter::tooManyAttempts($failuresKey, $maxFailures)) {
+            throw new ThrottleRequestsException('Too Many Attempts.', null, [
+                'Retry-After' => RateLimiter::availableIn($failuresKey),
+            ]);
+        }
+
+        try {
+            $this->resolve($request);
+        } catch (ApiAuthenticationException $e) {
+            RateLimiter::hit($failuresKey);
+
+            throw $e;
+        }
+
+        return $next($request);
+    }
+
+    private function resolve(Request $request): void
     {
         $apiKey = $request->header('api-key');
 
@@ -27,7 +53,7 @@ final class ResolveApiKey
         if ($adminKey && is_string($adminKey) && hash_equals($adminKey, $apiKey)) {
             $request->attributes->set('api_key_type', 'admin');
 
-            return $next($request);
+            return;
         }
 
         if (strlen($apiKey) < 10) {
@@ -61,7 +87,7 @@ final class ResolveApiKey
             $request->attributes->set('merchant_id', $apiKeyModel->merchant_account_id);
             $request->attributes->set('api_key', $apiKeyModel);
 
-            return $next($request);
+            return;
         }
 
         $merchantAccount = MerchantAccount::where('publishable_key', $apiKey)->first();
@@ -70,7 +96,7 @@ final class ResolveApiKey
             $request->attributes->set('api_key_type', 'publishable');
             $request->attributes->set('merchant_id', $merchantAccount->id);
 
-            return $next($request);
+            return;
         }
 
         throw new ApiAuthenticationException('Invalid API key', 'invalid_api_key', 'authentication_error');

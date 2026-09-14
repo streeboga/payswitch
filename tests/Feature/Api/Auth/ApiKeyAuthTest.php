@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
+use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Support\IdGenerator;
 
 uses(RefreshDatabase::class);
@@ -170,6 +172,49 @@ test('revoked status is not revealed by key prefix alone', function () {
     $this->getJson('/api/v1/payments/pay_nonexistent', ['api-key' => $forged])
         ->assertStatus(401)
         ->assertJsonPath('errors.0.code', 'invalid_api_key');
+});
+
+// --- Rate limiting: publishable по мерчанту и IP, неудачные попытки по IP (С8) ---
+
+test('publishable limit is counted per merchant and ip', function () {
+    [$merchant] = createMerchantWithApiKey();
+    $payment = PaymentIntent::create([
+        'merchant_account_id' => $merchant->id,
+        'amount' => 10000,
+        'currency' => 'RUB',
+        'status' => PaymentStatus::RequiresPaymentMethod,
+        'session_expiry' => 900,
+        'expires_on' => now()->addMinutes(15),
+    ]);
+    $url = "/api/v1/payments/{$payment->key}";
+    $headers = ['api-key' => $merchant->publishable_key, 'X-Client-Secret' => $payment->client_secret];
+    $limit = config('payswitch.rate_limit.publishable');
+
+    for ($i = 0; $i < $limit; $i++) {
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.1'])->getJson($url, $headers)->assertOk();
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.1'])->getJson($url, $headers)->assertStatus(429);
+    // Другой плательщик того же мерчанта чекаут не теряет.
+    $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.2'])->getJson($url, $headers)->assertOk();
+});
+
+test('failed api key attempts are limited per ip', function () {
+    $max = config('payswitch.rate_limit.unauthenticated');
+
+    for ($i = 0; $i < $max; $i++) {
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.3'])
+            ->getJson('/api/v1/payments', ['api-key' => 'snd_wrong_key_'.$i])
+            ->assertStatus(401);
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.3'])
+        ->getJson('/api/v1/payments', ['api-key' => 'snd_wrong_key_last'])
+        ->assertStatus(429);
+
+    $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.4'])
+        ->getJson('/api/v1/payments', ['api-key' => 'snd_wrong_key_other'])
+        ->assertStatus(401);
 });
 
 // --- Rate limiting ---

@@ -73,6 +73,12 @@ class AppServiceProvider extends ServiceProvider
             $limit = config("payswitch.rate_limit.{$type}", 60);
             $key = $request->attributes->get('merchant_id', $request->ip());
 
+            // publishable-запросы шлют браузеры плательщиков: общий на мерчанта
+            // счётчик давал одному плательщику выбить чекаут остальным.
+            if ($type === 'publishable') {
+                $key .= ':'.$request->ip();
+            }
+
             return Limit::perMinute($limit)->by($type.':'.$key);
         });
     }
