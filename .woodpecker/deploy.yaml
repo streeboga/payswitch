@@ -1,0 +1,50 @@
+# Woodpecker CI (https://ci.eq.team): тесты на PR и push в main, на push в main — выкладка.
+# Сервер сам проверяет sha (только вершина main), выкладывает ровно его и откатывает код
+# при провале /up: приёмник /usr/local/sbin/ci-deploy payswitch, исходник в gateway-audit/ci/receiver.
+# Репозиторий публичный: секреты только на push и manual, PR из форков — с одобрением.
+# widget/ и dashboard/ собираются здесь до выкладки; на сервере их собирает приёмник (payswitch.gnzs.pro отдаёт dashboard/dist).
+when:
+  - event: [push, pull_request, manual]
+    branch: main
+
+steps:
+  - name: build-front
+    image: node:22-bookworm
+    commands:
+      - npm --prefix widget ci --no-audit --no-fund && npm --prefix widget run build
+      - npm --prefix dashboard ci --no-audit --no-fund && npm --prefix dashboard run build
+
+  - name: test
+    image: rosary-ci-php:8.4-v2
+    pull: false
+    environment:
+      # phpunit.xml: sqlite :memory:.
+      COMPOSER_ALLOW_SUPERUSER: '1'
+    commands:
+      - composer install --prefer-dist --no-interaction --no-progress
+      - cp .env.example .env && php artisan key:generate
+      - php -d memory_limit=1G vendor/bin/pest   # 128M образа кончаются на середине набора
+
+  - name: deploy
+    image: alpine:3.22
+    when:
+      - event: [push, manual]
+        branch: main
+    environment:
+      DEPLOY_KEY: {from_secret: deploy_key}
+      DEPLOY_KNOWN_HOSTS: {from_secret: deploy_known_hosts}
+    commands:
+      - apk add --no-cache openssh-client
+      - install -d -m 700 /tmp/k && printf '%s\n' "$DEPLOY_KEY" > /tmp/k/key && chmod 600 /tmp/k/key
+      - printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > /tmp/k/kh
+      - ssh -i /tmp/k/key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/tmp/k/kh -o ServerAliveInterval=15 deploy@85.198.101.184 "deploy $CI_COMMIT_SHA"
+
+  - name: health
+    image: alpine:3.22
+    when:
+      - event: [push, manual]
+        branch: main
+    commands:
+      - apk add --no-cache curl
+      - curl --fail --silent --show-error --output /dev/null --retry 10 --retry-delay 3 --retry-all-errors https://psapi.gnzs.pro/up
+      - curl --fail --silent --show-error --output /dev/null --retry 10 --retry-delay 3 --retry-all-errors https://payswitch.gnzs.pro/
