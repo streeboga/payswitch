@@ -69,6 +69,13 @@ final class BusinessProfileQueryBuilder
         return $this;
     }
 
+    public function oldest(): self
+    {
+        $this->query->orderBy('id');
+
+        return $this;
+    }
+
     public function firstOrFail(): BusinessProfile
     {
         return $this->query->firstOrFail();
