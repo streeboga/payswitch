@@ -25,6 +25,8 @@ interface PaymentIntentRepositoryInterface
 
     public function findByKeyOrNull(string $key, int|string $merchantAccountId): ?PaymentIntent;
 
+    public function findByIdempotencyKey(string $idempotencyKey, int|string $merchantAccountId): ?PaymentIntent;
+
     /**
      * @param  array<string, mixed>  $attributes
      */

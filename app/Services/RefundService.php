@@ -11,6 +11,7 @@ use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Repositories\Contracts\RefundRepositoryInterface;
 use App\Repositories\Contracts\WebhookEventRepositoryInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -27,9 +28,54 @@ final readonly class RefundService
         private WebhookEventRepositoryInterface $webhookRepository,
     ) {}
 
+    /**
+     * Повтор с тем же Idempotency-Key у того же мерчанта отдаёт уже созданный возврат
+     * (wasRecentlyCreated === false). Тот же ключ с другой суммой или по другому
+     * платежу — 422 idempotency_key_reused.
+     */
     public function create(CreateRefundData $dto, int|string $merchantAccountId): Refund
     {
+        try {
+            return $this->createLocked($dto, $merchantAccountId);
+        } catch (UniqueConstraintViolationException $e) {
+            // Гонка одного ключа: второй запрос вставил возврат между нашим поиском и
+            // вставкой (по одному платежу это отсекает блокировка, по разным — только индекс).
+            $existing = $dto->idempotency_key !== null
+                ? $this->refundRepository->findByIdempotencyKey($dto->idempotency_key, $merchantAccountId)
+                : null;
+
+            if (! $existing) {
+                throw $e;
+            }
+
+            return $this->replayed($existing, $dto, $existing->paymentIntent->key);
+        }
+    }
+
+    private function replayed(Refund $existing, CreateRefundData $dto, string $paymentKey): Refund
+    {
+        if ($existing->amount !== $dto->amount || $paymentKey !== $dto->payment_id) {
+            throw new PaymentException(
+                'Idempotency-Key was already used with different parameters',
+                'idempotency_key_reused',
+                'invalid_request_error',
+                422,
+            );
+        }
+
+        return $existing;
+    }
+
+    private function createLocked(CreateRefundData $dto, int|string $merchantAccountId): Refund
+    {
         return DB::transaction(function () use ($dto, $merchantAccountId) {
+            if ($dto->idempotency_key !== null) {
+                $existing = $this->refundRepository->findByIdempotencyKey($dto->idempotency_key, $merchantAccountId);
+                if ($existing) {
+                    return $this->replayed($existing, $dto, $existing->paymentIntent->key);
+                }
+            }
+
             $payment = $this->paymentRepository->findByKeyLocked($dto->payment_id, $merchantAccountId);
 
             if (! in_array($payment->status, [PaymentStatus::Succeeded, PaymentStatus::PartiallyCaptured, PaymentStatus::PartiallyCapturedAndCapturable])) {
@@ -101,6 +147,7 @@ final readonly class RefundService
                 'error_code' => $refundResult['success'] ? null : ($refundResult['code'] ?? null),
                 'error_message' => $refundResult['success'] ? null : ($refundResult['message'] ?? null),
                 'metadata' => $dto->metadata,
+                'idempotency_key' => $dto->idempotency_key,
             ]);
 
             // Webhook event

@@ -10,6 +10,14 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class StorePaymentRequest extends FormRequest
 {
+    /**
+     * Ключ идемпотентности приходит заголовком; поле тела с тем же именем не принимается.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['idempotency_key' => $this->header('Idempotency-Key')]);
+    }
+
     /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {
@@ -29,6 +37,7 @@ final class StorePaymentRequest extends FormRequest
             'payment_method_data' => ['required_if:confirm,true', 'array'],
             'payment_method_data.*' => ['sometimes'],
             'connector' => ['sometimes', 'string'],
+            'idempotency_key' => ['nullable', 'string', 'max:255'],
         ];
     }
 

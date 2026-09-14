@@ -30,6 +30,11 @@ final readonly class RefundRepository implements RefundRepositoryInterface
         return $this->query()->forMerchant($merchantAccountId)->whereKey($key)->firstOrFail();
     }
 
+    public function findByIdempotencyKey(string $idempotencyKey, int|string $merchantAccountId): ?Refund
+    {
+        return $this->query()->forMerchant($merchantAccountId)->whereIdempotencyKey($idempotencyKey)->first();
+    }
+
     public function sumSucceededForPayment(int $paymentIntentId): int
     {
         return $this->query()->forPaymentIntent($paymentIntentId)->withStatus(RefundStatus::Succeeded)->sumAmount();

@@ -31,6 +31,13 @@ final class PaymentIntentQueryBuilder
         return $this;
     }
 
+    public function whereIdempotencyKey(string $idempotencyKey): self
+    {
+        $this->query->where('idempotency_key', $idempotencyKey);
+
+        return $this;
+    }
+
     public function whereKey(string $key): self
     {
         $this->query->where('key', $key);

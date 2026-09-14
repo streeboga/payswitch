@@ -10,6 +10,7 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
@@ -29,8 +30,20 @@ final readonly class PaymentService
         private PaymentConfirmationService $confirmationService,
     ) {}
 
+    /**
+     * Повтор с тем же Idempotency-Key у того же мерчанта отдаёт уже созданный платёж
+     * (у него wasRecentlyCreated === false — по этому контроллер понимает, что это повтор).
+     * Тот же ключ с другой суммой или валютой — 422 idempotency_key_reused.
+     */
     public function create(CreatePaymentData $dto, int|string $merchantAccountId): PaymentIntent
     {
+        if ($dto->idempotency_key !== null) {
+            $existing = $this->paymentRepository->findByIdempotencyKey($dto->idempotency_key, $merchantAccountId);
+            if ($existing) {
+                return $this->replayed($existing, $dto);
+            }
+        }
+
         if ($dto->payment_id) {
             $existing = $this->paymentRepository->findByKeyOrNull($dto->payment_id, $merchantAccountId);
             if ($existing) {
@@ -49,7 +62,7 @@ final readonly class PaymentService
 
         $businessProfileId = $this->resolveBusinessProfileId($dto->profile_id, $merchantAccountId);
 
-        return $this->paymentRepository->create([
+        $attributes = [
             'merchant_account_id' => $merchantAccountId,
             'business_profile_id' => $businessProfileId,
             'amount' => $dto->amount,
@@ -65,7 +78,40 @@ final readonly class PaymentService
             'attempt_count' => 1,
             'expires_on' => now()->addSeconds($expiry),
             'amount_capturable' => $dto->amount,
-        ]);
+            'idempotency_key' => $dto->idempotency_key,
+        ];
+
+        try {
+            // Вызывается вне транзакции: на Postgres упавший INSERT внутри неё сделал бы
+            // транзакцию непригодной и поиск ниже упал бы.
+            return $this->paymentRepository->create($attributes);
+        } catch (UniqueConstraintViolationException $e) {
+            // Гонка двух запросов с одним ключом: между нашим поиском и вставкой успел
+            // вставить другой. Отдаём его платёж.
+            $existing = $dto->idempotency_key !== null
+                ? $this->paymentRepository->findByIdempotencyKey($dto->idempotency_key, $merchantAccountId)
+                : null;
+
+            if (! $existing) {
+                throw $e;
+            }
+
+            return $this->replayed($existing, $dto);
+        }
+    }
+
+    private function replayed(PaymentIntent $existing, CreatePaymentData $dto): PaymentIntent
+    {
+        if ($existing->amount !== $dto->amount || $existing->currency !== strtoupper($dto->currency)) {
+            throw new PaymentException(
+                'Idempotency-Key was already used with different parameters',
+                'idempotency_key_reused',
+                'invalid_request_error',
+                422,
+            );
+        }
+
+        return $existing;
     }
 
     private function resolveBusinessProfileId(?string $profileKey, int|string $merchantAccountId): int

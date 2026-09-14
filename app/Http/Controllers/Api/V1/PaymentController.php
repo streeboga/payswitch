@@ -12,6 +12,7 @@ use App\Http\Resources\PaymentIntentResource;
 use App\Services\DashboardPaymentService;
 use App\Services\PaymentService;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\HeaderParameter;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
@@ -65,15 +66,29 @@ final class PaymentController extends Controller
      *
      * Creates a new payment intent for the authenticated merchant. The payment can optionally
      * be confirmed immediately by setting the confirm flag to true and providing payment method data.
+     *
+     * Idempotency: send an `Idempotency-Key` header (up to 255 characters, unique per merchant).
+     * A repeat with the same key returns the payment created by the first request, in its current
+     * state, with status 200 and the `Idempotent-Replayed: true` header — nothing is sent to the PSP
+     * again, `confirm` included. The same key with a different amount or currency is rejected
+     * with 422 `idempotency_key_reused`.
      */
+    #[HeaderParameter('Idempotency-Key', description: 'Client-generated key, up to 255 characters, unique per merchant', required: false, type: 'string', example: 'order-42')]
     #[Response(201, description: 'Payment intent created')]
-    #[Response(422, description: 'Validation error')]
+    #[Response(200, description: 'Replay of a request with the same Idempotency-Key: the existing payment intent')]
+    #[Response(422, description: 'Validation error, or idempotency_key_reused')]
     public function store(StorePaymentRequest $request): JsonResponse
     {
         $dto = $request->toDto();
         $merchantAccountId = $request->attributes->get('merchant_id');
 
         $payment = $this->paymentService->create($dto, $merchantAccountId);
+
+        if (! $payment->wasRecentlyCreated) {
+            return (new PaymentIntentResource($payment))
+                ->withHeader('Idempotent-Replayed', 'true')
+                ->toResponse($request);
+        }
 
         if ($dto->confirm) {
             $payment = $this->paymentService->confirm($payment->key, $request->toConfirmDto(), $merchantAccountId);
