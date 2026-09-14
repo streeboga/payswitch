@@ -61,22 +61,24 @@ final class StripeConnector implements ConnectorInterface
 
         return $this->makeRequest('POST', "/payment_intents/{$piId}/capture", [
             'amount_to_capture' => $params['amount'] ?? 0,
-        ], $params['payment_id'] ?? null);
+        ], self::idempotencyKey($params, 'capture'));
     }
 
     public function refund(array $params): array
     {
+        // Ключ — наш возврат: по payment_id Stripe отдавал бы на второй частичный возврат
+        // первый (или ошибку идемпотентности при другой сумме).
         return $this->makeRequest('POST', '/refunds', [
             'payment_intent' => $params['transaction_id'] ?? '',
             'amount' => $params['amount'] ?? 0,
-        ], $params['payment_id'] ?? null);
+        ], $params['refund_id'] ?? null);
     }
 
     public function void(array $params): array
     {
         $piId = $params['transaction_id'] ?? '';
 
-        return $this->makeRequest('POST', "/payment_intents/{$piId}/cancel", [], $params['payment_id'] ?? null);
+        return $this->makeRequest('POST', "/payment_intents/{$piId}/cancel", [], self::idempotencyKey($params, 'cancel'));
     }
 
     public function verifyWebhookSignature(string $payload, array $headers): bool
@@ -172,7 +174,7 @@ final class StripeConnector implements ConnectorInterface
             'cancel_url' => $cancelUrl,
         ];
 
-        $result = $this->makeRequest('POST', '/checkout/sessions', $body, $params['payment_id'] ?? null);
+        $result = $this->makeRequest('POST', '/checkout/sessions', $body, self::idempotencyKey($params, 'session'));
 
         if (! empty($result['data']['url'])) {
             $result['redirect_url'] = $result['data']['url'];
@@ -218,7 +220,19 @@ final class StripeConnector implements ConnectorInterface
             $body['return_url'] = $params['return_url'];
         }
 
-        return $this->makeRequest('POST', '/payment_intents', $body, $params['payment_id'] ?? null);
+        return $this->makeRequest('POST', '/payment_intents', $body, self::idempotencyKey($params, 'intent'));
+    }
+
+    /**
+     * Ключ идемпотентности Stripe привязан к одному запросу: тот же ключ на другой эндпоинт
+     * или с другими параметрами Stripe отклоняет. Один payment_id на сессию, PaymentIntent,
+     * списание и отмену ломал вторую операцию — поэтому суффикс операции.
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private static function idempotencyKey(array $params, string $operation): ?string
+    {
+        return empty($params['payment_id']) ? null : "{$params['payment_id']}:{$operation}";
     }
 
     private function makeRequest(string $method, string $endpoint, array $data, ?string $idempotencyKey = null): array
