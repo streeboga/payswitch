@@ -82,15 +82,27 @@ final class DeliverWebhookJob implements ShouldQueue
             'updated' => $event->created_at->toIso8601String(),
         ], JSON_THROW_ON_ERROR);
 
-        $signature = WebhookSigner::sign($payload, $profile->payment_response_hash_key);
+        // Новая подпись с меткой времени (С7): приёмник отвергает старую метку,
+        // повтор перехваченного вебхука не проходит. Метка — на попытку, не на
+        // событие: наш ретрай несёт свежую метку, повтор злоумышленника — старую.
+        $timestamp = time();
+        $signatureV2 = WebhookSigner::signWithTimestamp($payload, $profile->payment_response_hash_key, $timestamp);
+
+        $headers = [
+            'Content-Type' => 'application/json',
+            'x-webhook-timestamp' => (string) $timestamp,
+            'x-webhook-signature' => $signatureV2,
+            'x-webhook-event-id' => $event->key,
+        ];
+
+        // Старую подпись шлём параллельно, пока не все приёмники понимают v2.
+        if (config('payswitch.webhook.send_legacy_signature', true)) {
+            $headers['x-webhook-signature-512'] = WebhookSigner::sign($payload, $profile->payment_response_hash_key);
+        }
 
         try {
             $response = Http::timeout(config('payswitch.webhook.timeout', 30))
-                ->withHeaders([
-                    'Content-Type' => 'application/json',
-                    'x-webhook-signature-512' => $signature,
-                    'x-webhook-event-id' => $event->key,
-                ])
+                ->withHeaders($headers)
                 ->withBody($payload, 'application/json')
                 ->post($profile->webhook_url);
 

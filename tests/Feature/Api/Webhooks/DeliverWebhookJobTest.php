@@ -175,6 +175,35 @@ test('sends x-webhook-signature-512 header', function () {
     });
 });
 
+test('sends timestamped v2 signature valid for the sent timestamp (С7)', function () {
+    Http::fake(['*' => Http::response('ok', 200)]);
+
+    app()->call([new DeliverWebhookJob($this->event->id), 'handle']);
+
+    $key = $this->profile->fresh()->payment_response_hash_key;
+    Http::assertSent(function ($request) use ($key) {
+        $ts = $request->header('x-webhook-timestamp')[0] ?? '';
+        $sig = $request->header('x-webhook-signature')[0] ?? '';
+
+        return ctype_digit($ts)
+            && abs((int) $ts - time()) <= 5
+            && hash_equals(WebhookSigner::signWithTimestamp($request->body(), $key, (int) $ts), $sig)
+            // подпись не совпадает со старой (по голому телу) — метка учтена
+            && ! hash_equals(WebhookSigner::sign($request->body(), $key), $sig);
+    });
+});
+
+test('legacy signature header is dropped when send_legacy is off (шаг 3)', function () {
+    config()->set('payswitch.webhook.send_legacy_signature', false);
+    Http::fake(['*' => Http::response('ok', 200)]);
+
+    app()->call([new DeliverWebhookJob($this->event->id), 'handle']);
+
+    Http::assertSent(fn ($request) => $request->hasHeader('x-webhook-signature')
+        && $request->hasHeader('x-webhook-timestamp')
+        && ! $request->hasHeader('x-webhook-signature-512'));
+});
+
 test('body carries the time of the fact, not of the last attempt, and is signed', function () {
     $this->travelTo(now()->subHour());
     $event = WebhookEvent::create([

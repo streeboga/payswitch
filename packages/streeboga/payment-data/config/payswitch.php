@@ -70,6 +70,10 @@ return [
         'retry_schedule' => [1, 5, 5, 10, 10, 10, 10, 10, 60, 60, 60, 60, 60, 360, 360, 360], // minutes (job converts to seconds)
         'max_attempts' => 16,
         'timeout' => 30, // seconds
+        // Слать старую подпись x-webhook-signature-512 рядом с новой (С7).
+        // На время миграции — true: приёмники, ещё не понимающие v2, проверяют
+        // по ней. Выключается последним шагом, когда все приёмники требуют v2.
+        'send_legacy_signature' => env('PAYSWITCH_WEBHOOK_SEND_LEGACY', true),
     ],
 
     /*
