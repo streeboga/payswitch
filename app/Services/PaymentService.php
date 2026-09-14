@@ -375,15 +375,18 @@ final readonly class PaymentService
                 if ($lastAttempt) {
                     $mca = $this->merchantRepository->findConnectorByMerchantAndName($merchantAccountId, $lastAttempt->connector);
                     if ($mca) {
-                        try {
-                            $connector = ConnectorFactory::resolve($mca);
-                            $connector->void(['transaction_id' => $lastAttempt->connector_transaction_id, 'payment_id' => $payment->key]);
-                        } catch (\Throwable $e) {
-                            Log::warning("Failed to void authorization on cancel: {$e->getMessage()}");
-                        }
+                        $this->voidAtConnector($payment, $mca, $lastAttempt->connector_transaction_id);
                     }
                 }
             }
+
+            // requires_customer_action с сессией у провайдера отменяется только у нас.
+            // Ни один коннектор не умеет закрыть сессию через ConnectorInterface (void у них —
+            // отмена авторизации: Stripe ждёт PaymentIntent, а в попытке лежит cs_…), так что
+            // ссылка на оплату у провайдера остаётся оплачиваемой до своего истечения, а
+            // пришедшая после отмены оплата в cancelled уже не переведётся. Кандидаты на
+            // отдельный метод: T-Bank Cancel (NEW → CANCELED), Stripe checkout/sessions/{id}/expire,
+            // RBS decline.do.
 
             PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Cancelled);
             $this->paymentRepository->update($payment, ['status' => PaymentStatus::Cancelled]);
@@ -396,6 +399,38 @@ final readonly class PaymentService
         $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
 
         return $result['payment'];
+    }
+
+    /**
+     * Отмена холда у провайдера. Любая неудача — исключение, исключение, отказ или
+     * неизвестный исход — не глотается: иначе платёж становился cancelled, а деньги
+     * клиента оставались заблокированы. Транзакция отмены откатывается, клиенту 502.
+     */
+    private function voidAtConnector(PaymentIntent $payment, MerchantConnectorAccount $mca, ?string $transactionId): void
+    {
+        try {
+            $result = ConnectorFactory::resolve($mca)->void(['transaction_id' => $transactionId, 'payment_id' => $payment->key]);
+        } catch (\Throwable $e) {
+            $result = ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_exception'];
+        }
+
+        if (($result['success'] ?? false) === true) {
+            return;
+        }
+
+        Log::error('Void at connector failed, payment not cancelled', [
+            'payment_id' => $payment->key,
+            'connector' => $mca->connector_name,
+            'code' => $result['code'] ?? null,
+            'message' => $result['message'] ?? null,
+        ]);
+
+        throw new PaymentException(
+            'Failed to void the authorization at the connector: '.($result['message'] ?? 'unknown error'),
+            'void_failed',
+            'connector_error',
+            502,
+        );
     }
 
     public function sync(string $paymentKey, int|string $merchantAccountId): PaymentIntent

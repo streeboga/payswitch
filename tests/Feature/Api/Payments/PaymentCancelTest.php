@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
@@ -15,6 +16,7 @@ use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Support\IdGenerator;
+use Tests\Helpers\ScriptedConnector;
 
 uses(RefreshDatabase::class);
 
@@ -214,120 +216,28 @@ test('void receives correct transaction_id and payment_id', function () {
     expect($spyClass::$voidParams['payment_id'])->toBe($paymentId);
 });
 
-test('cancel succeeds even when void throws exception', function () {
-    // Register a connector whose void() throws
-    $throwingVoidClass = new class([]) implements ConnectorInterface
-    {
-        public function __construct(?array $credentials = []) {}
+test('ошибка void у провайдера не глотается: платёж не cancelled, 502', function (array|Throwable $voidAnswer) {
+    Log::spy();
+    ScriptedConnector::register('scripted_void', ['void' => $voidAnswer]);
 
-        public static function capabilities(): ConnectorCapabilities
-        {
-            return new ConnectorCapabilities(
-                defaultDisplayName: ['en' => 'Test'],
-                logoPath: '/logos/test.svg',
-                directMethods: [],
-                fallbackSessionType: SessionResultType::ServerRedirect,
-                amountUnit: AmountUnit::MinorUnits,
-            );
-        }
-
-        public function getName(): string
-        {
-            return 'throw_void';
-        }
-
-        public function purchase(array $params): array
-        {
-            return ['success' => true, 'transaction_id' => 'tv_ch_'.uniqid(), 'message' => 'ok', 'code' => 'ok', 'data' => []];
-        }
-
-        public function authorize(array $params): array
-        {
-            return ['success' => true, 'transaction_id' => 'tv_auth_'.uniqid(), 'message' => 'ok', 'code' => 'ok', 'data' => []];
-        }
-
-        public function capture(array $params): array
-        {
-            return ['success' => true, 'transaction_id' => 'x'];
-        }
-
-        public function refund(array $params): array
-        {
-            return ['success' => true, 'transaction_id' => 'x'];
-        }
-
-        public function void(array $params): array
-        {
-            throw new RuntimeException('PSP void endpoint is down');
-        }
-
-        public function verifyWebhookSignature(string $payload, array $headers): bool
-        {
-            return true;
-        }
-
-        public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
-        {
-            return null;
-        }
-
-        public function extractPaymentIdFromWebhook(array $payload): ?string
-        {
-            return null;
-        }
-
-        public function getPaymentStatus(array $params): array
-        {
-            return ['success' => true, 'transaction_id' => 'x', 'code' => 'ok', 'data' => ['status' => 'succeeded']];
-        }
-
-        public function createPaymentSession(array $params): array
-        {
-            return ['success' => false, 'code' => 'not_supported'];
-        }
-
-        public function testConnection(): array
-        {
-            return ['success' => true, 'message' => 'ok'];
-        }
-
-        public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
-        {
-            return null;
-        }
-    };
-
-    ConnectorFactory::register('throw_void', get_class($throwingVoidClass));
-
-    // Replace the connector MCA
     MerchantConnectorAccount::where('merchant_account_id', $this->merchant->id)
         ->where('connector_name', 'cancel_spy')
-        ->update(['connector_name' => 'throw_void']);
+        ->update(['connector_name' => 'scripted_void']);
 
-    // Create and authorize with this connector
-    $create = $this->postJson('/api/v1/payments', [
-        'amount' => 5000,
-        'currency' => 'USD',
-        'capture_method' => 'manual',
-    ], cancelApiHeaders());
+    $paymentId = createAndAuthorize();
 
-    $paymentId = $create->json('data.id');
+    $this->postJson("/api/v1/payments/{$paymentId}/cancel", [], cancelApiHeaders())
+        ->assertStatus(502)
+        ->assertJsonPath('errors.0.code', 'void_failed');
 
-    $this->postJson("/api/v1/payments/{$paymentId}/confirm", [
-        'payment_method' => 'card',
-        'payment_method_data' => [
-            'card' => [
-                'card_number' => '4242424242424242',
-                'card_exp_month' => '12',
-                'card_exp_year' => '2030',
-                'card_cvc' => '123',
-            ],
-        ],
-    ], cancelApiHeaders());
+    // Холд у клиента остался — значит, и у нас платёж всё ещё ждёт списания или отмены.
+    $this->getJson("/api/v1/payments/{$paymentId}", cancelApiHeaders())
+        ->assertJsonPath('data.attributes.status', 'requires_capture');
 
-    // Cancel should still succeed despite void() throwing
-    $response = $this->postJson("/api/v1/payments/{$paymentId}/cancel", [], cancelApiHeaders());
-
-    $response->assertOk()
-        ->assertJsonPath('data.attributes.status', 'cancelled');
-});
+    expect(ScriptedConnector::callsTo('void'))->toHaveCount(1);
+    Log::shouldHaveReceived('error')->withArgs(fn ($message, $context = []) => ($context['payment_id'] ?? null) === $paymentId)->once();
+})->with([
+    'исключение' => [new RuntimeException('PSP void endpoint is down')],
+    'отказ провайдера' => [['success' => false, 'transaction_id' => null, 'message' => 'Operation not allowed', 'code' => 'invalid_state']],
+    'таймаут, проглоченный драйвером' => [['success' => false, 'transaction_id' => null, 'message' => 'timeout', 'code' => 'connector_error']],
+]);
