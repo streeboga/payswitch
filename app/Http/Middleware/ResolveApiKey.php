@@ -19,19 +19,21 @@ final class ResolveApiKey
     public function handle(Request $request, Closure $next): Response
     {
         // Лимит payswitch-api считается после аутентификации и неверные ключи
-        // не видит. Неудачные попытки считаются здесь, по IP.
+        // не видит. Неудачные попытки считаются здесь, по IP — но режут только
+        // неудачи. Genesis, invoicing и apihub ходят с одного адреса: один
+        // проект с отозванным ключом не должен отнимать API у остальных.
         $failuresKey = 'payswitch-api-auth-failures:'.$request->ip();
         $maxFailures = (int) config('payswitch.rate_limit.unauthenticated', 30);
-
-        if (RateLimiter::tooManyAttempts($failuresKey, $maxFailures)) {
-            throw new ThrottleRequestsException('Too Many Attempts.', null, [
-                'Retry-After' => RateLimiter::availableIn($failuresKey),
-            ]);
-        }
 
         try {
             $this->resolve($request);
         } catch (ApiAuthenticationException $e) {
+            if (RateLimiter::tooManyAttempts($failuresKey, $maxFailures)) {
+                throw new ThrottleRequestsException('Too Many Attempts.', null, [
+                    'Retry-After' => RateLimiter::availableIn($failuresKey),
+                ]);
+            }
+
             RateLimiter::hit($failuresKey);
 
             throw $e;

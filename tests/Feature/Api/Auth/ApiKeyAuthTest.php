@@ -237,6 +237,22 @@ test('failed api key attempts are limited per ip', function () {
         ->assertStatus(401);
 });
 
+test('a valid key still passes from an ip that exhausted its failed attempts', function () {
+    // Genesis, invoicing и apihub ходят с одного адреса: чужие неудачи не
+    // должны отнимать API у проекта с верным ключом.
+    [, $rawKey] = createMerchantWithApiKey();
+    $max = config('payswitch.rate_limit.unauthenticated');
+
+    for ($i = 0; $i <= $max; $i++) {
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.5'])
+            ->getJson('/api/v1/payments', ['api-key' => 'snd_wrong_key_'.$i]);
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.5'])
+        ->getJson('/api/v1/payments', ['api-key' => $rawKey])
+        ->assertOk();
+});
+
 // --- Rate limiting ---
 
 test('api requests are rate limited', function () {
