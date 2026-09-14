@@ -139,7 +139,7 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
      *
      * @return array<string, mixed>
      */
-    public function webhookAck(?string $refusal): array
+    public function webhookAck(?string $refusal, array $payload = []): array
     {
         return ['code' => match ($refusal) {
             null => 0,

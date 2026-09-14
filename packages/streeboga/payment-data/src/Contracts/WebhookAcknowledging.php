@@ -21,7 +21,9 @@ interface WebhookAcknowledging
      *                                when the notified sum or currency is not the one we
      *                                billed, 'expired' when the payment ran out of time,
      *                                'unacceptable' otherwise — or null to allow it.
-     * @return array<string, mixed>
+     * @param  array<string, mixed>  $payload  The notification, for providers that want part
+     *                                         of it echoed back (Robokassa's InvId).
+     * @return array<string, mixed>|string A JSON body, or a plain-text one.
      */
-    public function webhookAck(?string $refusal): array;
+    public function webhookAck(?string $refusal, array $payload = []): array|string;
 }

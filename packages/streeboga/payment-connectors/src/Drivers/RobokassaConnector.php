@@ -8,6 +8,8 @@ use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentConnectors\PaymentSessionResult;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Contracts\WebhookAcknowledging;
+use Streeboga\PaymentData\Contracts\WebhookEventReading;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
@@ -21,7 +23,7 @@ use Streeboga\PaymentData\Enums\SessionResultType;
  *
  * @see https://docs.robokassa.ru/
  */
-final class RobokassaConnector implements ConnectorInterface
+final class RobokassaConnector implements ConnectorInterface, WebhookAcknowledging, WebhookEventReading
 {
     private string $login;
 
@@ -160,6 +162,27 @@ final class RobokassaConnector implements ConnectorInterface
         $expected = md5("{$outSum}:{$invId}:{$this->password2}{$shpString}");
 
         return hash_equals(strtolower($expected), strtolower($receivedSignature));
+    }
+
+    /**
+     * ResultURL carries no event: Robokassa calls it only for a paid invoice, and the
+     * signature has already been checked by the time anyone asks.
+     */
+    public function webhookEventType(array $payload): string
+    {
+        return 'result';
+    }
+
+    /**
+     * Robokassa keeps calling ResultURL until the body is `OK` followed by the InvId.
+     *
+     * @see https://docs.robokassa.ru/pay-interface/
+     */
+    public function webhookAck(?string $refusal, array $payload = []): array|string
+    {
+        return $refusal === null
+            ? 'OK'.(is_scalar($payload['InvId'] ?? null) ? $payload['InvId'] : '')
+            : ['status' => $refusal];
     }
 
     public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus

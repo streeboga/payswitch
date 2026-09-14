@@ -33,7 +33,7 @@ final readonly class WebhookReceiverService
     ) {}
 
     /**
-     * @return array{status: string, code: int, ack?: array<string, mixed>|null}
+     * @return array{status: string, code: int, ack?: array<string, mixed>|string|null}
      */
     public function handle(Request $request, string $merchantKey, string $mcaKey): array
     {
@@ -96,7 +96,7 @@ final readonly class WebhookReceiverService
         return [
             'status' => 'ok',
             'code' => 200,
-            'ack' => $connector instanceof WebhookAcknowledging ? $connector->webhookAck($refusal) : null,
+            'ack' => $connector instanceof WebhookAcknowledging ? $connector->webhookAck($refusal, $payload) : null,
         ];
     }
 
@@ -316,7 +316,7 @@ final readonly class WebhookReceiverService
      */
     private function notifiedAmount(ConnectorInterface $connector, array $payload): ?int
     {
-        $amount = $payload['Amount'] ?? $payload['amount'] ?? null;
+        $amount = $payload['Amount'] ?? $payload['amount'] ?? $payload['OutSum'] ?? null;
 
         if (! is_numeric($amount)) {
             return null;
