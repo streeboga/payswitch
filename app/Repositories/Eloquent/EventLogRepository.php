@@ -33,10 +33,7 @@ final readonly class EventLogRepository implements EventLogRepositoryInterface
 
         // Смены статуса пишет LogPaymentAudit в activity_log (spatie);
         // payment_audit_log с 18.03 не пополняется. Статусы — в json
-        // properties: wrap() даёт ->> в Postgres и json_extract в sqlite.
-        $grammar = DB::connection()->getQueryGrammar();
-        $previousStatus = $grammar->wrap('activity_log.properties->previous_status');
-        $newStatus = $grammar->wrap('activity_log.properties->new_status');
+        // properties: построитель даёт ->> в Postgres и json_extract в sqlite.
 
         $audits = DB::table('activity_log')
             ->join('payment_intents', function (JoinClause $join) {
@@ -51,8 +48,9 @@ final readonly class EventLogRepository implements EventLogRepositoryInterface
                 DB::raw("'status_change' as type"),
                 'activity_log.event as action',
                 'payment_intents.key as resource_id',
-                DB::raw("({$newStatus}) as status"),
-                DB::raw("(({$previousStatus}) || ' → ' || ({$newStatus})) as detail"),
+                'activity_log.properties->new_status as status',
+                // Прежний статус; «prev → new» собирается после выборки.
+                'activity_log.properties->previous_status as detail',
                 'activity_log.created_at',
             ]);
 
@@ -71,9 +69,17 @@ final readonly class EventLogRepository implements EventLogRepositoryInterface
 
         $union = $webhooks->unionAll($audits);
 
-        return DB::query()
+        $paginator = DB::query()
             ->fromSub($union, 'events')
             ->orderByDesc('created_at')
             ->paginate($perPage);
+
+        foreach ($paginator->items() as $row) {
+            if ($row instanceof \stdClass && $row->type === 'status_change') {
+                $row->detail = "{$row->detail} → {$row->status}";
+            }
+        }
+
+        return $paginator;
     }
 }
