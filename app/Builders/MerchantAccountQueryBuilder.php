@@ -51,8 +51,8 @@ final class MerchantAccountQueryBuilder
         $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $term);
 
         $this->query->where(function (Builder $q) use ($escaped) {
-            $q->where('name', 'like', "%{$escaped}%")
-                ->orWhere('key', 'like', "%{$escaped}%");
+            $q->whereLike('name', "%{$escaped}%")
+                ->orWhereLike('key', "%{$escaped}%");
         });
 
         return $this;

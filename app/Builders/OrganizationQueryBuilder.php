@@ -42,7 +42,7 @@ final class OrganizationQueryBuilder
     public function search(string $term): self
     {
         $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $term);
-        $this->query->where('name', 'like', "%{$escaped}%");
+        $this->query->whereLike('name', "%{$escaped}%");
 
         return $this;
     }

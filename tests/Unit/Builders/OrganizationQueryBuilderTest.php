@@ -69,7 +69,7 @@ test('search is case insensitive partial match', function () {
         ->search('acme')
         ->get();
 
-    // SQLite LIKE is case-insensitive for ASCII by default
+    // whereLike: ilike на Postgres, like на sqlite — поиск без учёта регистра на обоих
     expect($results)->toHaveCount(1)
         ->and($results->first()->name)->toBe('Acme Corporation');
 });

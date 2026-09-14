@@ -111,9 +111,9 @@ final class PaymentIntentQueryBuilder
         $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $term);
 
         $this->query->where(function (Builder $q) use ($escaped) {
-            $q->where('key', 'like', "%{$escaped}%")
-                ->orWhere('description', 'like', "%{$escaped}%")
-                ->orWhere('error_message', 'like', "%{$escaped}%");
+            $q->whereLike('key', "%{$escaped}%")
+                ->orWhereLike('description', "%{$escaped}%")
+                ->orWhereLike('error_message', "%{$escaped}%");
         });
 
         return $this;

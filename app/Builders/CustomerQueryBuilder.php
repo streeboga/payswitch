@@ -49,9 +49,9 @@ final class CustomerQueryBuilder
         $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $term);
 
         $this->query->where(function (Builder $q) use ($escaped) {
-            $q->where('name', 'like', "%{$escaped}%")
-                ->orWhere('email', 'like', "%{$escaped}%")
-                ->orWhere('key', 'like', "%{$escaped}%");
+            $q->whereLike('name', "%{$escaped}%")
+                ->orWhereLike('email', "%{$escaped}%")
+                ->orWhereLike('key', "%{$escaped}%");
         });
 
         return $this;
