@@ -77,6 +77,7 @@ final class PaymentController extends Controller
     #[Response(201, description: 'Payment intent created')]
     #[Response(200, description: 'Replay of a request with the same Idempotency-Key: the existing payment intent')]
     #[Response(422, description: 'Validation error, or idempotency_key_reused')]
+    #[Response(502, description: 'Connector outcome unknown (exception, timeout, unparsed answer): payment stays processing, no fallback to another PSP; connector_outcome_unknown')]
     public function store(StorePaymentRequest $request): JsonResponse
     {
         $dto = $request->toDto();
@@ -125,6 +126,7 @@ final class PaymentController extends Controller
     #[Response(200, description: 'Payment intent confirmed')]
     #[Response(404, description: 'Payment not found')]
     #[Response(422, description: 'Validation error')]
+    #[Response(502, description: 'Connector outcome unknown (exception, timeout, unparsed answer): payment stays processing, no fallback to another PSP; connector_outcome_unknown')]
     public function confirm(string $paymentKey, ConfirmPaymentRequest $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
@@ -159,6 +161,7 @@ final class PaymentController extends Controller
     #[PathParameter('paymentKey', description: 'Payment intent public key', example: 'pi_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Payment cancelled')]
     #[Response(404, description: 'Payment not found')]
+    #[Response(502, description: 'Void at the connector failed: payment is not cancelled; void_failed')]
     public function cancel(string $paymentKey, Request $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');

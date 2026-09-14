@@ -67,6 +67,7 @@ final class RefundController extends Controller
     #[Response(201, description: 'Refund created')]
     #[Response(200, description: 'Replay of a request with the same Idempotency-Key: the existing refund')]
     #[Response(422, description: 'Validation error, or idempotency_key_reused')]
+    #[Response(502, description: 'refund_pending: outcome unknown, refund stays pending (errors[].meta.refund_id); refund_failed: declined by the connector')]
     public function store(StoreRefundRequest $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
