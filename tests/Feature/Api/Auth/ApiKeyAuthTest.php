@@ -110,6 +110,68 @@ test('expired key returns 401 with api_key_expired code', function () {
         ->assertJsonPath('errors.0.code', 'api_key_expired');
 });
 
+// --- Key type from api_keys.type (С4) ---
+
+function createApiKeyOfType(MerchantAccount $merchant, string $type, ?string $rawKey = null): array
+{
+    $rawKey ??= IdGenerator::apiKey('sandbox');
+    $apiKey = ApiKey::create([
+        'merchant_account_id' => $merchant->id,
+        'key_hash' => hash('sha256', $rawKey),
+        'key_prefix' => substr($rawKey, 0, 20),
+        'name' => "{$type} key",
+        'type' => $type,
+    ]);
+
+    return [$rawKey, $apiKey];
+}
+
+test('publishable key from api_keys is not accepted as secret', function () {
+    [$merchant] = createMerchantWithApiKey();
+    [$rawKey] = createApiKeyOfType($merchant, 'publishable');
+
+    $this->getJson('/api/v1/payments', ['api-key' => $rawKey])
+        ->assertStatus(403)
+        ->assertJsonPath('errors.0.code', 'secret_key_required');
+});
+
+test('admin-type key from api_keys never grants admin api and works as merchant secret', function () {
+    [$merchant] = createMerchantWithApiKey();
+    [$rawKey] = createApiKeyOfType($merchant, 'admin');
+
+    $this->postJson('/api/v1/organizations', ['name' => 'Org'], ['api-key' => $rawKey])
+        ->assertStatus(403)
+        ->assertJsonPath('errors.0.code', 'admin_key_required');
+
+    $this->getJson('/api/v1/payments', ['api-key' => $rawKey])->assertOk();
+});
+
+test('keys sharing the same key_prefix both authenticate', function () {
+    [$merchantA] = createMerchantWithApiKey();
+    [$merchantB] = createMerchantWithApiKey();
+
+    // ULID одной миллисекунды: первые 20 символов совпадают.
+    $prefix = 'snd_01J0000000AAAAAA';
+    [$rawA] = createApiKeyOfType($merchantA, 'secret', $prefix.'BBBBBBBBBB');
+    [$rawB] = createApiKeyOfType($merchantB, 'secret', $prefix.'CCCCCCCCCC');
+
+    expect(substr($rawA, 0, 20))->toBe(substr($rawB, 0, 20));
+
+    $this->getJson('/api/v1/payments', ['api-key' => $rawA])->assertOk();
+    $this->getJson('/api/v1/payments', ['api-key' => $rawB])->assertOk();
+});
+
+test('revoked status is not revealed by key prefix alone', function () {
+    [$merchant, $rawKey, $apiKey] = createMerchantWithApiKey();
+    $apiKey->revoke();
+
+    $forged = substr($rawKey, 0, 20).str_repeat('Z', strlen($rawKey) - 20);
+
+    $this->getJson('/api/v1/payments/pay_nonexistent', ['api-key' => $forged])
+        ->assertStatus(401)
+        ->assertJsonPath('errors.0.code', 'invalid_api_key');
+});
+
 // --- Rate limiting ---
 
 test('api requests are rate limited', function () {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Enums\ApiKeyType;
 use Closure;
 use Illuminate\Http\Request;
 use Streeboga\PaymentData\Exceptions\ApiAuthenticationException;
@@ -35,7 +36,14 @@ final class ResolveApiKey
 
         $keyPrefix = substr($apiKey, 0, 20);
 
-        $apiKeyModel = ApiKey::where('key_prefix', $keyPrefix)->first();
+        // Префикс не уникален: у ULID-ключей одной миллисекунды первые 20
+        // символов совпадают, и first() брал чужую запись — вечный 401.
+        // Отзыв и срок проверяются только у записи с совпавшим хэшем, иначе по
+        // одному префиксу (панель его показывает) видно, отозван ли ключ.
+        $keyHash = hash('sha256', $apiKey);
+        $apiKeyModel = ApiKey::where('key_prefix', $keyPrefix)
+            ->get()
+            ->first(fn (ApiKey $candidate) => hash_equals($candidate->key_hash, $keyHash));
 
         if ($apiKeyModel) {
             if ($apiKeyModel->revoked_at !== null) {
@@ -46,11 +54,10 @@ final class ResolveApiKey
                 throw new ApiAuthenticationException('API key has expired', 'api_key_expired', 'authentication_error');
             }
 
-            if (! hash_equals($apiKeyModel->key_hash, hash('sha256', $apiKey))) {
-                throw new ApiAuthenticationException('Invalid API key', 'invalid_api_key', 'authentication_error');
-            }
-
-            $request->attributes->set('api_key_type', 'secret');
+            // Тип — из самой записи. admin из таблицы глобального admin API не
+            // даёт никогда (он только у ключа из env) и работает как secret
+            // мерчанта — так такие ключи и вели себя до сих пор.
+            $request->attributes->set('api_key_type', $apiKeyModel->type === ApiKeyType::Publishable ? 'publishable' : 'secret');
             $request->attributes->set('merchant_id', $apiKeyModel->merchant_account_id);
             $request->attributes->set('api_key', $apiKeyModel);
 

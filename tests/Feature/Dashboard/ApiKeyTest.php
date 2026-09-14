@@ -47,6 +47,16 @@ test('api key create returns 201', function () {
         ->assertJsonPath('data.type', 'api-keys');
 });
 
+test('api key of type admin cannot be created from dashboard', function () {
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/dashboard/api-keys', ['name' => 'Admin?', 'type' => 'admin'], $this->headers)
+        ->assertUnprocessable();
+
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/dashboard/api-keys', ['name' => 'Pub', 'type' => 'publishable'], $this->headers)
+        ->assertCreated();
+});
+
 test('api key revoke returns 204', function () {
     $rawKey = IdGenerator::apiKey('sandbox');
     $apiKey = ApiKey::create([

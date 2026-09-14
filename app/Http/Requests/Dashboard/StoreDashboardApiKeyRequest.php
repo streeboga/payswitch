@@ -16,7 +16,8 @@ final class StoreDashboardApiKeyRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['sometimes', 'string', Rule::enum(ApiKeyType::class)],
+            // admin из панели ничего не давал: admin API — только ключ из env.
+            'type' => ['sometimes', 'string', Rule::enum(ApiKeyType::class)->except(ApiKeyType::Admin)],
         ];
     }
 
