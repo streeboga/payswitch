@@ -29,3 +29,4 @@ yarn-error.log
 /dashboard/.playwright-mcp
 /dashboard/dist
 /.playwright-mcp
+.claude/worktrees/
