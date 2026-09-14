@@ -39,6 +39,9 @@ class BusinessProfile extends Model
     {
         return [
             'metadata' => 'array',
+            // Ключ подписи исходящих вебхуков: утёкший дамп базы не должен
+            // давать подделывать уведомления о зачислении.
+            'payment_response_hash_key' => 'encrypted',
         ];
     }
 
