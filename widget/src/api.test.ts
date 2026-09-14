@@ -19,9 +19,9 @@ describe('PaymentApi', () => {
 
     const result = await api.getPayment('pi_xxx', 'pi_xxx_secret_yyy');
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.example.com/api/v1/payments/pi_xxx?client_secret=pi_xxx_secret_yyy',
+      'https://api.example.com/api/v1/payments/pi_xxx',
       expect.objectContaining({
-        headers: expect.objectContaining({ 'api-key': 'pk_test_xxx' }),
+        headers: expect.objectContaining({ 'api-key': 'pk_test_xxx', 'X-Client-Secret': 'pi_xxx_secret_yyy' }),
       }),
     );
     expect(result.status).toBe('requires_payment_method');
@@ -41,7 +41,10 @@ describe('PaymentApi', () => {
       }),
     });
 
-    const result = await api.getPaymentMethods('pi_xxx', 'pi_xxx_secret_yyy');
+    const result = await api.getPaymentMethods('pi_xxx', 'pi_xxx_secret_yyy', 'ru');
+    const [url, opts] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.example.com/api/v1/payments/pi_xxx/payment-methods?locale=ru');
+    expect(opts.headers['X-Client-Secret']).toBe('pi_xxx_secret_yyy');
     expect(result.mode).toBe('mixed');
     expect(result.methods).toHaveLength(1);
     expect(result.methods[0].payment_method).toBe('card');
@@ -176,6 +179,9 @@ describe('PaymentApi', () => {
 
     const result = await api.getPaymentStatus('pi_xxx', 'pi_xxx_secret_yyy');
     expect(result.status).toBe('succeeded');
+    const [url, opts] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://api.example.com/api/v1/payments/pi_xxx/status');
+    expect(opts.headers['X-Client-Secret']).toBe('pi_xxx_secret_yyy');
   });
 
   it('throws on non-ok response', async () => {

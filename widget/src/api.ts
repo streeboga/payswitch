@@ -7,15 +7,15 @@ export class PaymentApi {
   ) {}
 
   async getPayment(paymentKey: string, clientSecret: string): Promise<PaymentIntentResponse> {
-    const url = `${this.baseUrl}/api/v1/payments/${paymentKey}?client_secret=${encodeURIComponent(clientSecret)}`;
-    const res = await this.request(url, { method: 'GET' });
+    const url = `${this.baseUrl}/api/v1/payments/${paymentKey}`;
+    const res = await this.request(url, { method: 'GET', headers: { 'X-Client-Secret': clientSecret } });
     return res.data.attributes;
   }
 
   async getPaymentMethods(paymentKey: string, clientSecret: string, locale?: string): Promise<PaymentMethodsResponse> {
-    let url = `${this.baseUrl}/api/v1/payments/${paymentKey}/payment-methods?client_secret=${encodeURIComponent(clientSecret)}`;
-    if (locale) url += `&locale=${encodeURIComponent(locale)}`;
-    const res = await this.request(url, { method: 'GET' });
+    let url = `${this.baseUrl}/api/v1/payments/${paymentKey}/payment-methods`;
+    if (locale) url += `?locale=${encodeURIComponent(locale)}`;
+    const res = await this.request(url, { method: 'GET', headers: { 'X-Client-Secret': clientSecret } });
 
     // New v2 format: { data: { attributes: { mode, methods[], connectors[] } } }
     if (res.data?.attributes?.mode) {
@@ -53,12 +53,14 @@ export class PaymentApi {
   }
 
   async getPaymentStatus(paymentKey: string, clientSecret: string): Promise<{ status: string }> {
-    const url = `${this.baseUrl}/api/v1/payments/${paymentKey}/status?client_secret=${encodeURIComponent(clientSecret)}`;
-    const res = await this.request(url, { method: 'GET' });
+    const url = `${this.baseUrl}/api/v1/payments/${paymentKey}/status`;
+    const res = await this.request(url, { method: 'GET', headers: { 'X-Client-Secret': clientSecret } });
     return res.data?.attributes ?? res.data ?? res;
   }
 
-  private async request(url: string, init: RequestInit = {}): Promise<any> {
+  // client_secret едет заголовком X-Client-Secret, а не в query: из адреса он
+  // оседает в access-логах. confirm по-прежнему кладёт его в тело.
+  private async request(url: string, init: RequestInit & { headers?: Record<string, string> } = {}): Promise<any> {
     const res = await fetch(url, {
       ...init,
       credentials: 'omit',

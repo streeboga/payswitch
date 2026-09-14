@@ -18,9 +18,11 @@ final class AuthenticateClientSecret
             return $next($request);
         }
 
-        $clientSecret = $request->input('client_secret');
+        // Заголовок — основной путь: из query секрет оседает в access-логах.
+        // query и тело остаются для уже встроенных копий виджета и confirm.
+        $clientSecret = $request->header('X-Client-Secret') ?? $request->input('client_secret');
 
-        if (! $clientSecret) {
+        if (! is_string($clientSecret) || $clientSecret === '') {
             return $this->errorResponse('client_secret is required', 'client_secret_required');
         }
 
