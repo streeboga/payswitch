@@ -77,7 +77,9 @@ final readonly class WebhookReceiverService
 
         try {
             $refusal = $this->processWebhook($connector, $mca->merchant_account_id, $payload, $mca->connector_name);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Throwable, not Exception: a payload of the wrong shape surfaces as a TypeError
+            // and used to escape as a 500.
             Log::error('Webhook processing failed', [
                 'mca_key' => $mcaKey,
                 'error' => $e->getMessage(),
@@ -108,7 +110,7 @@ final readonly class WebhookReceiverService
         $eventType = $payload['type'] ?? '';
 
         if (str_contains($eventType, 'refund')) {
-            $this->processRefundWebhook($payload, $connectorName);
+            $this->processRefundWebhook($payload, $merchantAccountId, $connectorName);
 
             return null;
         }
@@ -120,6 +122,18 @@ final readonly class WebhookReceiverService
 
         $payment = $this->paymentRepository->findByKeyOrNull($paymentId, $merchantAccountId);
         if (! $payment) {
+            return 'unacceptable';
+        }
+
+        // The URL names one connector of the merchant, and some of them sign nothing (the
+        // test ones). A payment another connector conducts is not this one's to move.
+        if ($payment->connector !== null && $payment->connector !== $connectorName) {
+            Log::warning('Webhook from a connector that does not conduct the payment', [
+                'payment_id' => $payment->key,
+                'payment_connector' => $payment->connector,
+                'webhook_connector' => $connectorName,
+            ]);
+
             return 'unacceptable';
         }
 
@@ -214,14 +228,14 @@ final readonly class WebhookReceiverService
      *
      * @param  array<string, mixed>  $payload
      */
-    private function processRefundWebhook(array $payload, string $connectorName): void
+    private function processRefundWebhook(array $payload, int $merchantAccountId, string $connectorName): void
     {
         $connectorRefundId = $payload['object']['id'] ?? null;
         if (! $connectorRefundId) {
             return;
         }
 
-        $refund = $this->refundRepository->findByConnectorRefundId($connectorRefundId);
+        $refund = $this->refundRepository->findByConnectorRefundId((string) $connectorRefundId, $merchantAccountId);
         if (! $refund) {
             return;
         }
