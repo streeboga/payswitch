@@ -75,7 +75,11 @@ final class DeliverWebhookJob implements ShouldQueue
             'event_id' => $event->key,
             'event_type' => $event->event_type,
             'content' => $event->content,
-            'updated' => $event->updated_at->toIso8601String(),
+            // Время факта, а не последней попытки: updated_at сдвигается на
+            // каждой неудаче, и ретрай старого события выглядел бы новее
+            // следующего. `updated` оставлен ради совместимости с приёмниками.
+            'created' => $event->created_at->toIso8601String(),
+            'updated' => $event->created_at->toIso8601String(),
         ], JSON_THROW_ON_ERROR);
 
         $signature = WebhookSigner::sign($payload, $profile->payment_response_hash_key);
@@ -85,6 +89,7 @@ final class DeliverWebhookJob implements ShouldQueue
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'x-webhook-signature-512' => $signature,
+                    'x-webhook-event-id' => $event->key,
                 ])
                 ->withBody($payload, 'application/json')
                 ->post($profile->webhook_url);

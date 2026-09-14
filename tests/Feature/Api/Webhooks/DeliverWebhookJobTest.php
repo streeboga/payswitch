@@ -16,6 +16,7 @@ use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\WebhookEvent;
+use Streeboga\PaymentData\Support\WebhookSigner;
 
 uses(RefreshDatabase::class);
 
@@ -171,6 +172,34 @@ test('sends x-webhook-signature-512 header', function () {
 
     Http::assertSent(function ($request) {
         return $request->hasHeader('x-webhook-signature-512');
+    });
+});
+
+test('body carries the time of the fact, not of the last attempt, and is signed', function () {
+    $this->travelTo(now()->subHour());
+    $event = WebhookEvent::create([
+        'event_type' => 'payment_succeeded',
+        'merchant_account_id' => $this->merchant->id,
+        'content' => ['payment_id' => 'pay_old', 'status' => 'succeeded'],
+    ]);
+    $this->travelBack();
+    // Неудачная попытка сдвигает updated_at события.
+    $event->update(['delivery_attempts' => 3, 'last_error' => 'HTTP 500']);
+    $createdAt = $event->created_at->toIso8601String();
+    expect($event->fresh()->updated_at->toIso8601String())->not->toBe($createdAt);
+
+    Http::fake(['*' => Http::response('ok', 200)]);
+    app()->call([new DeliverWebhookJob($event->id), 'handle']);
+
+    $key = $this->profile->fresh()->payment_response_hash_key;
+    Http::assertSent(function ($request) use ($event, $createdAt, $key) {
+        $body = json_decode($request->body(), true);
+
+        return $body['event_id'] === $event->key
+            && $body['created'] === $createdAt
+            && $body['updated'] === $createdAt
+            && $request->header('x-webhook-event-id')[0] === $event->key
+            && WebhookSigner::verify($request->body(), $request->header('x-webhook-signature-512')[0], $key);
     });
 });
 
