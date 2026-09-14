@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\PaymentAttemptStatus;
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
@@ -15,9 +16,11 @@ use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Contracts\WebhookAcknowledging;
+use Streeboga\PaymentData\Contracts\WebhookEventReading;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\RefundStatus;
+use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
 final readonly class WebhookReceiverService
@@ -26,10 +29,11 @@ final readonly class WebhookReceiverService
         private MerchantRepositoryInterface $merchantRepository,
         private PaymentIntentRepositoryInterface $paymentRepository,
         private RefundRepositoryInterface $refundRepository,
+        private WebhookService $webhookService,
     ) {}
 
     /**
-     * @return array{status: string, code: int, ack?: array<string, mixed>|null}
+     * @return array{status: string, code: int, ack?: array<string, mixed>|string|null}
      */
     public function handle(Request $request, string $merchantKey, string $mcaKey): array
     {
@@ -77,7 +81,9 @@ final readonly class WebhookReceiverService
 
         try {
             $refusal = $this->processWebhook($connector, $mca->merchant_account_id, $payload, $mca->connector_name);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Throwable, not Exception: a payload of the wrong shape surfaces as a TypeError
+            // and used to escape as a 500.
             Log::error('Webhook processing failed', [
                 'mca_key' => $mcaKey,
                 'error' => $e->getMessage(),
@@ -90,7 +96,7 @@ final readonly class WebhookReceiverService
         return [
             'status' => 'ok',
             'code' => 200,
-            'ack' => $connector instanceof WebhookAcknowledging ? $connector->webhookAck($refusal) : null,
+            'ack' => $connector instanceof WebhookAcknowledging ? $connector->webhookAck($refusal, $payload) : null,
         ];
     }
 
@@ -105,10 +111,12 @@ final readonly class WebhookReceiverService
         array $payload,
         string $connectorName,
     ): ?string {
-        $eventType = $payload['type'] ?? '';
+        $eventType = $connector instanceof WebhookEventReading
+            ? $connector->webhookEventType($payload)
+            : (string) ($payload['type'] ?? '');
 
         if (str_contains($eventType, 'refund')) {
-            $this->processRefundWebhook($payload, $connectorName);
+            $this->processRefundWebhook($connector, $payload, $eventType, $merchantAccountId, $connectorName);
 
             return null;
         }
@@ -123,50 +131,92 @@ final readonly class WebhookReceiverService
             return 'unacceptable';
         }
 
-        $newStatus = $connector->mapWebhookEventToStatus($eventType);
+        // The URL names one connector of the merchant, and some of them sign nothing (the
+        // test ones). A payment another connector conducts is not this one's to move.
+        if ($payment->connector !== null && $payment->connector !== $connectorName) {
+            Log::warning('Webhook from a connector that does not conduct the payment', [
+                'payment_id' => $payment->key,
+                'payment_connector' => $payment->connector,
+                'webhook_connector' => $connectorName,
+            ]);
 
-        // Fallback for connectors that don't use `type` field (e.g. CloudPayments sends `Status` directly)
-        if (! $newStatus && isset($payload['Status'])) {
-            // CloudPayments "check" notification: Status=Completed but no AuthCode — it's a
-            // validation request ("can I proceed?"), not a payment confirmation. Skip status update.
-            // Pay notifications have AuthCode; Fail notifications have Status=Declined.
-            if ($payload['Status'] === 'Completed' && ! isset($payload['AuthCode'])) {
-                // This is the one moment we get to compare what the payer is about to be
-                // charged with what we billed. The widget is handed its amount in the
-                // browser, so that number is the payer's to change until we say otherwise.
-                return $this->amountMatches($connector, $payload, $payment->amount) ? null : 'amount';
-            }
-
-            $newStatus = $connector->mapPaymentStatusToInternal($payload['Status']);
+            return 'unacceptable';
         }
 
-        if (! $newStatus || ! PaymentStateMachine::canTransition($payment->status, $newStatus)) {
+        if ($eventType === WebhookEventReading::CHECK) {
+            return $this->checkRefusal($connector, $payload, $payment);
+        }
+
+        $newStatus = $connector->mapWebhookEventToStatus($eventType);
+
+        // Fallback for connectors that don't use `type` field (e.g. T-Bank sends `Status` directly)
+        if (! $newStatus && isset($payload['Status'])) {
+            $newStatus = $connector->mapPaymentStatusToInternal((string) $payload['Status']);
+        }
+
+        if (! $newStatus) {
             return null;
         }
 
-        $result = DB::transaction(function () use ($payment, $newStatus, $connectorName) {
+        $result = DB::transaction(function () use ($connector, $payload, $payment, $newStatus, $connectorName) {
             $lockedPayment = $this->paymentRepository->findByIdLocked($payment->id);
             if (! $lockedPayment) {
                 return null;
             }
-            $previousStatus = $lockedPayment->status->value;
+            $from = $lockedPayment->status;
+            $updateData = ['status' => $newStatus, 'connector' => $connectorName];
 
-            if (PaymentStateMachine::canTransition($lockedPayment->status, $newStatus)) {
-                $updateData = [
-                    'status' => $newStatus,
+            // The provider reports money taken from the payer. That is a fact, not a request,
+            // and our own verdict on the payment does not undo it.
+            $charged = $newStatus === PaymentStatus::Succeeded || $newStatus === PaymentStatus::RequiresCapture;
+
+            // What the provider says it took. A notification that quotes no amount (Stripe,
+            // YooKassa nest it elsewhere) is credited with what we billed, as before.
+            $notifiedAmount = $this->notifiedAmount($connector, $payload);
+            $mismatch = $charged && $notifiedAmount !== null
+                ? $this->mismatch($connector, $payload, $lockedPayment, $notifiedAmount)
+                : null;
+
+            if ($charged && $mismatch !== null
+                && PaymentStateMachine::canConfirmByProvider($from, PaymentStatus::RequiresMerchantAction)) {
+                // Money moved, but not the money we billed: the payer may have edited the
+                // amount or currency in the browser. Not ours to call it paid.
+                $updateData['status'] = PaymentStatus::RequiresMerchantAction;
+                $updateData['error_code'] = $mismatch;
+                $updateData['error_message'] = 'The provider charged a different amount or currency than billed';
+            } elseif ($charged && $from === PaymentStatus::Cancelled) {
+                // Cancelled here, paid there: refund or deliver is the merchant's call.
+                $updateData['status'] = PaymentStatus::RequiresMerchantAction;
+                $updateData['error_code'] = 'paid_after_cancellation';
+                $updateData['error_message'] = 'The provider charged the payer after the payment was cancelled';
+                Log::error('Webhook confirms a charge on a cancelled payment', [
+                    'payment_id' => $lockedPayment->key,
                     'connector' => $connectorName,
-                ];
-                if ($newStatus === PaymentStatus::Succeeded) {
-                    $updateData['amount_received'] = $lockedPayment->amount;
-                }
-                $this->paymentRepository->update($lockedPayment, $updateData);
-
-                $lockedPayment->refresh();
-
-                return ['payment' => $lockedPayment, 'previousStatus' => $previousStatus];
+                ]);
+            } elseif ($charged && ! PaymentStateMachine::canTransition($from, $newStatus)
+                && PaymentStateMachine::canConfirmByProvider($from, $newStatus)) {
+                // 3DS or SBP outlasting the payment's lifetime, or a second try after a Fail.
+                $updateData['error_code'] = null;
+                $updateData['error_message'] = null;
+                Log::warning('Webhook confirms a late payment', [
+                    'payment_id' => $lockedPayment->key,
+                    'from' => $from->value,
+                    'to' => $newStatus->value,
+                    'connector' => $connectorName,
+                ]);
+            } elseif (! PaymentStateMachine::canTransition($from, $newStatus)) {
+                return null;
             }
 
-            return null;
+            if ($updateData['status'] === PaymentStatus::Succeeded) {
+                $updateData['amount_received'] = $notifiedAmount ?? $lockedPayment->amount;
+            }
+            $this->paymentRepository->update($lockedPayment, $updateData);
+            $this->recordAttemptOutcome($lockedPayment, $connectorName, $updateData['status'], $payload);
+
+            $lockedPayment->refresh();
+
+            return ['payment' => $lockedPayment, 'previousStatus' => $from->value];
         });
 
         if ($result) {
@@ -177,36 +227,135 @@ final readonly class WebhookReceiverService
     }
 
     /**
-     * Does the amount in the notification match what we billed?
+     * Carry the outcome over to the payment's attempt, with the provider's transaction id.
+     *
+     * Refund and capture look for a succeeded attempt, sync for one with a transaction id.
+     * Without this a payment confirmed by notification stayed with a `requires_action`
+     * attempt and no id, and nothing could be done with it but from the provider's cabinet.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function recordAttemptOutcome(PaymentIntent $payment, string $connectorName, PaymentStatus $status, array $payload): void
+    {
+        $failed = $status === PaymentStatus::Failed;
+        if (! $failed && ! in_array($status, [PaymentStatus::Succeeded, PaymentStatus::RequiresCapture, PaymentStatus::RequiresMerchantAction], true)) {
+            return;
+        }
+
+        $transactionId = $payload['TransactionId'] ?? null;
+        $attributes = array_filter([
+            'status' => $failed ? PaymentAttemptStatus::Failed->value : PaymentAttemptStatus::Succeeded->value,
+            'connector_transaction_id' => is_scalar($transactionId) ? (string) $transactionId : null,
+        ], fn ($value) => $value !== null);
+
+        // A late success may follow a Fail that already closed the attempt; a capture follows
+        // an authorization that already succeeded it — neither is a new attempt.
+        $open = $failed ? ['requires_action', 'processing'] : ['requires_action', 'processing', 'failed', 'succeeded'];
+
+        $attempt = $payment->paymentAttempts()
+            ->where('connector', $connectorName)
+            ->whereIn('status', $open)
+            ->latest('id')
+            ->first();
+
+        if ($attempt) {
+            $attempt->update($attributes);
+        } elseif (! $failed) {
+            $this->paymentRepository->createAttempt($payment, $attributes + [
+                'connector' => $connectorName,
+                'amount' => $payment->amount,
+            ]);
+        }
+    }
+
+    /**
+     * Answer to a pre-charge check: may the provider take the payer's money?
+     *
+     * This is the one moment we get to compare what the payer is about to be charged with
+     * what we billed. The widget is handed its amount and currency in the browser, so
+     * those are the payer's to change until we say otherwise. And a payment that is
+     * already paid, cancelled or out of time must not be paid again.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function checkRefusal(ConnectorInterface $connector, array $payload, PaymentIntent $payment): ?string
+    {
+        if ($payment->status === PaymentStatus::Expired) {
+            return 'expired';
+        }
+
+        $payable = [
+            PaymentStatus::RequiresPaymentMethod,
+            PaymentStatus::RequiresConfirmation,
+            PaymentStatus::RequiresCustomerAction,
+            PaymentStatus::Processing,
+        ];
+        if (! in_array($payment->status, $payable, true)) {
+            Log::warning('Check refused: payment can no longer be paid', [
+                'payment_id' => $payment->key,
+                'status' => $payment->status->value,
+            ]);
+
+            return 'unacceptable';
+        }
+
+        $notifiedAmount = $this->notifiedAmount($connector, $payload);
+
+        return $notifiedAmount === null || $this->mismatch($connector, $payload, $payment, $notifiedAmount) !== null
+            ? 'amount'
+            : null;
+    }
+
+    /**
+     * The amount the provider quotes in the notification, in minor units, or null if it
+     * quotes none.
      *
      * Providers quote amounts in their own unit — CloudPayments in rubles, most in minor
      * units — and the connector already declares which, so convert rather than guess.
      *
      * @param  array<string, mixed>  $payload
      */
-    private function amountMatches(ConnectorInterface $connector, array $payload, int $expectedMinor): bool
+    private function notifiedAmount(ConnectorInterface $connector, array $payload): ?int
     {
-        $amount = $payload['Amount'] ?? $payload['amount'] ?? null;
+        $amount = $payload['Amount'] ?? $payload['amount'] ?? $payload['OutSum'] ?? null;
 
         if (! is_numeric($amount)) {
-            return false;
+            return null;
         }
 
-        $notified = $connector::capabilities()->amountUnit === AmountUnit::Rubles
+        return $connector::capabilities()->amountUnit === AmountUnit::Rubles
             ? (int) round(((float) $amount) * 100)
             : (int) round((float) $amount);
+    }
 
-        if ($notified !== $expectedMinor) {
-            Log::warning('Webhook amount does not match the payment', [
+    /**
+     * 'amount_mismatch' or 'currency_mismatch' when the notification is not for what we
+     * billed, null when it is. A currency the notification does not quote is not held
+     * against it.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function mismatch(ConnectorInterface $connector, array $payload, PaymentIntent $payment, int $notifiedAmount): ?string
+    {
+        $currency = $payload['Currency'] ?? $payload['currency'] ?? null;
+
+        $mismatch = match (true) {
+            $notifiedAmount !== $payment->amount => 'amount_mismatch',
+            is_string($currency) && strtoupper($currency) !== strtoupper($payment->currency) => 'currency_mismatch',
+            default => null,
+        };
+
+        if ($mismatch !== null) {
+            Log::error('Webhook amount or currency does not match the payment', [
                 'connector' => $connector->getName(),
-                'expected_minor' => $expectedMinor,
-                'notified_minor' => $notified,
+                'payment_id' => $payment->key,
+                'mismatch' => $mismatch,
+                'expected' => [$payment->amount, $payment->currency],
+                'notified' => [$notifiedAmount, $currency],
             ]);
-
-            return false;
         }
 
-        return true;
+        return $mismatch;
     }
 
     /**
@@ -214,23 +363,32 @@ final readonly class WebhookReceiverService
      *
      * @param  array<string, mixed>  $payload
      */
-    private function processRefundWebhook(array $payload, string $connectorName): void
-    {
-        $connectorRefundId = $payload['object']['id'] ?? null;
-        if (! $connectorRefundId) {
+    private function processRefundWebhook(
+        ConnectorInterface $connector,
+        array $payload,
+        string $eventType,
+        int $merchantAccountId,
+        string $connectorName,
+    ): void {
+        // YooKassa nests the refund, CloudPayments sends its transaction flat.
+        $connectorRefundId = $payload['object']['id'] ?? $payload['TransactionId'] ?? null;
+        if (! is_scalar($connectorRefundId) || (string) $connectorRefundId === '') {
             return;
         }
+        $connectorRefundId = (string) $connectorRefundId;
 
-        $refund = $this->refundRepository->findByConnectorRefundId($connectorRefundId);
+        $refund = $this->refundRepository->findByConnectorRefundId($connectorRefundId, $merchantAccountId);
         if (! $refund) {
+            if (str_contains($eventType, 'succeeded')) {
+                $this->recordProviderRefund($connector, $payload, $connectorRefundId, $merchantAccountId, $connectorName);
+            }
+
             return;
         }
 
         if ($refund->status === RefundStatus::Succeeded || $refund->status === RefundStatus::Failed) {
             return;
         }
-
-        $eventType = $payload['type'] ?? '';
 
         if (str_contains($eventType, 'succeeded')) {
             $this->refundRepository->updateRefund($refund, [
@@ -242,6 +400,58 @@ final readonly class WebhookReceiverService
                 'status' => RefundStatus::Failed,
                 'connector' => $connectorName,
             ]);
+        }
+    }
+
+    /**
+     * A refund we did not make: done in the provider's cabinet. The payer already has the
+     * money back, so the merchant — and whoever credited the payment — must hear of it.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function recordProviderRefund(
+        ConnectorInterface $connector,
+        array $payload,
+        string $connectorRefundId,
+        int $merchantAccountId,
+        string $connectorName,
+    ): void {
+        $paymentId = $connector->extractPaymentIdFromWebhook($payload);
+        $amount = $this->notifiedAmount($connector, $payload);
+        $payment = $paymentId ? $this->paymentRepository->findByKeyOrNull($paymentId, $merchantAccountId) : null;
+
+        if (! $payment || $amount === null || ($payment->connector !== null && $payment->connector !== $connectorName)) {
+            Log::warning('Refund notification for a payment we cannot match', [
+                'connector' => $connectorName,
+                'connector_refund_id' => $connectorRefundId,
+                'payment_id' => $paymentId,
+            ]);
+
+            return;
+        }
+
+        $refund = DB::transaction(function () use ($payment, $amount, $connectorRefundId, $merchantAccountId, $connectorName) {
+            // The provider repeats notifications; the lock keeps two copies from both passing
+            // the lookup above.
+            $this->paymentRepository->findByIdLocked($payment->id);
+            if ($this->refundRepository->findByConnectorRefundId($connectorRefundId, $merchantAccountId)) {
+                return null;
+            }
+
+            return $this->refundRepository->create([
+                'payment_intent_id' => $payment->id,
+                'merchant_account_id' => $merchantAccountId,
+                'amount' => $amount,
+                'currency' => $payment->currency,
+                'status' => RefundStatus::Succeeded,
+                'reason' => 'Refunded at the provider',
+                'connector' => $connectorName,
+                'connector_refund_id' => $connectorRefundId,
+            ]);
+        });
+
+        if ($refund) {
+            $this->webhookService->dispatchForRefund($refund, $payment);
         }
     }
 }

@@ -10,11 +10,12 @@ use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentConnectors\PaymentSessionResult;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Contracts\WebhookAcknowledging;
+use Streeboga\PaymentData\Contracts\WebhookEventReading;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
 
-final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowledging
+final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowledging, WebhookEventReading
 {
     private string $publicId;
 
@@ -130,26 +131,76 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
      * in it, so the payer sees «Платеж не может быть принят» and no money moves.
      *
      * The refusal codes are theirs and they are not interchangeable: 12 shows up in the
-     * merchant's cabinet as InvalidAmount, 13 as NotAccepted. Saying which one it was is
-     * the difference between "the payer changed the price" and "something went wrong".
+     * merchant's cabinet as InvalidAmount, 13 as NotAccepted, 20 as Expired. Saying which
+     * one it was is the difference between "the payer changed the price" and "something
+     * went wrong".
      *
      * @see https://developers.cloudpayments.ru/#uvedomleniya
      *
      * @return array<string, mixed>
      */
-    public function webhookAck(?string $refusal): array
+    public function webhookAck(?string $refusal, array $payload = []): array
     {
         return ['code' => match ($refusal) {
             null => 0,
             'amount' => 12,
+            'expired' => 20,
             default => 13,
         }];
+    }
+
+    /**
+     * CloudPayments has no event field: which notification it is shows only in which fields
+     * are there. Check and Pay both carry Status (Completed, or Authorized for two-stage),
+     * only Pay has AuthCode. Refund is marked by OperationType.
+     *
+     * `type` is not theirs — it is honoured first so that a hand-made notification can
+     * still name its event.
+     *
+     * @see https://developers.cloudpayments.ru/#uvedomleniya
+     */
+    public function webhookEventType(array $payload): string
+    {
+        if (isset($payload['type'])) {
+            return (string) $payload['type'];
+        }
+
+        // Before Status: money going back to the payer must never read as a payment.
+        if (($payload['OperationType'] ?? null) === 'Refund') {
+            return 'refund.succeeded';
+        }
+
+        $status = $payload['Status'] ?? null;
+
+        if ($status === 'Completed' || $status === 'Authorized') {
+            if (! isset($payload['AuthCode'])) {
+                return self::CHECK;
+            }
+
+            return $status === 'Completed' ? 'payment.succeeded' : 'payment.waiting_for_capture';
+        }
+
+        // Fail comes with the decline reason and, unlike Pay and Check, without Status.
+        if ($status === 'Declined' || isset($payload['ReasonCode'])) {
+            return 'payment.failed';
+        }
+
+        // Cancel (an authorization voided) has nothing of its own, only the bare set below.
+        // Taken strictly: a receipt notification also carries TransactionId and InvoiceId,
+        // and must not void a payment.
+        $cancelFields = ['TransactionId', 'Amount', 'DateTime', 'InvoiceId', 'AccountId', 'Email', 'Data', 'JsonData'];
+        if (isset($payload['TransactionId']) && array_diff(array_keys($payload), $cancelFields) === []) {
+            return 'payment.canceled';
+        }
+
+        return '';
     }
 
     public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
     {
         return match ($eventType) {
             'payment.succeeded' => PaymentStatus::Succeeded,
+            'payment.failed' => PaymentStatus::Failed,
             'payment.canceled' => PaymentStatus::Cancelled,
             'payment.waiting_for_capture' => PaymentStatus::RequiresCapture,
             default => null,
@@ -161,11 +212,42 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
         return $payload['InvoiceId'] ?? ($payload['data']['InvoiceId'] ?? null);
     }
 
+    /**
+     * `/payments/get` takes a TransactionId; `/v2/payments/find` takes an InvoiceId (our
+     * payment id) and lists every transaction on it. The old call sent a TransactionId to
+     * `/payments/find`, which looks up by InvoiceId, so it never found anything.
+     *
+     * Sync reads the provider status from `data.status`; CloudPayments keeps it in
+     * `Model.Status`, so it is copied there.
+     *
+     * @see https://developers.cloudpayments.ru/
+     */
     public function getPaymentStatus(array $params): array
     {
-        return $this->makeRequest('/payments/find', [
-            'TransactionId' => $params['transaction_id'] ?? '',
-        ]);
+        $transactionId = $params['transaction_id'] ?? null;
+
+        $result = $transactionId
+            ? $this->makeRequest('/payments/get', ['TransactionId' => $transactionId])
+            : $this->makeRequest('/v2/payments/find', ['InvoiceId' => $params['payment_id'] ?? '']);
+
+        $model = $result['data'] ?? null;
+        if (! is_array($model)) {
+            return $result;
+        }
+
+        if (array_is_list($model)) {
+            // Several tries on one invoice: the one that took money is the answer, if any.
+            $charged = array_values(array_filter(
+                $model,
+                fn ($txn) => in_array($txn['Status'] ?? null, ['Completed', 'Authorized'], true),
+            ));
+            $model = $charged[0] ?? end($model) ?: [];
+            $result['transaction_id'] = $model['TransactionId'] ?? null;
+        }
+
+        $result['data'] = $model + ['status' => $model['Status'] ?? null];
+
+        return $result;
     }
 
     public function createPaymentSession(array $params): PaymentSessionResult
@@ -186,9 +268,11 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
     public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
     {
         return match ($rawStatus) {
+            'AwaitingAuthentication' => PaymentStatus::RequiresCustomerAction,
             'Completed' => PaymentStatus::Succeeded,
             'Declined' => PaymentStatus::Failed,
             'Authorized' => PaymentStatus::RequiresCapture,
+            'Cancelled' => PaymentStatus::Cancelled,
             default => null,
         };
     }

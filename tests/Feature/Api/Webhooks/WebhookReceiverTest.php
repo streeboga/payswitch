@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 use App\Services\WebhookReceiverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Models\PaymentIntent;
+use Streeboga\PaymentData\Models\Refund;
+use Streeboga\PaymentData\Models\WebhookEvent;
 
 covers(WebhookReceiverService::class);
 
@@ -348,7 +352,7 @@ test('cloudpayments webhook: valid HMAC passes, wrong and absent are refused', f
  *
  * @see https://developers.cloudpayments.ru/#uvedomleniya
  */
-function cloudPaymentsCheck(object $test, PaymentIntent $payment, string $amount): \Illuminate\Testing\TestResponse
+function cloudPaymentsCheck(object $test, PaymentIntent $payment, string $amount): TestResponse
 {
     $test->mca->update([
         'connector_name' => 'cloudpayments',
@@ -431,4 +435,65 @@ test('refuses the CloudPayments check for a payment that is not ours', function 
     cloudPaymentsCheck($this, $payment, '137.00')
         ->assertOk()
         ->assertExactJson(['code' => 13]);
+});
+
+// --- С5: неподписанный коннектор не двигает чужие платежи и чужие возвраты ---
+
+test('webhook of one connector does not move a payment conducted by another', function () {
+    $payment = PaymentIntent::create([
+        'merchant_account_id' => $this->merchant->id,
+        'amount' => 5000,
+        'currency' => 'RUB',
+        'status' => PaymentStatus::RequiresCustomerAction,
+        'capture_method' => CaptureMethod::Automatic,
+        'attempt_count' => 1,
+        'connector' => 'cloudpayments',
+    ]);
+
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [
+        'type' => 'payment.succeeded',
+        'payment_id' => $payment->key,
+    ])->assertOk();
+
+    $fresh = $payment->fresh();
+    expect($fresh->status)->toBe(PaymentStatus::RequiresCustomerAction)
+        ->and($fresh->connector)->toBe('cloudpayments')
+        ->and(WebhookEvent::count())->toBe(0);
+});
+
+test('refund webhook does not touch a refund of another merchant', function () {
+    $org = Organization::create(['name' => 'Other']);
+    $other = MerchantAccount::create(['org_id' => $org->id, 'name' => 'B']);
+    $payment = PaymentIntent::create([
+        'merchant_account_id' => $other->id,
+        'amount' => 5000,
+        'currency' => 'RUB',
+        'status' => PaymentStatus::Succeeded,
+        'capture_method' => CaptureMethod::Automatic,
+        'attempt_count' => 1,
+        'connector' => 'test',
+    ]);
+    $refund = Refund::create([
+        'payment_intent_id' => $payment->id,
+        'merchant_account_id' => $other->id,
+        'amount' => 1000,
+        'currency' => 'RUB',
+        'status' => RefundStatus::Pending,
+        'connector' => 'test',
+        'connector_refund_id' => 're_shared',
+    ]);
+
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [
+        'type' => 'refund.failed',
+        'object' => ['id' => 're_shared'],
+    ])->assertOk();
+
+    expect($refund->fresh()->status)->toBe(RefundStatus::Pending);
+});
+
+test('a malformed payload that raises a TypeError is refused, not a 500', function () {
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [
+        'type' => 'payment.succeeded',
+        'payment_id' => ['not', 'a', 'string'],
+    ])->assertOk();
 });

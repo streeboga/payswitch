@@ -9,6 +9,7 @@ use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentConnectors\PaymentSessionResult;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Contracts\WebhookEventReading;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
@@ -19,7 +20,7 @@ use Streeboga\PaymentData\Enums\SessionResultType;
  * All requests are application/x-www-form-urlencoded with auth params in the body.
  * Responses are JSON.
  */
-final class RbsConnector implements ConnectorInterface
+final class RbsConnector implements ConnectorInterface, WebhookEventReading
 {
     private string $baseUrl;
 
@@ -244,6 +245,24 @@ final class RbsConnector implements ConnectorInterface
         return hash_equals($expected, strtoupper($received));
     }
 
+    /**
+     * The callback names the operation in `operation` and whether it went through in
+     * `status` (1 — yes, 0 — no). A failed deposit or approval is a declined payment; a
+     * failed reversal or refund changes nothing.
+     *
+     * @see https://securepayments.sberbank.ru/wiki/doku.php/integration:api:callback:start
+     */
+    public function webhookEventType(array $payload): string
+    {
+        $operation = is_string($payload['operation'] ?? null) ? $payload['operation'] : '';
+
+        if ((string) ($payload['status'] ?? '1') === '0') {
+            return in_array($operation, ['approved', 'deposited'], true) ? 'declined' : '';
+        }
+
+        return $operation;
+    }
+
     public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
     {
         return match ($eventType) {
@@ -251,7 +270,7 @@ final class RbsConnector implements ConnectorInterface
             'approved', 'authorized' => PaymentStatus::RequiresCapture,
             'reversed' => PaymentStatus::Cancelled,
             'refunded' => null,
-            'declined' => PaymentStatus::Failed,
+            'declined', 'declinedByTimeout' => PaymentStatus::Failed,
             default => null,
         };
     }

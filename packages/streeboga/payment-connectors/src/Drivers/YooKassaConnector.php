@@ -8,12 +8,13 @@ use Illuminate\Support\Facades\Http;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Contracts\WebhookEventReading;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
 use Symfony\Component\HttpFoundation\IpUtils;
 
-final class YooKassaConnector implements ConnectorInterface
+final class YooKassaConnector implements ConnectorInterface, WebhookEventReading
 {
     /**
      * Pseudo-header the webhook receiver puts the real peer address in. It is written after
@@ -140,6 +141,17 @@ final class YooKassaConnector implements ConnectorInterface
         }
 
         return IpUtils::checkIp($ip, array_values(array_map('strval', $allowed)));
+    }
+
+    /**
+     * `{"type": "notification", "event": "payment.succeeded", "object": {...}}` — the
+     * event is in `event`; `type` says nothing.
+     *
+     * @see https://yookassa.ru/developers/using-api/webhooks
+     */
+    public function webhookEventType(array $payload): string
+    {
+        return is_string($payload['event'] ?? null) ? $payload['event'] : '';
     }
 
     public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus

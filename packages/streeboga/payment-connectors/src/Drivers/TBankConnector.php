@@ -9,6 +9,7 @@ use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentConnectors\PaymentSessionResult;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Contracts\WebhookAcknowledging;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
@@ -19,7 +20,7 @@ use Streeboga\PaymentData\Enums\SessionResultType;
  * API docs: https://www.tbank.ru/kassa/dev/payments/
  * All amounts are in kopecks. Every request is signed with SHA-256 Token.
  */
-final class TBankConnector implements ConnectorInterface
+final class TBankConnector implements ConnectorInterface, WebhookAcknowledging
 {
     private string $baseUrl;
 
@@ -207,6 +208,16 @@ final class TBankConnector implements ConnectorInterface
         $expectedToken = $this->generateToken($params);
 
         return hash_equals($expectedToken, (string) $receivedToken);
+    }
+
+    /**
+     * T-Bank resends a notification until the body is exactly `OK`.
+     *
+     * @see https://www.tbank.ru/kassa/dev/payments/
+     */
+    public function webhookAck(?string $refusal, array $payload = []): array|string
+    {
+        return $refusal === null ? 'OK' : ['status' => $refusal];
     }
 
     public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus

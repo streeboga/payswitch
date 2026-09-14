@@ -72,9 +72,12 @@ final readonly class RefundRepository implements RefundRepositoryInterface
         return $builder->with('paymentIntent')->paginate($perPage);
     }
 
-    public function findByConnectorRefundId(string $connectorRefundId): ?Refund
+    public function findByConnectorRefundId(string $connectorRefundId, int|string $merchantAccountId): ?Refund
     {
-        return Refund::where('connector_refund_id', $connectorRefundId)->first();
+        // Ids are the provider's, not ours: two merchants on the same PSP can share one.
+        return $this->query()->forMerchant($merchantAccountId)->getQuery()
+            ->where('connector_refund_id', $connectorRefundId)
+            ->first();
     }
 
     /**

@@ -171,14 +171,13 @@ test('yookassa: payment.succeeded webhook updates payment status', function () {
         'attempt_count' => 1,
     ]);
 
+    // Real notification: type is always "notification", the event is in `event`.
     $fixture = ConnectorTestData::webhookFixture('yookassa_payment_succeeded');
     $fixture['object']['metadata']['payment_id'] = $payment->key;
 
     $this->withServerVariables(YOOKASSA_PEER)
-        ->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", array_merge(
-            $fixture,
-            ['type' => 'payment.succeeded'],
-        ))->assertOk();
+        ->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", $fixture)
+        ->assertOk();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
 });
@@ -206,10 +205,8 @@ test('yookassa: payment.canceled webhook updates payment status', function () {
     $fixture['object']['metadata']['payment_id'] = $payment->key;
 
     $this->withServerVariables(YOOKASSA_PEER)
-        ->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", array_merge(
-            $fixture,
-            ['type' => 'payment.canceled'],
-        ))->assertOk();
+        ->postJson("/api/v1/webhooks/{$this->merchant->key}/{$mca->key}", $fixture)
+        ->assertOk();
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Cancelled);
 });

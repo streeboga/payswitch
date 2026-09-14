@@ -5,12 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\DataTransferObjects\Refund\CreateRefundData;
-use App\Enums\WebhookEventType;
-use App\Jobs\DeliverWebhookJob;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Repositories\Contracts\RefundRepositoryInterface;
-use App\Repositories\Contracts\WebhookEventRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -24,7 +21,7 @@ final readonly class RefundService
         private RefundRepositoryInterface $refundRepository,
         private PaymentIntentRepositoryInterface $paymentRepository,
         private MerchantRepositoryInterface $merchantRepository,
-        private WebhookEventRepositoryInterface $webhookRepository,
+        private WebhookService $webhookService,
     ) {}
 
     public function create(CreateRefundData $dto, int|string $merchantAccountId): Refund
@@ -103,21 +100,7 @@ final readonly class RefundService
                 'metadata' => $dto->metadata,
             ]);
 
-            // Webhook event
-            $eventType = $refundResult['success'] ? WebhookEventType::RefundSucceeded->value : WebhookEventType::RefundFailed->value;
-            $webhookEvent = $this->webhookRepository->create([
-                'event_type' => $eventType,
-                'merchant_account_id' => $merchantAccountId,
-                'payment_intent_id' => $payment->id,
-                'content' => [
-                    'refund_id' => $refund->key,
-                    'payment_id' => $payment->key,
-                    'amount' => $refund->amount,
-                    'currency' => $refund->currency,
-                    'status' => $refundStatus->value,
-                ],
-            ]);
-            DeliverWebhookJob::dispatch($webhookEvent->id);
+            $this->webhookService->dispatchForRefund($refund, $payment);
 
             if (! $refundResult['success']) {
                 throw new PaymentException(
