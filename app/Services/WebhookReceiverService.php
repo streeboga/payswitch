@@ -15,9 +15,11 @@ use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Contracts\WebhookAcknowledging;
+use Streeboga\PaymentData\Contracts\WebhookEventReading;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\RefundStatus;
+use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\StateMachine\PaymentStateMachine;
 
 final readonly class WebhookReceiverService
@@ -107,7 +109,9 @@ final readonly class WebhookReceiverService
         array $payload,
         string $connectorName,
     ): ?string {
-        $eventType = $payload['type'] ?? '';
+        $eventType = $connector instanceof WebhookEventReading
+            ? $connector->webhookEventType($payload)
+            : (string) ($payload['type'] ?? '');
 
         if (str_contains($eventType, 'refund')) {
             $this->processRefundWebhook($payload, $merchantAccountId, $connectorName);
@@ -137,21 +141,15 @@ final readonly class WebhookReceiverService
             return 'unacceptable';
         }
 
+        if ($eventType === WebhookEventReading::CHECK) {
+            return $this->checkRefusal($connector, $payload, $payment);
+        }
+
         $newStatus = $connector->mapWebhookEventToStatus($eventType);
 
-        // Fallback for connectors that don't use `type` field (e.g. CloudPayments sends `Status` directly)
+        // Fallback for connectors that don't use `type` field (e.g. T-Bank sends `Status` directly)
         if (! $newStatus && isset($payload['Status'])) {
-            // CloudPayments "check" notification: Status=Completed but no AuthCode — it's a
-            // validation request ("can I proceed?"), not a payment confirmation. Skip status update.
-            // Pay notifications have AuthCode; Fail notifications have Status=Declined.
-            if ($payload['Status'] === 'Completed' && ! isset($payload['AuthCode'])) {
-                // This is the one moment we get to compare what the payer is about to be
-                // charged with what we billed. The widget is handed its amount in the
-                // browser, so that number is the payer's to change until we say otherwise.
-                return $this->amountMatches($connector, $payload, $payment->amount) ? null : 'amount';
-            }
-
-            $newStatus = $connector->mapPaymentStatusToInternal($payload['Status']);
+            $newStatus = $connector->mapPaymentStatusToInternal((string) $payload['Status']);
         }
 
         if (! $newStatus || ! PaymentStateMachine::canTransition($payment->status, $newStatus)) {
@@ -191,36 +189,93 @@ final readonly class WebhookReceiverService
     }
 
     /**
-     * Does the amount in the notification match what we billed?
+     * Answer to a pre-charge check: may the provider take the payer's money?
+     *
+     * This is the one moment we get to compare what the payer is about to be charged with
+     * what we billed. The widget is handed its amount and currency in the browser, so
+     * those are the payer's to change until we say otherwise. And a payment that is
+     * already paid, cancelled or out of time must not be paid again.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function checkRefusal(ConnectorInterface $connector, array $payload, PaymentIntent $payment): ?string
+    {
+        if ($payment->status === PaymentStatus::Expired) {
+            return 'expired';
+        }
+
+        $payable = [
+            PaymentStatus::RequiresPaymentMethod,
+            PaymentStatus::RequiresConfirmation,
+            PaymentStatus::RequiresCustomerAction,
+            PaymentStatus::Processing,
+        ];
+        if (! in_array($payment->status, $payable, true)) {
+            Log::warning('Check refused: payment can no longer be paid', [
+                'payment_id' => $payment->key,
+                'status' => $payment->status->value,
+            ]);
+
+            return 'unacceptable';
+        }
+
+        $notifiedAmount = $this->notifiedAmount($connector, $payload);
+
+        return $notifiedAmount === null || $this->mismatch($connector, $payload, $payment, $notifiedAmount) !== null
+            ? 'amount'
+            : null;
+    }
+
+    /**
+     * The amount the provider quotes in the notification, in minor units, or null if it
+     * quotes none.
      *
      * Providers quote amounts in their own unit — CloudPayments in rubles, most in minor
      * units — and the connector already declares which, so convert rather than guess.
      *
      * @param  array<string, mixed>  $payload
      */
-    private function amountMatches(ConnectorInterface $connector, array $payload, int $expectedMinor): bool
+    private function notifiedAmount(ConnectorInterface $connector, array $payload): ?int
     {
         $amount = $payload['Amount'] ?? $payload['amount'] ?? null;
 
         if (! is_numeric($amount)) {
-            return false;
+            return null;
         }
 
-        $notified = $connector::capabilities()->amountUnit === AmountUnit::Rubles
+        return $connector::capabilities()->amountUnit === AmountUnit::Rubles
             ? (int) round(((float) $amount) * 100)
             : (int) round((float) $amount);
+    }
 
-        if ($notified !== $expectedMinor) {
-            Log::warning('Webhook amount does not match the payment', [
+    /**
+     * 'amount_mismatch' or 'currency_mismatch' when the notification is not for what we
+     * billed, null when it is. A currency the notification does not quote is not held
+     * against it.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function mismatch(ConnectorInterface $connector, array $payload, PaymentIntent $payment, int $notifiedAmount): ?string
+    {
+        $currency = $payload['Currency'] ?? $payload['currency'] ?? null;
+
+        $mismatch = match (true) {
+            $notifiedAmount !== $payment->amount => 'amount_mismatch',
+            is_string($currency) && strtoupper($currency) !== strtoupper($payment->currency) => 'currency_mismatch',
+            default => null,
+        };
+
+        if ($mismatch !== null) {
+            Log::error('Webhook amount or currency does not match the payment', [
                 'connector' => $connector->getName(),
-                'expected_minor' => $expectedMinor,
-                'notified_minor' => $notified,
+                'payment_id' => $payment->key,
+                'mismatch' => $mismatch,
+                'expected' => [$payment->amount, $payment->currency],
+                'notified' => [$notifiedAmount, $currency],
             ]);
-
-            return false;
         }
 
-        return true;
+        return $mismatch;
     }
 
     /**

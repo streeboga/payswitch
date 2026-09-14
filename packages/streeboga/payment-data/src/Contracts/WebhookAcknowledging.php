@@ -18,7 +18,8 @@ interface WebhookAcknowledging
      * Body the provider expects in the webhook response.
      *
      * @param  string|null  $refusal  Why we will not let the operation proceed — 'amount'
-     *                                when the notified sum is not the one we billed,
+     *                                when the notified sum or currency is not the one we
+     *                                billed, 'expired' when the payment ran out of time,
      *                                'unacceptable' otherwise — or null to allow it.
      * @return array<string, mixed>
      */

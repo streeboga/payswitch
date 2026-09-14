@@ -10,11 +10,12 @@ use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentConnectors\PaymentSessionResult;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Contracts\WebhookAcknowledging;
+use Streeboga\PaymentData\Contracts\WebhookEventReading;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
 
-final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowledging
+final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowledging, WebhookEventReading
 {
     private string $publicId;
 
@@ -130,8 +131,9 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
      * in it, so the payer sees «Платеж не может быть принят» and no money moves.
      *
      * The refusal codes are theirs and they are not interchangeable: 12 shows up in the
-     * merchant's cabinet as InvalidAmount, 13 as NotAccepted. Saying which one it was is
-     * the difference between "the payer changed the price" and "something went wrong".
+     * merchant's cabinet as InvalidAmount, 13 as NotAccepted, 20 as Expired. Saying which
+     * one it was is the difference between "the payer changed the price" and "something
+     * went wrong".
      *
      * @see https://developers.cloudpayments.ru/#uvedomleniya
      *
@@ -142,8 +144,38 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
         return ['code' => match ($refusal) {
             null => 0,
             'amount' => 12,
+            'expired' => 20,
             default => 13,
         }];
+    }
+
+    /**
+     * CloudPayments has no event field: which notification it is shows only in which fields
+     * are there. Check and Pay both carry Status (Completed, or Authorized for two-stage),
+     * only Pay has AuthCode. Refund is marked by OperationType.
+     *
+     * `type` is not theirs — it is honoured first so that a hand-made notification can
+     * still name its event.
+     *
+     * @see https://developers.cloudpayments.ru/#uvedomleniya
+     */
+    public function webhookEventType(array $payload): string
+    {
+        if (isset($payload['type'])) {
+            return (string) $payload['type'];
+        }
+
+        $status = $payload['Status'] ?? null;
+
+        if ($status === 'Completed' || $status === 'Authorized') {
+            if (! isset($payload['AuthCode'])) {
+                return self::CHECK;
+            }
+
+            return $status === 'Completed' ? 'payment.succeeded' : 'payment.waiting_for_capture';
+        }
+
+        return '';
     }
 
     public function mapWebhookEventToStatus(string $eventType): ?PaymentStatus
