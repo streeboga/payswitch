@@ -10,6 +10,7 @@ use App\Repositories\Contracts\CustomerRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 use Streeboga\PaymentData\Models\Customer;
 
@@ -37,7 +38,9 @@ final readonly class CustomerService
         }
 
         try {
-            return $this->customerRepository->create($attributes);
+            // Транзакция — точка сохранения внутри чужой: иначе на Postgres упавший INSERT
+            // делает внешнюю транзакцию непригодной.
+            return DB::transaction(fn () => $this->customerRepository->create($attributes));
         } catch (UniqueConstraintViolationException) {
             // Заданный мерчантом id — это customers.key: публичный ключ в маршрутах и в
             // payment_intents.customer_id, уникальный глобально. Занят другим мерчантом (или

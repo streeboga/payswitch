@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use App\Repositories\Contracts\RefundRepositoryInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
@@ -120,22 +122,34 @@ test('ключ длиннее 255 символов отклоняется вал
 });
 
 test('гонка: параллельный запрос вставил платёж с тем же ключом первым — отдаётся его платёж', function () {
-    // Имитация второго запроса, который успел вставить строку между нашим поиском и нашей вставкой.
-    $raced = null;
-    PaymentIntent::creating(function (PaymentIntent $model) use (&$raced) {
-        if ($raced !== null || $model->idempotency_key === null) {
-            return;
-        }
-        $raced = $model->replicate();
-        $raced->key = IdGenerator::paymentId();
-        $raced->client_secret = IdGenerator::clientSecret($raced->key);
-        $raced->saveQuietly();
-    });
+    // Первый запрос уже вставил платёж, а наш поиск по ключу успел отработать до его
+    // коммита и ничего не нашёл. Дальше наша вставка упирается в уникальный индекс.
+    // Мимо HTTP: роутер кэширует экземпляр контроллера, и подменённый ниже репозиторий
+    // до второго запроса уже не доехал бы.
+    $winner = PaymentIntent::create([
+        'merchant_account_id' => ApiKey::where('key_hash', hash('sha256', $this->keyA))->value('merchant_account_id'),
+        'amount' => 6540,
+        'currency' => 'RUB',
+        'status' => 'requires_payment_method',
+        'idempotency_key' => 'race-1',
+    ]);
+
+    $real = app(PaymentIntentRepositoryInterface::class);
+    $lookups = 0;
+    $repository = Mockery::mock(PaymentIntentRepositoryInterface::class);
+    $repository->shouldReceive('findByIdempotencyKey')->andReturnUsing(
+        function (string $key, int|string $merchantId) use ($real, &$lookups) {
+            return ++$lookups === 1 ? null : $real->findByIdempotencyKey($key, $merchantId);
+        },
+    );
+    $repository->shouldReceive('create')->andReturnUsing(fn (array $attributes) => $real->create($attributes));
+    $this->app->instance(PaymentIntentRepositoryInterface::class, $repository);
 
     $response = $this->postJson('/api/v1/payments', idempotentPaymentBody(['confirm' => false]), ['api-key' => $this->keyA, 'Idempotency-Key' => 'race-1']);
 
-    $response->assertStatus(200)->assertJsonPath('data.id', $raced->key);
-    expect(PaymentIntent::count())->toBe(1);
+    $response->assertStatus(200)->assertJsonPath('data.id', $winner->key);
+    expect($lookups)->toBe(2)
+        ->and(PaymentIntent::count())->toBe(1);
 });
 
 // --- Возврат ---
@@ -160,6 +174,40 @@ test('повтор возврата с тем же ключом возвраща
         ->assertJsonPath('data.id', $first->json('data.id'));
 
     expect(Refund::count())->toBe(1);
+});
+
+test('гонка возвратов: наш поиск не увидел чужой возврат с тем же ключом — отдаётся он', function () {
+    $paymentId = idempotencyPaidPayment($this->keyA);
+    $headers = ['api-key' => $this->keyA, 'Idempotency-Key' => 'refund-race'];
+    // Мимо HTTP, как и в гонке платежей: контроллер возвратов ещё не создан и получит подмену.
+    $payment = PaymentIntent::where('key', $paymentId)->sole();
+    $winner = Refund::create([
+        'payment_intent_id' => $payment->id,
+        'merchant_account_id' => $payment->merchant_account_id,
+        'amount' => 1000,
+        'currency' => $payment->currency,
+        'status' => 'succeeded',
+        'idempotency_key' => 'refund-race',
+    ]);
+
+    $real = app(RefundRepositoryInterface::class);
+    $lookups = 0;
+    $repository = Mockery::mock(RefundRepositoryInterface::class);
+    $repository->shouldReceive('findByIdempotencyKey')->andReturnUsing(
+        function (string $key, int|string $merchantId) use ($real, &$lookups) {
+            return ++$lookups === 1 ? null : $real->findByIdempotencyKey($key, $merchantId);
+        },
+    );
+    $repository->shouldReceive('sumPendingAndSucceededForPayment')->andReturnUsing(fn (int $id) => $real->sumPendingAndSucceededForPayment($id));
+    $repository->shouldReceive('create')->andReturnUsing(fn (array $attributes) => $real->create($attributes));
+    $this->app->instance(RefundRepositoryInterface::class, $repository);
+
+    $this->postJson('/api/v1/refunds', ['payment_id' => $paymentId, 'amount' => 1000], $headers)
+        ->assertStatus(200)
+        ->assertJsonPath('data.id', $winner->key);
+
+    expect($lookups)->toBe(2)
+        ->and(Refund::count())->toBe(1);
 });
 
 test('тот же ключ возврата с другой суммой или другим платежом — 422', function () {

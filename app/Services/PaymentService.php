@@ -82,9 +82,9 @@ final readonly class PaymentService
         ];
 
         try {
-            // Вызывается вне транзакции: на Postgres упавший INSERT внутри неё сделал бы
-            // транзакцию непригодной и поиск ниже упал бы.
-            return $this->paymentRepository->create($attributes);
+            // Своя транзакция, а внутри чужой — точка сохранения: на Postgres упавший INSERT
+            // иначе делает внешнюю транзакцию непригодной, и поиск ниже падает.
+            return DB::transaction(fn () => $this->paymentRepository->create($attributes));
         } catch (UniqueConstraintViolationException $e) {
             // Гонка двух запросов с одним ключом: между нашим поиском и вставкой успел
             // вставить другой. Отдаём его платёж.
