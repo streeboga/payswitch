@@ -240,9 +240,8 @@ cd widget && npm run test
 Потребители вкладывают сборку к себе:
 
 - панель держит его путевой зависимостью (`dashboard/package.json:62` —
-  `"@payswitch/js": "file:../widget"`), а CI перед сборкой перетирает свежей
-  сборкой: `rm -rf node_modules/@payswitch/js; cp -r ../widget node_modules/@payswitch/js`
-  (`deploy/deploy.sh`);
+  `"@payswitch/js": "file:../widget"`), сборку делает приёмник `ci-deploy payswitch`
+  (сначала `widget`, потом `dashboard`);
 - invoicing-service кладёт `payswitch.mjs` прямо в исходники чекаута
   (`resources/js/checkout/vendor/`).
 
@@ -290,24 +289,7 @@ cd widget && npm run test
 
 ## Выкладка
 
-Один способ — `deploy/deploy.sh` на `85.198.101.184` от root, после пуша в
-`main`:
-
-```bash
-ssh root@85.198.101.184 'cd /var/www/psapi.gnzs.pro && bash deploy/deploy.sh'
-```
-
-Скрипт: git и composer от `deploy`, сборка виджета и панели
-(`VITE_BACKEND_URL=https://psapi.gnzs.pro`), `pg_dump` в `/var/backups/psapi`
-(последние десять), `migrate`, `config:clear`, `route:clear`, `event:clear`,
-`view:clear`, `queue:restart`, крон из `deploy/cron.d`.
-
-**git только от `deploy`.** От root git оставлял в `.git` объекты root, fetch
-от `deploy` падал, и приходилось снова идти от root. Если fetch упал на правах —
-`chown -R deploy:www-data .git`. На сервере `core.fileMode=false`.
-
-Workflow `deploy.yml` удалён: он шёл на тот же хост от `deploy`, падал и делал
-`event:cache` от `deploy`, который `www-data` не перезаписывает.
+Push в `main` → Woodpecker (`.woodpecker/deploy.yaml`) → приёмник `ci-deploy payswitch` на 85.198.101.184; вручную — `ci-deploy payswitch <sha>` от `deploy`.
 
 README описывает `/var/www/payswitch` и `your-domain.com` (`README.md:201` и
 далее) — отстал.
