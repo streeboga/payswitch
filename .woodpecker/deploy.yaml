@@ -3,6 +3,9 @@
 # при провале /up: приёмник /usr/local/sbin/ci-deploy payswitch, исходник в gateway-audit/ci/receiver.
 # Репозиторий публичный: секреты только на push и manual, PR из форков — с одобрением.
 # widget/ и dashboard/ собираются здесь до выкладки; на сервере их собирает приёмник (payswitch.gnzs.pro отдаёт dashboard/dist).
+labels:
+  pool: services   # агент PHP-сервисов на 87.58.220.19, отдельно от очереди rosary
+
 when:
   - event: [push, pull_request, manual]
     branch: main
