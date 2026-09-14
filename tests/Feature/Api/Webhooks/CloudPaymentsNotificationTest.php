@@ -251,6 +251,17 @@ test('pay marks the attempt succeeded and keeps the provider transaction id', fu
         ->and($foreign->fresh()->connector_transaction_id)->toBeNull();
 });
 
+test('authorization then completion keeps a single attempt', function () {
+    $payment = cpPayment($this->merchant, ['capture_method' => CaptureMethod::Manual]);
+    cpAttempt($payment);
+
+    cpNotify($this, cpPayParams($payment, ['Status' => 'Authorized', 'TransactionId' => 777005]))->assertOk();
+    cpNotify($this, cpPayParams($payment, ['TransactionId' => 777005]))->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and(PaymentAttempt::where('payment_intent_id', $payment->id)->count())->toBe(1);
+});
+
 test('fail notification fails the payment and the attempt', function () {
     $payment = cpPayment($this->merchant);
     $attempt = cpAttempt($payment);

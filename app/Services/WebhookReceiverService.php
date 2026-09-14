@@ -248,8 +248,9 @@ final readonly class WebhookReceiverService
             'connector_transaction_id' => is_scalar($transactionId) ? (string) $transactionId : null,
         ], fn ($value) => $value !== null);
 
-        // A late success may follow a Fail that already closed the attempt.
-        $open = $failed ? ['requires_action', 'processing'] : ['requires_action', 'processing', 'failed'];
+        // A late success may follow a Fail that already closed the attempt; a capture follows
+        // an authorization that already succeeded it — neither is a new attempt.
+        $open = $failed ? ['requires_action', 'processing'] : ['requires_action', 'processing', 'failed', 'succeeded'];
 
         $attempt = $payment->paymentAttempts()
             ->where('connector', $connectorName)
