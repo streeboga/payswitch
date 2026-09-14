@@ -10,6 +10,7 @@ use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
+use Streeboga\PaymentData\Models\Refund;
 use Streeboga\PaymentData\Support\IdGenerator;
 
 uses(RefreshDatabase::class);
@@ -90,7 +91,7 @@ test('confirm passes payment_id to connector for idempotency', function () {
     });
 });
 
-test('refund passes payment_id to connector for idempotency', function () {
+test('refund passes our refund key to connector for idempotency', function () {
     $create = createYooPayment();
     $paymentId = $create->json('data.id');
 
@@ -120,17 +121,16 @@ test('refund passes payment_id to connector for idempotency', function () {
     $this->postJson('/api/v1/refunds', [
         'payment_id' => $paymentId,
         'amount' => 6540,
-    ], yooApiHeaders());
+    ], yooApiHeaders())->assertStatus(201);
 
-    Http::assertSent(function ($request) use ($paymentId) {
+    $refundKey = Refund::sole()->key;
+
+    Http::assertSent(function ($request) use ($refundKey) {
         if (! str_contains($request->url(), 'api.yookassa.ru/v3/refunds')) {
             return false;
         }
 
-        // YooKassa connector builds Idempotence-Key from payment_id.
-        // Without payment_id, it falls back to random bytes — no idempotency.
-        $idempotenceKey = $request->header('Idempotence-Key')[0] ?? '';
-
-        return str_contains($idempotenceKey, $paymentId);
+        // Ключ — наш возврат: платёж+сумма схлопывали у ЮKassa два равных частичных возврата.
+        return ($request->header('Idempotence-Key')[0] ?? '') === $refundKey;
     });
 });
