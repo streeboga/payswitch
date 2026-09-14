@@ -6,7 +6,9 @@ namespace App\Repositories\Eloquent;
 
 use App\Repositories\Contracts\EventLogRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\DB;
+use Streeboga\PaymentData\Models\PaymentIntent;
 
 final readonly class EventLogRepository implements EventLogRepositoryInterface
 {
@@ -29,17 +31,29 @@ final readonly class EventLogRepository implements EventLogRepositoryInterface
                 'webhook_events.created_at',
             ]);
 
-        $audits = DB::table('payment_audit_log')
-            ->join('payment_intents', 'payment_audit_log.payment_intent_id', '=', 'payment_intents.id')
-            ->where('payment_audit_log.merchant_account_id', $merchantId)
+        // Смены статуса пишет LogPaymentAudit в activity_log (spatie);
+        // payment_audit_log с 18.03 не пополняется. Статусы — в json
+        // properties: wrap() даёт ->> в Postgres и json_extract в sqlite.
+        $grammar = DB::connection()->getQueryGrammar();
+        $previousStatus = $grammar->wrap('activity_log.properties->previous_status');
+        $newStatus = $grammar->wrap('activity_log.properties->new_status');
+
+        $audits = DB::table('activity_log')
+            ->join('payment_intents', function (JoinClause $join) {
+                $join->on('activity_log.subject_id', '=', 'payment_intents.id')
+                    ->where('activity_log.subject_type', (new PaymentIntent)->getMorphClass());
+            })
+            ->where('activity_log.log_name', 'payment')
+            ->where('activity_log.event', 'status_changed')
+            ->where('payment_intents.merchant_account_id', $merchantId)
             ->select([
-                DB::raw('CAST(payment_audit_log.id AS TEXT) as event_id'),
+                DB::raw('CAST(activity_log.id AS TEXT) as event_id'),
                 DB::raw("'status_change' as type"),
-                'payment_audit_log.action',
+                'activity_log.event as action',
                 'payment_intents.key as resource_id',
-                'payment_audit_log.new_status as status',
-                DB::raw("(payment_audit_log.previous_status || ' → ' || payment_audit_log.new_status) as detail"),
-                'payment_audit_log.created_at',
+                DB::raw("({$newStatus}) as status"),
+                DB::raw("(({$previousStatus}) || ' → ' || ({$newStatus})) as detail"),
+                'activity_log.created_at',
             ]);
 
         if (! empty($filters['type'])) {
@@ -52,7 +66,7 @@ final readonly class EventLogRepository implements EventLogRepositoryInterface
 
         if (! empty($filters['from']) && ! empty($filters['to'])) {
             $webhooks->whereBetween('webhook_events.created_at', [$filters['from'], $filters['to']]);
-            $audits->whereBetween('payment_audit_log.created_at', [$filters['from'], $filters['to']]);
+            $audits->whereBetween('activity_log.created_at', [$filters['from'], $filters['to']]);
         }
 
         $union = $webhooks->unionAll($audits);
