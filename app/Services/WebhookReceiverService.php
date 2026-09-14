@@ -156,7 +156,7 @@ final readonly class WebhookReceiverService
             return null;
         }
 
-        $result = DB::transaction(function () use ($payment, $newStatus, $connectorName) {
+        $result = DB::transaction(function () use ($connector, $payload, $payment, $newStatus, $connectorName) {
             $lockedPayment = $this->paymentRepository->findByIdLocked($payment->id);
             if (! $lockedPayment) {
                 return null;
@@ -168,7 +168,21 @@ final readonly class WebhookReceiverService
             // and our own verdict on the payment does not undo it.
             $charged = $newStatus === PaymentStatus::Succeeded || $newStatus === PaymentStatus::RequiresCapture;
 
-            if ($charged && $from === PaymentStatus::Cancelled) {
+            // What the provider says it took. A notification that quotes no amount (Stripe,
+            // YooKassa nest it elsewhere) is credited with what we billed, as before.
+            $notifiedAmount = $this->notifiedAmount($connector, $payload);
+            $mismatch = $charged && $notifiedAmount !== null
+                ? $this->mismatch($connector, $payload, $lockedPayment, $notifiedAmount)
+                : null;
+
+            if ($charged && $mismatch !== null
+                && PaymentStateMachine::canConfirmByProvider($from, PaymentStatus::RequiresMerchantAction)) {
+                // Money moved, but not the money we billed: the payer may have edited the
+                // amount or currency in the browser. Not ours to call it paid.
+                $updateData['status'] = PaymentStatus::RequiresMerchantAction;
+                $updateData['error_code'] = $mismatch;
+                $updateData['error_message'] = 'The provider charged a different amount or currency than billed';
+            } elseif ($charged && $from === PaymentStatus::Cancelled) {
                 // Cancelled here, paid there: refund or deliver is the merchant's call.
                 $updateData['status'] = PaymentStatus::RequiresMerchantAction;
                 $updateData['error_code'] = 'paid_after_cancellation';
@@ -193,7 +207,7 @@ final readonly class WebhookReceiverService
             }
 
             if ($updateData['status'] === PaymentStatus::Succeeded) {
-                $updateData['amount_received'] = $lockedPayment->amount;
+                $updateData['amount_received'] = $notifiedAmount ?? $lockedPayment->amount;
             }
             $this->paymentRepository->update($lockedPayment, $updateData);
 

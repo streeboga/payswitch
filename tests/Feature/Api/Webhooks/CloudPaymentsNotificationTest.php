@@ -172,6 +172,52 @@ test('a repeated pay on a succeeded payment changes nothing', function () {
     Event::assertNotDispatched(PaymentStatusChanged::class);
 });
 
+// --- Б5: сумма и валюта в Pay ---
+
+test('pay for another amount or currency is put before the merchant, not succeeded', function (array $overrides, string $errorCode) {
+    Event::fake([PaymentStatusChanged::class]);
+    Log::spy();
+    $payment = cpPayment($this->merchant);
+
+    cpNotify($this, cpPayParams($payment, $overrides))->assertOk();
+
+    $fresh = $payment->fresh();
+    expect($fresh->status)->toBe(PaymentStatus::RequiresMerchantAction)
+        ->and($fresh->error_code)->toBe($errorCode)
+        ->and($fresh->amount_received)->toBeNull();
+    Event::assertDispatched(PaymentStatusChanged::class);
+    Log::shouldHaveReceived('error')->atLeast()->once();
+})->with([
+    'amount' => [['Amount' => '1.00'], 'amount_mismatch'],
+    'currency' => [['Currency' => 'KZT'], 'currency_mismatch'],
+]);
+
+test('authorized pay for another amount does not become requires_capture', function () {
+    $payment = cpPayment($this->merchant, ['capture_method' => CaptureMethod::Manual]);
+
+    cpNotify($this, cpPayParams($payment, ['Status' => 'Authorized', 'Amount' => '1.00']))->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::RequiresMerchantAction);
+});
+
+test('late pay for another amount on an expired payment is put before the merchant too', function () {
+    $payment = cpPayment($this->merchant, ['status' => PaymentStatus::Expired]);
+
+    cpNotify($this, cpPayParams($payment, ['Amount' => '10.00']))->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::RequiresMerchantAction)
+        ->and($payment->fresh()->error_code)->toBe('amount_mismatch');
+});
+
+test('amount_received is the amount the provider quotes, converted to minor units', function () {
+    $payment = cpPayment($this->merchant, ['amount' => 13750]);
+
+    cpNotify($this, cpPayParams($payment, ['Amount' => '137.5']))->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($payment->fresh()->amount_received)->toBe(13750);
+});
+
 test('check with the billed amount and currency on a payable payment gets 0', function () {
     $payment = cpPayment($this->merchant);
 
