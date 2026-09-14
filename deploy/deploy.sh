@@ -7,8 +7,9 @@ set -euo pipefail
 DIR=${DIR:-/var/www/psapi.gnzs.pro}
 cd "$DIR"
 
-sudo -u deploy git fetch origin
-sudo -u deploy git merge --ff-only origin/main
+# git от root: часть объектов в .git принадлежит root, от deploy fetch падает.
+git fetch origin
+git merge --ff-only origin/main
 git log --oneline -1
 
 sudo -u deploy composer install --no-dev --optimize-autoloader --no-interaction -q
