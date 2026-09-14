@@ -30,7 +30,8 @@ export interface MerchantAccountAttributes {
 export interface BusinessProfileAttributes {
   merchant_id: string
   webhook_url: string | null
-  payment_response_hash_key: string
+  /** null, если пользователь не admin мерчанта */
+  payment_response_hash_key: string | null
   connectors_count: number
   routing_rules_count: number
   created_at: string

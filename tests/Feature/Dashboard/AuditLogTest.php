@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Activitylog\Models\Activity;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -14,6 +15,9 @@ beforeEach(function () {
     $this->user = User::factory()->create();
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
+    UserRole::create(['user_id' => $this->user->id, 'organization_id' => $org->id, 'role' => 'viewer']);
+    // Журнал показывает только действия пользователей организации мерчанта.
+    $this->causer = ['causer_type' => $this->user->getMorphClass(), 'causer_id' => $this->user->id];
     $this->headers = ['X-Merchant-Key' => $this->merchant->key];
 });
 
@@ -24,8 +28,7 @@ test('audit log returns paginated json:api response', function () {
         'event' => 'created',
         'subject_type' => 'PaymentIntent',
         'subject_id' => 1,
-        'causer_type' => 'User',
-        'causer_id' => $this->user->id,
+        ...$this->causer,
     ]);
 
     $response = $this->actingAs($this->user)
@@ -37,8 +40,8 @@ test('audit log returns paginated json:api response', function () {
 });
 
 test('audit log filters by event type', function () {
-    Activity::create(['log_name' => 'default', 'description' => 'Created', 'event' => 'created']);
-    Activity::create(['log_name' => 'default', 'description' => 'Updated', 'event' => 'updated']);
+    Activity::create(['log_name' => 'default', 'description' => 'Created', 'event' => 'created', ...$this->causer]);
+    Activity::create(['log_name' => 'default', 'description' => 'Updated', 'event' => 'updated', ...$this->causer]);
 
     $response = $this->actingAs($this->user)
         ->getJson('/api/v1/dashboard/audit-log?filter[event]=created', $this->headers);
@@ -48,7 +51,7 @@ test('audit log filters by event type', function () {
 });
 
 test('audit log export returns csv', function () {
-    Activity::create(['log_name' => 'default', 'description' => 'Test', 'event' => 'created']);
+    Activity::create(['log_name' => 'default', 'description' => 'Test', 'event' => 'created', ...$this->causer]);
 
     $response = $this->actingAs($this->user)
         ->get('/api/v1/dashboard/audit-log/export', $this->headers);
@@ -58,7 +61,7 @@ test('audit log export returns csv', function () {
 });
 
 test('audit log export has correct csv headers', function () {
-    Activity::create(['log_name' => 'default', 'description' => 'Test', 'event' => 'created']);
+    Activity::create(['log_name' => 'default', 'description' => 'Test', 'event' => 'created', ...$this->causer]);
 
     $response = $this->actingAs($this->user)
         ->get('/api/v1/dashboard/audit-log/export', $this->headers);
@@ -79,8 +82,7 @@ test('audit log export contains entry data', function () {
         'event' => 'created',
         'subject_type' => 'PaymentIntent',
         'subject_id' => 42,
-        'causer_type' => 'User',
-        'causer_id' => $this->user->id,
+        ...$this->causer,
     ]);
 
     $response = $this->actingAs($this->user)
@@ -120,12 +122,14 @@ test('audit log export respects date filters', function () {
         'description' => 'Old entry',
         'event' => 'created',
         'created_at' => now()->subDays(10),
+        ...$this->causer,
     ]);
     Activity::create([
         'log_name' => 'default',
         'description' => 'Recent entry',
         'event' => 'updated',
         'created_at' => now()->subDay(),
+        ...$this->causer,
     ]);
 
     $from = now()->subDays(3)->format('Y-m-d');

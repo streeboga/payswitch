@@ -8,6 +8,7 @@ use App\DataTransferObjects\Admin\CreateConnectorData;
 use App\DataTransferObjects\Admin\UpdateConnectorData;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Validation\ValidationException;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 
@@ -21,7 +22,7 @@ final readonly class ConnectorService
     {
         $merchant = $this->merchantRepository->findMerchantByKey($merchantKey);
 
-        $profileId = $this->resolveProfileId($dto->profile_id)
+        $profileId = $this->resolveProfileId($dto->profile_id, $merchant->id)
             ?? $this->merchantRepository->findProfileByMerchant($merchant->id)?->id;
 
         $connector = $this->merchantRepository->createConnector([
@@ -67,7 +68,7 @@ final readonly class ConnectorService
         $updateData = $dto->toUpdateArray();
 
         if (array_key_exists('profile_id', $updateData)) {
-            $updateData['business_profile_id'] = $this->resolveProfileId($updateData['profile_id']);
+            $updateData['business_profile_id'] = $this->resolveProfileId($updateData['profile_id'], $merchant->id);
             unset($updateData['profile_id']);
         }
 
@@ -122,12 +123,17 @@ final readonly class ConnectorService
         $this->merchantRepository->deleteConnector($connector);
     }
 
-    private function resolveProfileId(?string $profileKey): ?int
+    /**
+     * Чужой профиль не принимается: иначе коннектор мерчанта A привязывается
+     * к профилю мерчанта B.
+     */
+    private function resolveProfileId(?string $profileKey, int|string $merchantId): ?int
     {
         if (! $profileKey) {
             return null;
         }
 
-        return $this->merchantRepository->findProfileByKey($profileKey)->id;
+        return $this->merchantRepository->findProfileByMerchantAndKey($merchantId, $profileKey)->id
+            ?? throw ValidationException::withMessages(['profile_id' => 'Профиль не найден у этого мерчанта.']);
     }
 }

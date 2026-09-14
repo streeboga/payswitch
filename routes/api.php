@@ -74,10 +74,6 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'throttle:300,1'])->g
     Route::post('/saved-filters', [SavedFilterController::class, 'store']);
     Route::delete('/saved-filters/{filterId}', [SavedFilterController::class, 'destroy']);
 
-    // Audit log (Story 15-3)
-    Route::get('/audit-log', [AuditLogController::class, 'index']);
-    Route::get('/audit-log/export', [AuditLogController::class, 'export']);
-
 });
 
 // Dashboard API — Sanctum auth + merchant context
@@ -139,6 +135,10 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
 
     // Event logs (Story 14-3)
     Route::get('/event-logs', [EventLogController::class, 'index']);
+
+    // Audit log (Story 15-3) — в контексте мерчанта: без него журнал был общим на всех
+    Route::get('/audit-log', [AuditLogController::class, 'index']);
+    Route::get('/audit-log/export', [AuditLogController::class, 'export']);
 
     // Business profiles (Story 15-2)
     Route::get('/profiles', [DashboardBusinessProfileController::class, 'index']);

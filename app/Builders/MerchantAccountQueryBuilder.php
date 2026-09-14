@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Builders;
 
+use App\Models\UserRole;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -27,6 +28,13 @@ final class MerchantAccountQueryBuilder
     public function forOrganization(int|string $orgId): self
     {
         $this->query->where('org_id', $orgId);
+
+        return $this;
+    }
+
+    public function forUser(int $userId): self
+    {
+        $this->query->whereIn('org_id', UserRole::query()->select('organization_id')->where('user_id', $userId));
 
         return $this;
     }

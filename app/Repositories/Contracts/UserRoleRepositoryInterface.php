@@ -21,6 +21,10 @@ interface UserRoleRepositoryInterface
 
     public function findOrFail(string $roleId): UserRole;
 
+    public function findByUserAndOrganization(int|string $userId, int|string $organizationId): ?UserRole;
+
+    public function countAdmins(int|string $organizationId): int;
+
     public function update(UserRole $role, string $newRole): void;
 
     public function delete(UserRole $role): void;

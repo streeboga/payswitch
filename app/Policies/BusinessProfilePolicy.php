@@ -27,4 +27,9 @@ final class BusinessProfilePolicy extends MerchantPolicy
     {
         return $this->isAdmin($user, $merchantId);
     }
+
+    public function delete(User $user, int|string $merchantId): bool
+    {
+        return $this->isAdmin($user, $merchantId);
+    }
 }

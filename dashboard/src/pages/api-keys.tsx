@@ -297,7 +297,8 @@ function CreateApiKeyDialog({
 
   const createApiKeySchema = z.object({
     name: z.string().min(1, t('apiKeys.nameRequired')),
-    type: z.enum(['admin', 'secret', 'publishable'], {
+    // admin выпускать нечего: admin API открывает только ключ из env сервера
+    type: z.enum(['secret', 'publishable'], {
       message: t('apiKeys.typeRequired'),
     }),
   })
@@ -365,7 +366,6 @@ function CreateApiKeyDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="secret">Secret</SelectItem>
                       <SelectItem value="publishable">Publishable</SelectItem>
                     </SelectContent>

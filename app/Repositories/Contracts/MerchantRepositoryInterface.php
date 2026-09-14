@@ -83,15 +83,21 @@ interface MerchantRepositoryInterface
 
     public function findConnectorByMerchantAndKeyOrNull(int|string $merchantAccountId, string $connectorKey): ?MerchantConnectorAccount;
 
-    /**
-     * @return Collection<int, Organization>
-     */
-    public function listOrganizations(): Collection;
+    public function findProfileByMerchantAndKey(int|string $merchantAccountId, string $profileKey): ?BusinessProfile;
 
     /**
+     * Организации, в которых у пользователя есть роль.
+     *
+     * @return Collection<int, Organization>
+     */
+    public function listOrganizationsForUser(int $userId): Collection;
+
+    /**
+     * Мерчанты организаций, в которых у пользователя есть роль.
+     *
      * @return Collection<int, MerchantAccount>
      */
-    public function listAllMerchants(): Collection;
+    public function listMerchantsForUser(int $userId): Collection;
 
     /**
      * @return Collection<int, ApiKey>

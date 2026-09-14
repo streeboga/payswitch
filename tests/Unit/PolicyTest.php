@@ -372,6 +372,7 @@ test('TestPaymentPolicy: no-role user is denied', function () {
 
 test('UserRolePolicy: admin can viewAny, assign, update, delete', function () {
     $user = mockUserWithMerchantRole(UserRole::Admin);
+    $user->shouldReceive('roleForOrganization')->andReturn(UserRole::Admin);
     $policy = new UserRolePolicy;
     expect($policy->viewAny($user, 1))->toBeTrue();
     expect($policy->assign($user, 1))->toBeTrue();
@@ -381,6 +382,7 @@ test('UserRolePolicy: admin can viewAny, assign, update, delete', function () {
 
 test('UserRolePolicy: operator can viewAny but not assign/update/delete', function () {
     $user = mockUserWithMerchantRole(UserRole::Operator);
+    $user->shouldReceive('roleForOrganization')->andReturn(UserRole::Operator);
     $policy = new UserRolePolicy;
     expect($policy->viewAny($user, 1))->toBeTrue();
     expect($policy->assign($user, 1))->toBeFalse();
@@ -388,8 +390,18 @@ test('UserRolePolicy: operator can viewAny but not assign/update/delete', functi
     expect($policy->delete($user, 1))->toBeFalse();
 });
 
+test('UserRolePolicy: merchant admin is not admin of another organization', function () {
+    $user = mockUserWithMerchantRole(UserRole::Admin);
+    $user->shouldReceive('roleForOrganization')->andReturn(null);
+    $policy = new UserRolePolicy;
+    expect($policy->assign($user, 2))->toBeFalse();
+    expect($policy->update($user, 2))->toBeFalse();
+    expect($policy->delete($user, 2))->toBeFalse();
+});
+
 test('UserRolePolicy: no-role user is denied', function () {
     $user = mockUserWithMerchantRole(null);
+    $user->shouldReceive('roleForOrganization')->andReturn(null);
     $policy = new UserRolePolicy;
     expect($policy->viewAny($user, 1))->toBeFalse();
     expect($policy->assign($user, 1))->toBeFalse();
@@ -566,6 +578,7 @@ test('all merchant-based policy methods return bool', function () {
     ];
 
     $user = mockUserWithMerchantRole(UserRole::Admin);
+    $user->shouldReceive('roleForOrganization')->andReturn(UserRole::Admin);
 
     foreach ($policies as $policyClass => $methods) {
         $policy = new $policyClass;

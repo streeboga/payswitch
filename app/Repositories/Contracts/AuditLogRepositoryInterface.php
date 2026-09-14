@@ -14,11 +14,11 @@ interface AuditLogRepositoryInterface
      * @param  array<string, mixed>  $filters
      * @return LengthAwarePaginator<int, Activity>
      */
-    public function getPaginated(array $filters, int $perPage): LengthAwarePaginator;
+    public function getPaginated(int|string $merchantId, array $filters, int $perPage): LengthAwarePaginator;
 
     /**
      * @param  array<string, mixed>  $filters
      * @return LazyCollection<int, Activity>
      */
-    public function getCursorForExport(array $filters): LazyCollection;
+    public function getCursorForExport(int|string $merchantId, array $filters): LazyCollection;
 }

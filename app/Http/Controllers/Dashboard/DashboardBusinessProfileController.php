@@ -9,6 +9,7 @@ use App\Http\Requests\Dashboard\StoreDashboardBusinessProfileRequest;
 use App\Http\Requests\Dashboard\UpdateDashboardBusinessProfileRequest;
 use App\Http\Resources\BusinessProfileResource;
 use App\Services\BusinessProfileService;
+use App\Services\MerchantService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
@@ -21,6 +22,7 @@ final class DashboardBusinessProfileController extends Controller
 {
     public function __construct(
         private readonly BusinessProfileService $businessProfileService,
+        private readonly MerchantService $merchantService,
     ) {}
 
     /**
@@ -45,10 +47,15 @@ final class DashboardBusinessProfileController extends Controller
      */
     #[PathParameter('merchantKey', description: 'Merchant public key', example: 'merchant_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Profile list')]
+    #[Response(403, description: 'No access to this merchant')]
     #[Response(404, description: 'Merchant not found')]
     public function indexByMerchant(string $merchantKey, Request $request): JsonResponse
     {
-        $profiles = $this->businessProfileService->listByMerchantKey($merchantKey);
+        // Маршрут вне resolve.merchant: доступ к мерчанту проверяем сами.
+        $merchant = $this->merchantService->findMerchant($merchantKey);
+        Gate::authorize('business-profile.viewAny', [$merchant->id]);
+
+        $profiles = $this->businessProfileService->listByMerchantId($merchant->id);
 
         return BusinessProfileResource::jsonApiList($profiles, $request);
     }
@@ -65,7 +72,7 @@ final class DashboardBusinessProfileController extends Controller
     {
         $merchantId = $request->attributes->get('merchant_id');
         Gate::authorize('business-profile.view', [$merchantId]);
-        $profile = $this->businessProfileService->findByKey($profileKey);
+        $profile = $this->businessProfileService->findByKey($profileKey, $merchantId);
 
         return (new BusinessProfileResource($profile))->toResponse($request);
     }
@@ -113,6 +120,7 @@ final class DashboardBusinessProfileController extends Controller
 
         $profile = $this->businessProfileService->update(
             $profileKey,
+            $merchantId,
             $validated,
         );
 
@@ -132,7 +140,7 @@ final class DashboardBusinessProfileController extends Controller
         $merchantId = $request->attributes->get('merchant_id');
         Gate::authorize('business-profile.delete', [$merchantId]);
 
-        $this->businessProfileService->delete($profileKey);
+        $this->businessProfileService->delete($profileKey, $merchantId);
 
         return response()->json(null, 204);
     }

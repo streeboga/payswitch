@@ -30,9 +30,9 @@ final readonly class MerchantService
     /**
      * @return Collection<int, Organization>
      */
-    public function listOrganizations(): Collection
+    public function listOrganizationsForUser(int $userId): Collection
     {
-        return $this->merchantRepository->listOrganizations();
+        return $this->merchantRepository->listOrganizationsForUser($userId);
     }
 
     public function findOrganization(string $orgKey): Organization
@@ -43,9 +43,9 @@ final readonly class MerchantService
     /**
      * @return Collection<int, MerchantAccount>
      */
-    public function listAllMerchants(): Collection
+    public function listMerchantsForUser(int $userId): Collection
     {
-        return $this->merchantRepository->listAllMerchants();
+        return $this->merchantRepository->listMerchantsForUser($userId);
     }
 
     /**

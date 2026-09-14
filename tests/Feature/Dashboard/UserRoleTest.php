@@ -116,3 +116,85 @@ test('requires authentication', function () {
 
     $response->assertUnauthorized();
 });
+
+// С2: роли назначает только admin организации, к которой относится роль.
+
+test('viewer cannot assign role in foreign organization', function () {
+    $viewer = User::factory()->create();
+    UserRole::create(['user_id' => $viewer->id, 'organization_id' => $this->org->id, 'role' => 'viewer']);
+    $foreignOrg = Organization::create(['name' => 'Foreign Org']);
+
+    $this->actingAs($viewer)
+        ->postJson('/api/v1/dashboard/users/roles', [
+            'user_id' => $viewer->id,
+            'organization_id' => $foreignOrg->id,
+            'role' => 'admin',
+        ], $this->headers)
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('user_roles', ['organization_id' => $foreignOrg->id]);
+});
+
+test('viewer cannot promote himself in own organization', function () {
+    $viewer = User::factory()->create();
+    $role = UserRole::create(['user_id' => $viewer->id, 'organization_id' => $this->org->id, 'role' => 'viewer']);
+
+    $this->actingAs($viewer)
+        ->patchJson("/api/v1/dashboard/users/roles/{$role->id}", ['role' => 'admin'], $this->headers)
+        ->assertForbidden();
+
+    $this->actingAs($viewer)
+        ->postJson('/api/v1/dashboard/users/roles', [
+            'user_id' => $viewer->id,
+            'organization_id' => $this->org->id,
+            'role' => 'admin',
+        ], $this->headers)
+        ->assertForbidden();
+
+    expect($role->fresh()->role->value)->toBe('viewer');
+});
+
+test('admin of one organization cannot update or delete role of another organization', function () {
+    $foreignOrg = Organization::create(['name' => 'Foreign Org']);
+    $foreignUser = User::factory()->create();
+    $foreignRole = UserRole::create(['user_id' => $foreignUser->id, 'organization_id' => $foreignOrg->id, 'role' => 'viewer']);
+
+    $this->actingAs($this->user)
+        ->patchJson("/api/v1/dashboard/users/roles/{$foreignRole->id}", ['role' => 'admin'], $this->headers)
+        ->assertForbidden();
+
+    $this->actingAs($this->user)
+        ->deleteJson("/api/v1/dashboard/users/roles/{$foreignRole->id}", [], $this->headers)
+        ->assertForbidden();
+
+    expect($foreignRole->fresh()?->role->value)->toBe('viewer');
+});
+
+test('last admin of organization cannot be demoted or removed', function () {
+    $this->actingAs($this->user)
+        ->patchJson("/api/v1/dashboard/users/roles/{$this->adminRole->id}", ['role' => 'viewer'], $this->headers)
+        ->assertUnprocessable();
+
+    $this->actingAs($this->user)
+        ->deleteJson("/api/v1/dashboard/users/roles/{$this->adminRole->id}", [], $this->headers)
+        ->assertUnprocessable();
+
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/dashboard/users/roles', [
+            'user_id' => $this->user->id,
+            'organization_id' => $this->org->id,
+            'role' => 'operator',
+        ], $this->headers)
+        ->assertUnprocessable();
+
+    expect($this->adminRole->fresh()->role->value)->toBe('admin');
+});
+
+test('admin can be demoted when another admin remains', function () {
+    $second = User::factory()->create();
+    UserRole::create(['user_id' => $second->id, 'organization_id' => $this->org->id, 'role' => 'admin']);
+
+    $this->actingAs($this->user)
+        ->patchJson("/api/v1/dashboard/users/roles/{$this->adminRole->id}", ['role' => 'viewer'], $this->headers)
+        ->assertOk();
+});

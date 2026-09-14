@@ -81,7 +81,8 @@ return [
     'rate_limit' => [
         'admin' => 30,      // requests per minute for Admin API Key
         'secret' => 120,    // requests per minute for Secret API Key
-        'publishable' => 60, // requests per minute for Publishable Key
+        'publishable' => 60, // requests per minute for Publishable Key, per merchant and IP
+        'unauthenticated' => 30, // failed API key attempts per minute per IP
     ],
 
 ];

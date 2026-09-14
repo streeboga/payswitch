@@ -155,23 +155,25 @@ export function ProfileDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <KeyRound className="h-4 w-4" />
-              {t('profileDetail.hashKeyTitle')}
-            </CardTitle>
-            <CardDescription>{t('profileDetail.hashKeyDesc')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <code className="bg-muted flex-1 rounded px-3 py-2 font-mono text-sm">
-                {profile.payment_response_hash_key}
-              </code>
-              <CopyButton value={profile.payment_response_hash_key} />
-            </div>
-          </CardContent>
-        </Card>
+        {profile.payment_response_hash_key && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="h-4 w-4" />
+                {t('profileDetail.hashKeyTitle')}
+              </CardTitle>
+              <CardDescription>{t('profileDetail.hashKeyDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <code className="bg-muted flex-1 rounded px-3 py-2 font-mono text-sm">
+                  {profile.payment_response_hash_key}
+                </code>
+                <CopyButton value={profile.payment_response_hash_key} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

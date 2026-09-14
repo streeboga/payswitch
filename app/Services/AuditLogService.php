@@ -21,9 +21,9 @@ final readonly class AuditLogService
      * @param  array<string, mixed>  $filters
      * @return LengthAwarePaginator<int, Activity>
      */
-    public function getPaginated(array $filters, int $perPage): LengthAwarePaginator
+    public function getPaginated(int|string $merchantId, array $filters, int $perPage): LengthAwarePaginator
     {
-        return $this->auditLogs->getPaginated($filters, $perPage);
+        return $this->auditLogs->getPaginated($merchantId, $filters, $perPage);
     }
 
     /**
@@ -32,8 +32,8 @@ final readonly class AuditLogService
      * @param  array<string, mixed>  $filters
      * @return LazyCollection<int, Activity>
      */
-    public function getCursorForExport(array $filters): LazyCollection
+    public function getCursorForExport(int|string $merchantId, array $filters): LazyCollection
     {
-        return $this->auditLogs->getCursorForExport($filters);
+        return $this->auditLogs->getCursorForExport($merchantId, $filters);
     }
 }
