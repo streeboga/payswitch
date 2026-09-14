@@ -16,27 +16,24 @@ artisan() { sudo -u www-data env HOME=/tmp php artisan "$@"; }
 # закрепляла. Если fetch упал на правах, лечится один раз:
 #   chown -R deploy:www-data .git
 as_deploy git fetch origin
-as_deploy git merge --ff-only origin/main
-as_deploy git log --oneline -1
-
-as_deploy composer install --no-dev --optimize-autoloader --no-interaction -q
-
-# dist панели и виджета в .gitignore: без сборки git обновляет код, а
-# payswitch.gnzs.pro продолжает отдавать старую панель.
-(cd widget && as_deploy npm ci --no-audit --no-fund && as_deploy npm run build)
-(
-    cd dashboard
-    as_deploy npm ci --no-audit --no-fund
-    # file:../widget ставится симлинком на исходники; панели нужна сборка.
-    rm -rf node_modules/@payswitch/js
-    as_deploy cp -r ../widget node_modules/@payswitch/js
-    as_deploy env VITE_BACKEND_URL=https://psapi.gnzs.pro npm run build
-)
 
 # Снимок базы до миграций: откатить миграцию на живых платежах иначе нечем.
 install -d -m 0700 "$BACKUPS"
 sudo -u postgres pg_dump -Fc payswitch > "$BACKUPS/payswitch-$(date +%Y%m%d-%H%M%S).dump"
 ls -1t "$BACKUPS"/payswitch-*.dump | tail -n +11 | xargs -r rm --
+
+# От merge до migrate новый код ходит в старую схему: INSERT с новой колонкой
+# даёт 500, воркер подписывает вебхук ключом, который миграция вот-вот
+# зашифрует. Поэтому воркеры стоят, API отвечает 503 (PSP повторит вебхук,
+# клиенты — запрос), а окно — только composer и migrate. Упал шаг — сервис
+# остаётся в maintenance: новый код на старой схеме хуже, чем 503.
+supervisorctl stop 'payswitch-worker:*'
+artisan down --retry=30
+trap 'echo "ВЫКЛАДКА ОСТАНОВЛЕНА: сервис в maintenance, воркеры стоят. Разобраться, затем artisan up и supervisorctl start payswitch-worker:*" >&2' ERR
+
+as_deploy git merge --ff-only origin/main
+as_deploy git log --oneline -1
+as_deploy composer install --no-dev --optimize-autoloader --no-interaction -q
 
 artisan migrate --force
 
@@ -47,10 +44,27 @@ artisan config:clear
 artisan route:clear
 artisan event:clear
 artisan view:clear
-artisan queue:restart
+
+artisan up
+supervisorctl start 'payswitch-worker:*'
+trap - ERR
 
 # Планировщик: файл крона живёт в репозитории, а не только на сервере.
 install -m 0644 -o root -g root deploy/cron.d/psapi-gnzs-pro /etc/cron.d/psapi-gnzs-pro
 
+# dist панели и виджета в .gitignore: без сборки git обновляет код, а
+# payswitch.gnzs.pro продолжает отдавать старую панель. Сборка — после up:
+# API от неё не зависит, и ждать её в maintenance незачем.
+(cd widget && as_deploy npm ci --no-audit --no-fund && as_deploy npm run build)
+(
+    cd dashboard
+    as_deploy npm ci --no-audit --no-fund
+    # file:../widget ставится симлинком на исходники; панели нужна сборка.
+    rm -rf node_modules/@payswitch/js
+    as_deploy cp -r ../widget node_modules/@payswitch/js
+    as_deploy env VITE_BACKEND_URL=https://psapi.gnzs.pro npm run build
+)
+
 curl -sf -o /dev/null -w 'up: %{http_code}\n' https://psapi.gnzs.pro/up
 curl -sf -o /dev/null -w 'panel: %{http_code}\n' https://payswitch.gnzs.pro/
+supervisorctl status | grep payswitch-worker
