@@ -31,7 +31,7 @@ beforeEach(function () {
         'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ]);
 });
 
@@ -129,7 +129,7 @@ test('refunds list scoped to merchant', function () {
         'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ]);
     Refund::create([
         'payment_intent_id' => $otherPayment->id,

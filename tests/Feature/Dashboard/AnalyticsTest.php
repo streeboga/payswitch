@@ -32,7 +32,7 @@ function createAnalyticsPayment(object $context, array $overrides = []): Payment
         'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ], $overrides));
 }
 

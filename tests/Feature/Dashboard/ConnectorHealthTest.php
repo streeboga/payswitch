@@ -50,7 +50,7 @@ function createPaymentWithAttempt(object $ctx, string $status, array $attemptOve
         'status' => $status === 'succeeded' ? PaymentStatus::Succeeded : PaymentStatus::Failed,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ]);
 
     return PaymentAttempt::create(array_merge([
@@ -195,7 +195,7 @@ test('health endpoint scoped to merchant', function () {
         'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ]);
     PaymentAttempt::create([
         'payment_intent_id' => $otherPi->id,

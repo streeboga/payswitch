@@ -31,7 +31,7 @@ test('payment detail returns json:api resource', function () {
         'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ]);
 
     $response = $this->actingAs($this->user)
@@ -58,7 +58,7 @@ test('payment detail returns 404 for other merchant', function () {
         'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ]);
 
     $response = $this->actingAs($this->user)

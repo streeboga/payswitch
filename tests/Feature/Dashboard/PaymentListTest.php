@@ -32,7 +32,7 @@ function createTestPayment(object $context, array $overrides = []): PaymentInten
         'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ], $overrides));
 }
 
@@ -157,7 +157,7 @@ test('payments list scoped to merchant', function () {
         'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ]);
 
     $response = $this->actingAs($this->user)

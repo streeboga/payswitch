@@ -31,7 +31,7 @@ beforeEach(function () {
         'amount' => 10000, 'net_amount' => 9700, 'amount_capturable' => 0, 'amount_received' => 10000,
         'currency' => 'USD', 'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic', 'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ]);
 });
 
@@ -76,7 +76,7 @@ test('disputes scoped to merchant', function () {
         'merchant_account_id' => $otherMerchant->id, 'amount' => 5000, 'net_amount' => 4850,
         'amount_capturable' => 0, 'amount_received' => 5000, 'currency' => 'USD',
         'status' => PaymentStatus::Succeeded, 'capture_method' => 'automatic',
-        'authentication_type' => 'no_three_ds', 'session_expiry' => now()->addMinutes(15),
+        'authentication_type' => 'no_three_ds', 'session_expiry' => 900,
     ]);
     Dispute::create([
         'payment_intent_id' => $otherPayment->id, 'merchant_account_id' => $otherMerchant->id,
