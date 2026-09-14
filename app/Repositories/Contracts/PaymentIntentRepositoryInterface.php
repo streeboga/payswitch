@@ -73,4 +73,12 @@ interface PaymentIntentRepositoryInterface
      * @param  array<int, PaymentStatus>  $statuses
      */
     public function findExpiredInStatuses(array $statuses): Builder;
+
+    /**
+     * Платежи в статусах, изменённые в окне [$from, $to], по текущему статусу
+     * которых нет ни одного платёжного webhook_events.
+     *
+     * @param  array<int, PaymentStatus>  $statuses
+     */
+    public function findWithoutWebhookForCurrentStatus(array $statuses, \DateTimeInterface $from, \DateTimeInterface $to): Builder;
 }
