@@ -43,8 +43,8 @@
   --accent-foreground: #171717;
   --destructive: #ef4444;
   --destructive-foreground: #fafafa;
-  --border: #f0f0f0;
-  --input: #f0f0f0;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
   --ring: #0a0a0a;
 }
 
@@ -68,4 +68,22 @@
   --border: #262626;
   --input: #262626;
   --ring: #d4d4d4;
+}
+
+/*
+ * Tailwind 4 красит рамку по умолчанию в currentColor. Без этого слоя каждая
+ * карточка, строка таблицы и разделитель рисовались чёрной линией в 1px, а токен
+ * --border не применялся нигде, кроме полей с явным border-input.
+ */
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
 }
