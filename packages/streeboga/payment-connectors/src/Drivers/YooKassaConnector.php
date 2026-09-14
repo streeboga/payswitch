@@ -99,15 +99,24 @@ final class YooKassaConnector implements ConnectorInterface, WebhookEventReading
 
     public function refund(array $params): array
     {
-        $idempotencyKey = ($params['payment_id'] ?? bin2hex(random_bytes(16))).'_refund_'.($params['amount'] ?? 0);
-
-        return $this->makeRequest('POST', '/refunds', [
+        // Ключ — наш возврат, а не платёж+сумма: два законных возврата по 500 иначе
+        // схлопывались у ЮKassa в один, а у нас оставались двумя. Без refund_id ключ случайный.
+        $result = $this->makeRequest('POST', '/refunds', [
             'payment_id' => $params['transaction_id'] ?? '',
             'amount' => [
                 'value' => number_format(($params['amount'] ?? 0) / 100, 2, '.', ''),
                 'currency' => $params['currency'] ?? 'RUB',
             ],
-        ], $idempotencyKey);
+        ], (string) ($params['refund_id'] ?? ''));
+
+        // Явный отказ — только ошибка запроса или canceled. pending и неразобранный ответ
+        // (5xx, пустое тело) — исход неизвестен, деньги могли уйти.
+        $data = $result['data'] ?? [];
+        if (! $result['success'] && ($data['type'] ?? null) !== 'error' && ($data['status'] ?? null) !== 'canceled' && $result['code'] !== 'connector_error') {
+            $result['code'] = 'pending';
+        }
+
+        return $result;
     }
 
     public function void(array $params): array

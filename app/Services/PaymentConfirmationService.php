@@ -9,6 +9,7 @@ use App\Enums\PaymentAttemptStatus;
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Support\Facades\DB;
+use Streeboga\PaymentConnectors\ConnectorErrorNormalizer;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentConnectors\PaymentSessionResult;
 use Streeboga\PaymentData\Enums\AuthenticationType;
@@ -101,12 +102,19 @@ final readonly class PaymentConfirmationService
             }
 
             $result = $this->executeConnectorCall($payment, $mca, $connectorParams);
+            $unknownOutcome = false;
 
             if ($result['success']) {
                 $this->applySuccessStatus($payment, $mca->connector_name);
             } elseif (($result['code'] ?? null) === 'requires_action') {
                 $this->applyRequiresActionStatus($payment, $mca->connector_name, $result);
+            } elseif (ConnectorErrorNormalizer::isIndeterminate($result)) {
+                // Исключение, таймаут, неразобранный ответ: первый провайдер мог списать.
+                // Данные карты следующему не отправляем — иначе двойное списание.
+                $this->applyUnknownOutcomeStatus($payment, $mca->connector_name, $result);
+                $unknownOutcome = true;
             } else {
+                // Явный отказ провайдера — пробуем следующего.
                 $fallbackMca = $this->routingService->fallback($merchantAccountId, [$mca->connector_name]);
 
                 if ($fallbackMca) {
@@ -114,6 +122,9 @@ final readonly class PaymentConfirmationService
 
                     if ($fallbackResult['success']) {
                         $this->applySuccessStatus($payment, $fallbackMca->connector_name);
+                    } elseif (ConnectorErrorNormalizer::isIndeterminate($fallbackResult)) {
+                        $this->applyUnknownOutcomeStatus($payment, $fallbackMca->connector_name, $fallbackResult);
+                        $unknownOutcome = true;
                     } else {
                         $this->applyFailedStatus($payment, $fallbackMca->connector_name, $fallbackResult);
                     }
@@ -124,10 +135,22 @@ final readonly class PaymentConfirmationService
 
             $payment->refresh();
 
-            return ['payment' => $payment, 'previousStatus' => $previousStatus];
+            return ['payment' => $payment, 'previousStatus' => $previousStatus, 'unknownOutcome' => $unknownOutcome];
         });
 
         $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
+
+        // Бросаем после коммита: попытка и processing должны остаться, чтобы исход
+        // потом разрешил вебхук провайдера или sync.
+        if ($result['unknownOutcome'] ?? false) {
+            throw new PaymentException(
+                'Payment outcome at the connector is unknown; the payment stays processing',
+                'connector_outcome_unknown',
+                'connector_error',
+                502,
+                meta: ['payment_id' => $result['payment']->key],
+            );
+        }
 
         return $result['payment'];
     }
@@ -311,6 +334,20 @@ final readonly class PaymentConfirmationService
             'metadata' => array_merge($payment->metadata ?? [], [
                 'redirect_url' => $result['data']['redirect_url'] ?? null,
             ]),
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     */
+    private function applyUnknownOutcomeStatus(PaymentIntent $payment, string $connectorName, array $result): void
+    {
+        PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Processing);
+        $this->paymentRepository->update($payment, [
+            'status' => PaymentStatus::Processing,
+            'error_code' => $result['code'] ?? null,
+            'error_message' => $result['message'] ?? null,
+            'connector' => $connectorName,
         ]);
     }
 

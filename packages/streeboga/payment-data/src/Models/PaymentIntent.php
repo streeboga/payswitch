@@ -38,6 +38,7 @@ use Streeboga\PaymentData\Support\IdGenerator;
  * @property string|null $error_message
  * @property string|null $cancellation_reason
  * @property Carbon|null $expires_on
+ * @property string|null $idempotency_key
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -65,6 +66,7 @@ class PaymentIntent extends Model
         'error_message',
         'cancellation_reason',
         'expires_on',
+        'idempotency_key',
     ];
 
     protected function casts(): array

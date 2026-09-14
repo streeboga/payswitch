@@ -16,6 +16,8 @@ interface RefundRepositoryInterface
 
     public function findByKey(string $key, int|string $merchantAccountId): Refund;
 
+    public function findByIdempotencyKey(string $idempotencyKey, int|string $merchantAccountId): ?Refund;
+
     public function sumSucceededForPayment(int $paymentIntentId): int;
 
     public function sumPendingAndSucceededForPayment(int $paymentIntentId): int;

@@ -10,6 +10,7 @@ use App\Http\Resources\RefundResource;
 use App\Services\DashboardRefundService;
 use App\Services\RefundService;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\HeaderParameter;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
@@ -55,14 +56,29 @@ final class RefundController extends Controller
      * Create a refund.
      *
      * Initiates a refund against a previously succeeded payment intent. Partial refunds supported.
+     *
+     * Idempotency: send an `Idempotency-Key` header (up to 255 characters, unique per merchant).
+     * A repeat with the same key returns the refund created by the first request, in its current
+     * state, with status 200 and the `Idempotent-Replayed: true` header — the PSP is not called
+     * again. The same key with a different amount or payment is rejected with 422
+     * `idempotency_key_reused`.
      */
+    #[HeaderParameter('Idempotency-Key', description: 'Client-generated key, up to 255 characters, unique per merchant', required: false, type: 'string', example: 'refund-order-42-1')]
     #[Response(201, description: 'Refund created')]
-    #[Response(422, description: 'Validation error')]
+    #[Response(200, description: 'Replay of a request with the same Idempotency-Key: the existing refund')]
+    #[Response(422, description: 'Validation error, or idempotency_key_reused')]
+    #[Response(502, description: 'refund_pending: outcome unknown, refund stays pending (errors[].meta.refund_id); refund_failed: declined by the connector')]
     public function store(StoreRefundRequest $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
 
         $refund = $this->refundService->create($request->toDto(), $merchantAccountId);
+
+        if (! $refund->wasRecentlyCreated) {
+            return (new RefundResource($refund))
+                ->withHeader('Idempotent-Replayed', 'true')
+                ->toResponse($request);
+        }
 
         return (new RefundResource($refund))
             ->withStatus(201)

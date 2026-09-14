@@ -16,5 +16,6 @@ final class CreateRefundData extends Data
         public readonly int $amount,
         public readonly ?string $reason = null,
         public readonly ?array $metadata = null,
+        public readonly ?string $idempotency_key = null,
     ) {}
 }

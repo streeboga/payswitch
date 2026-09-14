@@ -261,7 +261,7 @@ test('cannot cancel succeeded payment', function () {
 
 // --- Edge cases ---
 
-test('connector exception during confirm triggers fallback', function () {
+test('connector exception during confirm does not fall back: payment stays processing', function () {
     // Register a throwing connector
     $throwingConnectorClass = new class([]) implements ConnectorInterface
     {
@@ -367,9 +367,10 @@ test('connector exception during confirm triggers fallback', function () {
         'payment_method_data' => ['card' => ['card_number' => '4242424242424242', 'card_exp_month' => '12', 'card_exp_year' => '2030', 'card_cvc' => '123']],
     ], apiHeaders());
 
-    // The primary connector throws, fallback should be attempted
-    // If fallback succeeds -> succeeded; if no fallback available -> failed
-    expect($response->json('data.attributes.status'))->toBeIn(['succeeded', 'failed']);
+    // Исключение — исход неизвестен, первый провайдер мог списать: карту второму не отдаём (П6).
+    $response->assertStatus(502)->assertJsonPath('errors.0.code', 'connector_outcome_unknown');
+    expect(PaymentIntent::where('key', $paymentId)->sole()->status->value)->toBe('processing');
+    $this->assertDatabaseMissing('payment_attempts', ['connector' => 'test']);
 
     // Verify the failed attempt was recorded
     $this->assertDatabaseHas('payment_attempts', [

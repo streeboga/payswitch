@@ -77,27 +77,27 @@ test('purchase with token uses payment_method field', function () {
     });
 });
 
-test('purchase sends Idempotency-Key header', function () {
-    Http::fake([
-        'api.stripe.com/v1/payment_intents' => Http::response(['id' => 'pi_idem', 'status' => 'succeeded']),
-    ]);
+test('each operation has its own Idempotency-Key: one payment_id across endpoints does not collide', function (string $method, array $params, string $expectedKey) {
+    Http::fake(['api.stripe.com/*' => Http::response(['id' => 'obj_1', 'status' => 'succeeded'])]);
 
-    stripeConnector()->purchase([
-        'amount' => 5000,
-        'currency' => 'USD',
-        'payment_method_data' => ['card' => [
-            'card_number' => '4242424242424242',
-            'card_exp_month' => '12',
-            'card_exp_year' => '2030',
-            'card_cvc' => '123',
-        ]],
-        'payment_id' => 'pay_idem_test',
-    ]);
+    stripeConnector()->{$method}(['payment_id' => 'pay_idem_test', 'amount' => 5000, 'currency' => 'USD', 'transaction_id' => 'pi_1', ...$params]);
 
-    Http::assertSent(function ($request) {
-        return $request->hasHeader('Idempotency-Key')
-            && $request->header('Idempotency-Key')[0] === 'pay_idem_test';
-    });
+    Http::assertSent(fn ($request) => $request->header('Idempotency-Key') === [$expectedKey]);
+})->with([
+    'purchase' => ['purchase', ['payment_method_data' => ['card' => ['card_number' => '4242424242424242']]], 'pay_idem_test:intent'],
+    'authorize' => ['authorize', ['payment_method_data' => ['card' => ['card_number' => '4242424242424242']]], 'pay_idem_test:intent'],
+    'session' => ['createPaymentSession', ['return_url' => 'https://shop.test/r'], 'pay_idem_test:session'],
+    'capture' => ['capture', [], 'pay_idem_test:capture'],
+    'cancel' => ['void', [], 'pay_idem_test:cancel'],
+    'refund — ключ нашего возврата' => ['refund', ['refund_id' => 'ref_STRIPE1'], 'ref_STRIPE1'],
+]);
+
+test('refund without refund_id sends no Idempotency-Key rather than collapsing refunds of one payment', function () {
+    Http::fake(['api.stripe.com/*' => Http::response(['id' => 're_1', 'status' => 'succeeded'])]);
+
+    stripeConnector()->refund(['payment_id' => 'pay_idem_test', 'amount' => 500, 'transaction_id' => 'pi_1']);
+
+    Http::assertSent(fn ($request) => ! $request->hasHeader('Idempotency-Key'));
 });
 
 // ── Authorize ────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ test('void cancels PaymentIntent', function () {
     Http::assertSent(function ($request) {
         return str_contains($request->url(), '/payment_intents/pi_auth456/cancel')
             && $request->hasHeader('Idempotency-Key')
-            && $request->header('Idempotency-Key')[0] === 'pay_void_test';
+            && $request->header('Idempotency-Key')[0] === 'pay_void_test:cancel';
     });
 });
 

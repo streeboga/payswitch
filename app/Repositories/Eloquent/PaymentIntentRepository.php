@@ -45,6 +45,11 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         return $this->query()->forMerchant($merchantAccountId)->whereKey($key)->first();
     }
 
+    public function findByIdempotencyKey(string $idempotencyKey, int|string $merchantAccountId): ?PaymentIntent
+    {
+        return $this->query()->forMerchant($merchantAccountId)->whereIdempotencyKey($idempotencyKey)->first();
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

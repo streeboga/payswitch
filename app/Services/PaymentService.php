@@ -10,6 +10,7 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
@@ -29,8 +30,20 @@ final readonly class PaymentService
         private PaymentConfirmationService $confirmationService,
     ) {}
 
+    /**
+     * Повтор с тем же Idempotency-Key у того же мерчанта отдаёт уже созданный платёж
+     * (у него wasRecentlyCreated === false — по этому контроллер понимает, что это повтор).
+     * Тот же ключ с другой суммой или валютой — 422 idempotency_key_reused.
+     */
     public function create(CreatePaymentData $dto, int|string $merchantAccountId): PaymentIntent
     {
+        if ($dto->idempotency_key !== null) {
+            $existing = $this->paymentRepository->findByIdempotencyKey($dto->idempotency_key, $merchantAccountId);
+            if ($existing) {
+                return $this->replayed($existing, $dto);
+            }
+        }
+
         if ($dto->payment_id) {
             $existing = $this->paymentRepository->findByKeyOrNull($dto->payment_id, $merchantAccountId);
             if ($existing) {
@@ -49,7 +62,7 @@ final readonly class PaymentService
 
         $businessProfileId = $this->resolveBusinessProfileId($dto->profile_id, $merchantAccountId);
 
-        return $this->paymentRepository->create([
+        $attributes = [
             'merchant_account_id' => $merchantAccountId,
             'business_profile_id' => $businessProfileId,
             'amount' => $dto->amount,
@@ -65,7 +78,40 @@ final readonly class PaymentService
             'attempt_count' => 1,
             'expires_on' => now()->addSeconds($expiry),
             'amount_capturable' => $dto->amount,
-        ]);
+            'idempotency_key' => $dto->idempotency_key,
+        ];
+
+        try {
+            // Своя транзакция, а внутри чужой — точка сохранения: на Postgres упавший INSERT
+            // иначе делает внешнюю транзакцию непригодной, и поиск ниже падает.
+            return DB::transaction(fn () => $this->paymentRepository->create($attributes));
+        } catch (UniqueConstraintViolationException $e) {
+            // Гонка двух запросов с одним ключом: между нашим поиском и вставкой успел
+            // вставить другой. Отдаём его платёж.
+            $existing = $dto->idempotency_key !== null
+                ? $this->paymentRepository->findByIdempotencyKey($dto->idempotency_key, $merchantAccountId)
+                : null;
+
+            if (! $existing) {
+                throw $e;
+            }
+
+            return $this->replayed($existing, $dto);
+        }
+    }
+
+    private function replayed(PaymentIntent $existing, CreatePaymentData $dto): PaymentIntent
+    {
+        if ($existing->amount !== $dto->amount || $existing->currency !== strtoupper($dto->currency)) {
+            throw new PaymentException(
+                'Idempotency-Key was already used with different parameters',
+                'idempotency_key_reused',
+                'invalid_request_error',
+                422,
+            );
+        }
+
+        return $existing;
     }
 
     private function resolveBusinessProfileId(?string $profileKey, int|string $merchantAccountId): int
@@ -329,15 +375,18 @@ final readonly class PaymentService
                 if ($lastAttempt) {
                     $mca = $this->merchantRepository->findConnectorByMerchantAndName($merchantAccountId, $lastAttempt->connector);
                     if ($mca) {
-                        try {
-                            $connector = ConnectorFactory::resolve($mca);
-                            $connector->void(['transaction_id' => $lastAttempt->connector_transaction_id, 'payment_id' => $payment->key]);
-                        } catch (\Throwable $e) {
-                            Log::warning("Failed to void authorization on cancel: {$e->getMessage()}");
-                        }
+                        $this->voidAtConnector($payment, $mca, $lastAttempt->connector_transaction_id);
                     }
                 }
             }
+
+            // requires_customer_action с сессией у провайдера отменяется только у нас.
+            // Ни один коннектор не умеет закрыть сессию через ConnectorInterface (void у них —
+            // отмена авторизации: Stripe ждёт PaymentIntent, а в попытке лежит cs_…), так что
+            // ссылка на оплату у провайдера остаётся оплачиваемой до своего истечения, а
+            // пришедшая после отмены оплата в cancelled уже не переведётся. Кандидаты на
+            // отдельный метод: T-Bank Cancel (NEW → CANCELED), Stripe checkout/sessions/{id}/expire,
+            // RBS decline.do.
 
             PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Cancelled);
             $this->paymentRepository->update($payment, ['status' => PaymentStatus::Cancelled]);
@@ -350,6 +399,38 @@ final readonly class PaymentService
         $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
 
         return $result['payment'];
+    }
+
+    /**
+     * Отмена холда у провайдера. Любая неудача — исключение, исключение, отказ или
+     * неизвестный исход — не глотается: иначе платёж становился cancelled, а деньги
+     * клиента оставались заблокированы. Транзакция отмены откатывается, клиенту 502.
+     */
+    private function voidAtConnector(PaymentIntent $payment, MerchantConnectorAccount $mca, ?string $transactionId): void
+    {
+        try {
+            $result = ConnectorFactory::resolve($mca)->void(['transaction_id' => $transactionId, 'payment_id' => $payment->key]);
+        } catch (\Throwable $e) {
+            $result = ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_exception'];
+        }
+
+        if (($result['success'] ?? false) === true) {
+            return;
+        }
+
+        Log::error('Void at connector failed, payment not cancelled', [
+            'payment_id' => $payment->key,
+            'connector' => $mca->connector_name,
+            'code' => $result['code'] ?? null,
+            'message' => $result['message'] ?? null,
+        ]);
+
+        throw new PaymentException(
+            'Failed to void the authorization at the connector: '.($result['message'] ?? 'unknown error'),
+            'void_failed',
+            'connector_error',
+            502,
+        );
     }
 
     public function sync(string $paymentKey, int|string $merchantAccountId): PaymentIntent

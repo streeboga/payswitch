@@ -97,10 +97,17 @@ final class TBankConnector implements ConnectorInterface, WebhookAcknowledging
 
     public function capture(array $params): array
     {
-        return $this->makeRequest('Confirm', [
+        $requestParams = [
             'TerminalKey' => $this->terminalKey(),
             'PaymentId' => $params['transaction_id'] ?? '',
-        ]);
+        ];
+
+        // Без Amount Confirm списывает всю авторизацию, а payswitch пишет частичное списание.
+        if (! empty($params['amount'])) {
+            $requestParams['Amount'] = $params['amount'];
+        }
+
+        return $this->makeRequest('Confirm', $requestParams);
     }
 
     public function refund(array $params): array
@@ -112,6 +119,12 @@ final class TBankConnector implements ConnectorInterface, WebhookAcknowledging
 
         if (! empty($params['amount'])) {
             $requestParams['Amount'] = $params['amount'];
+        }
+
+        // ExternalRequestId — идемпотентность Cancel: повтор с тем же id отдаёт состояние
+        // первой операции, а не возвращает второй раз. Для СБП T-Bank его не учитывает.
+        if (! empty($params['refund_id'])) {
+            $requestParams['ExternalRequestId'] = $params['refund_id'];
         }
 
         return $this->makeRequest('Cancel', $requestParams);

@@ -69,6 +69,7 @@ final readonly class WebhookService
                 ? WebhookEventType::RefundSucceeded->value
                 : WebhookEventType::RefundFailed->value,
             'merchant_account_id' => $refund->merchant_account_id,
+            'business_profile_id' => $payment->business_profile_id,
             'payment_intent_id' => $payment->id,
             'content' => [
                 'refund_id' => $refund->key,

@@ -16,8 +16,10 @@ use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
+use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\RoutingRule;
 use Streeboga\PaymentData\Support\IdGenerator;
+use Tests\Helpers\ScriptedConnector;
 
 uses(RefreshDatabase::class);
 
@@ -170,7 +172,91 @@ function failoverConfirmPayment(string $paymentId): TestResponse
 
 // --- Failover tests ---
 
-test('priority routing: first connector fails, second succeeds', function () {
+/**
+ * Коннектор, явно отклоняющий карту (ответ провайдера с кодом отказа).
+ */
+function failoverDecliningConnector(): void
+{
+    ScriptedConnector::register('declining', [
+        'purchase' => ['success' => false, 'transaction_id' => null, 'message' => 'Your card was declined', 'code' => 'card_declined'],
+    ]);
+
+    MerchantConnectorAccount::create([
+        'merchant_account_id' => test()->merchant->id,
+        'business_profile_id' => test()->profile->id,
+        'connector_name' => 'declining',
+        'connector_type' => 'fiz_operations',
+        'connector_account_details' => ['api_key' => 'sk_decline'],
+        'payment_methods_enabled' => [['payment_method' => 'card']],
+        'test_mode' => true,
+    ]);
+}
+
+test('priority routing: first connector declines, second succeeds', function () {
+    failoverDecliningConnector();
+    RoutingRule::create([
+        'merchant_account_id' => $this->merchant->id,
+        'business_profile_id' => $this->profile->id,
+        'type' => RoutingRuleType::Priority,
+        'name' => 'Primary with fallback',
+        'rules' => ['connectors' => ['declining', 'test']],
+        'active' => true,
+        'priority' => 1,
+    ]);
+
+    $paymentId = failoverCreatePayment()->json('data.id');
+
+    failoverConfirmPayment($paymentId)
+        ->assertOk()
+        ->assertJsonPath('data.attributes.status', 'succeeded');
+
+    $this->assertDatabaseHas('payment_attempts', ['connector' => 'declining', 'status' => 'failed', 'error_code' => 'card_declined']);
+    $this->assertDatabaseHas('payment_attempts', ['connector' => 'test', 'status' => 'succeeded']);
+});
+
+test('rule-based routing: matched connector declines, fallback succeeds', function () {
+    failoverDecliningConnector();
+    RoutingRule::create([
+        'merchant_account_id' => $this->merchant->id,
+        'business_profile_id' => $this->profile->id,
+        'type' => RoutingRuleType::RuleBased,
+        'name' => 'USD to declining',
+        'rules' => [
+            'conditions' => [
+                ['field' => 'currency', 'operator' => '==', 'value' => 'USD', 'connector' => 'declining'],
+            ],
+        ],
+        'active' => true,
+        'priority' => 1,
+    ]);
+
+    $paymentId = failoverCreatePayment(['currency' => 'USD'])->json('data.id');
+
+    failoverConfirmPayment($paymentId)
+        ->assertOk()
+        ->assertJsonPath('data.attributes.status', 'succeeded');
+
+    $this->assertDatabaseHas('payment_attempts', ['connector' => 'declining', 'status' => 'failed']);
+    $this->assertDatabaseHas('payment_attempts', ['connector' => 'test', 'status' => 'succeeded']);
+});
+
+test('all connectors decline results in failed payment', function () {
+    MerchantConnectorAccount::where('merchant_account_id', $this->merchant->id)->whereIn('connector_name', ['test', 'throwing'])->delete();
+    failoverDecliningConnector();
+
+    $paymentId = failoverCreatePayment()->json('data.id');
+
+    failoverConfirmPayment($paymentId)
+        ->assertOk()
+        ->assertJsonPath('data.attributes.status', 'failed');
+
+    $this->assertDatabaseMissing('payment_attempts', ['status' => 'succeeded']);
+});
+
+// П6: исключение, таймаут или неразобранный ответ — первый провайдер мог списать.
+// Данные карты второму не уходят: платёж остаётся processing, клиенту 502.
+
+test('connector exception: no fallback, payment stays processing, 502', function () {
     RoutingRule::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->profile->id,
@@ -181,102 +267,48 @@ test('priority routing: first connector fails, second succeeds', function () {
         'priority' => 1,
     ]);
 
-    $create = failoverCreatePayment();
-    $paymentId = $create->json('data.id');
+    $paymentId = failoverCreatePayment()->json('data.id');
 
-    $response = failoverConfirmPayment($paymentId);
+    failoverConfirmPayment($paymentId)
+        ->assertStatus(502)
+        ->assertJsonPath('errors.0.code', 'connector_outcome_unknown');
 
-    $response->assertOk()
-        ->assertJsonPath('data.attributes.status', 'succeeded');
+    $this->getJson("/api/v1/payments/{$paymentId}", failoverHeaders())
+        ->assertJsonPath('data.attributes.status', 'processing')
+        ->assertJsonPath('data.attributes.connector', 'throwing');
 
-    // Primary connector failed
-    $this->assertDatabaseHas('payment_attempts', [
-        'connector' => 'throwing',
-        'status' => 'failed',
-        'error_code' => 'connector_exception',
-    ]);
-
-    // Fallback connector succeeded
-    $this->assertDatabaseHas('payment_attempts', [
-        'connector' => 'test',
-        'status' => 'succeeded',
-    ]);
+    $this->assertDatabaseHas('payment_attempts', ['connector' => 'throwing', 'status' => 'failed', 'error_code' => 'connector_exception']);
+    $this->assertDatabaseMissing('payment_attempts', ['connector' => 'test']);
 });
 
-test('rule-based routing: matched connector fails, fallback succeeds', function () {
-    RoutingRule::create([
+test('timeout swallowed by driver or unparsed answer: no fallback', function (array $answer) {
+    ScriptedConnector::register('flaky', ['purchase' => $answer]);
+    MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->profile->id,
-        'type' => RoutingRuleType::RuleBased,
-        'name' => 'USD to throwing',
-        'rules' => [
-            'conditions' => [
-                [
-                    'field' => 'currency',
-                    'operator' => '==',
-                    'value' => 'USD',
-                    'connector' => 'throwing',
-                ],
-            ],
-        ],
-        'active' => true,
-        'priority' => 1,
+        'connector_name' => 'flaky',
+        'connector_type' => 'fiz_operations',
+        'connector_account_details' => ['api_key' => 'sk_flaky'],
+        'payment_methods_enabled' => [['payment_method' => 'card']],
+        'test_mode' => true,
     ]);
-
-    $create = failoverCreatePayment(['currency' => 'USD']);
-    $paymentId = $create->json('data.id');
-
-    $response = failoverConfirmPayment($paymentId);
-
-    $response->assertOk()
-        ->assertJsonPath('data.attributes.status', 'succeeded');
-
-    // Rule-matched connector failed
-    $this->assertDatabaseHas('payment_attempts', [
-        'connector' => 'throwing',
-        'status' => 'failed',
-        'error_code' => 'connector_exception',
-    ]);
-
-    // Fallback connector succeeded
-    $this->assertDatabaseHas('payment_attempts', [
-        'connector' => 'test',
-        'status' => 'succeeded',
-    ]);
-});
-
-test('all connectors fail results in failed payment', function () {
-    // Remove the test connector so only throwing remains
-    MerchantConnectorAccount::where('connector_name', 'test')
-        ->where('merchant_account_id', $this->merchant->id)
-        ->delete();
-
     RoutingRule::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->profile->id,
         'type' => RoutingRuleType::Priority,
-        'name' => 'Only throwing',
-        'rules' => ['connectors' => ['throwing']],
+        'name' => 'Flaky first',
+        'rules' => ['connectors' => ['flaky', 'test']],
         'active' => true,
         'priority' => 1,
     ]);
 
-    $create = failoverCreatePayment();
-    $paymentId = $create->json('data.id');
+    $paymentId = failoverCreatePayment()->json('data.id');
 
-    $response = failoverConfirmPayment($paymentId);
+    failoverConfirmPayment($paymentId)->assertStatus(502);
 
-    $response->assertOk()
-        ->assertJsonPath('data.attributes.status', 'failed');
-
-    $this->assertDatabaseHas('payment_attempts', [
-        'connector' => 'throwing',
-        'status' => 'failed',
-        'error_code' => 'connector_exception',
-    ]);
-
-    // No successful attempt should exist
-    $this->assertDatabaseMissing('payment_attempts', [
-        'status' => 'succeeded',
-    ]);
-});
+    $this->assertDatabaseMissing('payment_attempts', ['connector' => 'test']);
+    expect(PaymentIntent::where('key', $paymentId)->sole()->status->value)->toBe('processing');
+})->with([
+    'connector_error' => [['success' => false, 'transaction_id' => null, 'message' => 'cURL error 28', 'code' => 'connector_error']],
+    'пустой код' => [['success' => false, 'transaction_id' => null, 'message' => 'T-Bank error', 'code' => '']],
+]);

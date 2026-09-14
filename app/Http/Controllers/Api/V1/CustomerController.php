@@ -42,6 +42,7 @@ final class CustomerController extends Controller
      * Creates a new customer record for the authenticated merchant.
      */
     #[Response(201, description: 'Customer created')]
+    #[Response(409, description: 'duplicate_customer_id: the id is taken — customer ids are unique across all merchants')]
     #[Response(422, description: 'Validation error')]
     public function store(StoreCustomerRequest $request): JsonResponse
     {

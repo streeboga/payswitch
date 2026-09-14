@@ -174,7 +174,7 @@ test('authorize calls Init with PayType T', function () {
 
 // --- capture (Confirm) ---
 
-test('capture calls Confirm with PaymentId', function () {
+test('capture calls Confirm with PaymentId and Amount, Amount is signed', function () {
     Http::fake([
         'securepay.tinkoff.ru/*' => Http::response([
             'Success' => true,
@@ -187,16 +187,21 @@ test('capture calls Confirm with PaymentId', function () {
     $connector = tbankConnector();
     $result = $connector->capture([
         'transaction_id' => '99002',
+        'amount' => 30000,
     ]);
 
     expect($result['success'])->toBeTrue();
 
     Http::assertSent(function ($request) {
         $body = $request->data();
+        // Без Amount T-Bank списывает всю авторизацию, а payswitch записал бы частичное.
+        $expectedToken = hash('sha256', '30000test_password99002TinkoffBankTest');
 
         return str_contains($request->url(), '/Confirm')
             && $body['PaymentId'] === '99002'
-            && $body['TerminalKey'] === 'TinkoffBankTest';
+            && $body['Amount'] === 30000
+            && $body['TerminalKey'] === 'TinkoffBankTest'
+            && $body['Token'] === $expectedToken;
     });
 });
 

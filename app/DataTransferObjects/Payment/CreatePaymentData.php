@@ -29,5 +29,6 @@ final class CreatePaymentData extends Data
         public readonly ?string $payment_method = null,
         public readonly ?array $payment_method_data = null,
         public readonly ?string $payment_id = null,
+        public readonly ?string $idempotency_key = null,
     ) {}
 }
