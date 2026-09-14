@@ -64,44 +64,65 @@ Payswitch — самостоятельный маршрутизирующий ш
 
 Переходы — статическая таблица в
 `packages/streeboga/payment-data/src/StateMachine/PaymentStateMachine.php:13`,
-`canTransition()` / `assertTransition()`. В таблице 11 ключей: в
-`requires_merchant_action` не ведёт ни один переход — статус объявлен, но
-недостижим.
+`canTransition()` / `assertTransition()`. `succeeded`, `failed`, `cancelled`,
+`expired`, `partially_captured` — конечные.
+
+**Провайдеру можно больше.** `canConfirmByProvider()` (`:46`) пускает
+подтверждение списания из `expired`/`failed` в `succeeded` или
+`requires_capture`, а из `cancelled` — в `requires_merchant_action`. Списание у
+PSP — факт, а не наше решение: 3DS или СБП дольше 15 минут срока платежа, и
+отбросить такой Pay значит молча потерять деньги плательщика. Зовётся только из
+приёмника вебхуков.
+
+`requires_merchant_action` — «деньги пришли не те»: сумма или валюта в Pay не
+совпали с намерением (`error_code` `amount_mismatch`/`currency_mismatch`), или
+оплатили отменённый платёж. Разбирает человек.
+
+`amount_received` — сумма из уведомления провайдера в минорных единицах, а не
+копия `amount`. Сверяется только верхний уровень (`Amount`, `amount`,
+`OutSum`): у Stripe и YooKassa сумма глубже, для них это пока копия.
 
 ## Подпись вебхуков от PSP
 
-`WebhookReceiverService.php:49` проверяет подпись **до** обработки и на отказ
-отдаёт 401:
+`WebhookReceiverService.php:65` проверяет подпись **до** обработки и на отказ
+отдаёт 401; `processWebhook()` — на `:83`. Всё, что брошено при обработке,
+включая `TypeError`, ловится как `\Throwable` и отдаётся провайдеру его кодом
+отказа.
 
-```php
-if (! $connector->verifyWebhookSignature($request->getContent(), $headers)) {
-    return ['status' => 'invalid_signature', 'code' => 401];
-}
-```
+Что именно проверяет каждый драйвер (`packages/streeboga/payment-connectors/src/Drivers/`):
 
-`processWebhook()` вызывается только на `:67`. Код проходит наружу как есть
-(`WebhookReceiverController.php:34`); докблок этого контроллера на `:25` всё ещё
-обещает «Always returns 200» — он устарел.
-
-Что именно проверяет каждый драйвер:
-
-| Коннектор | Файл | Что на самом деле |
+| Коннектор | Строка | Что на самом деле |
 |---|---|---|
-| Stripe | `StripeConnector.php:82` | Настоящий HMAC-SHA256 по `t.payload`, окно повтора 300 с, `hash_equals` |
-| CloudPayments | `CloudPaymentsConnector.php:103` | HMAC-SHA256 base64 по сырому телу против `content-hmac` |
-| TBank | `TBankConnector.php:190` | **Не HMAC.** Токен: SHA-256 от склеенных отсортированных полей с паролем |
-| Robokassa | `RobokassaConnector.php:125` | **MD5**, не HMAC: `md5("{$outSum}:{$invId}:{$password2}{$shp}")` |
-| **Rbs** | `RbsConnector.php:205` | **Не проверяет.** `return true` — «callbacks are unreliable, polling» |
-| **Tochka** | `TochkaConnector.php:180` | **Не проверяет.** `return true` — «For MVP» |
-| **YooKassa** | `YooKassaConnector.php:94` | **Не проверяет** осознанно: у них IP-allowlist, подписи нет |
+| Stripe | `StripeConnector.php:84` | HMAC-SHA256 по `t.payload`, окно повтора 300 с, `hash_equals` |
+| CloudPayments | `CloudPaymentsConnector.php:112` | HMAC-SHA256 base64 по сырому телу против `content-hmac`. Без заголовка — только при `PAYSWITCH_ALLOW_UNSIGNED_WEBHOOKS=true` (на проде не задан) |
+| TBank | `TBankConnector.php:204` | **Не HMAC.** Токен: SHA-256 от склеенных отсортированных полей с паролем |
+| Robokassa | `RobokassaConnector.php:136` | **MD5**, не HMAC: `md5("{$outSum}:{$invId}:{$password2}{$shp}")` |
+| Rbs | `RbsConnector.php:227` | HMAC `checksum` по `callback_secret` |
+| Tochka | `TochkaConnector.php:207` | JWT RS256, `alg` зашит |
+| **YooKassa** | `YooKassaConnector.php:137` | Подписи нет у провайдера — IP-allowlist по `$request->ip()` |
+| **Test** | `TestConnector.php:98` | `return true` |
 
-**Дыр три, а не одна.** YooKassa — единственная, где отказ от подписи
-обоснован: провайдер её не выдаёт, защита строится на списке адресов. Rbs
-(а значит `sberbank` и `alfabank`) и Tochka принимают любой POST на свой
-адрес вебхука. Пока это закрыто только секретностью URL и TLS.
+**Коннектор из URL двигает только свои платежи.** Платёж, у которого записан
+другой `connector`, — `unacceptable`; возврат ищется только у мерчанта из URL.
+Иначе неподписанный `test` мерчанта проводил бы его CloudPayments-платежи.
 
-Отдельно: CloudPayments на отсутствующем заголовке возвращает
-`! app()->environment('production')` (`:107`) — вне прода пропускает.
+**CloudPayments: что за уведомление, решает драйвер**
+(`webhookEventType`). Check — `Completed` или `Authorized` без `AuthCode`: код
+13, если платёж уже нельзя оплатить, 20 для `expired`, 12 при несовпадении
+суммы или валюты. Fail — по `ReasonCode`. `OperationType=Refund` заводит
+`Refund` в `succeeded`, если его у мерчанта нет, и шлёт `refund_succeeded`.
+Pay и Fail пишут исход и `TransactionId` в попытку — без этого возврат через API
+не находил попытку.
+
+TBank получает телом `OK`, Robokassa — `OK{InvId}`; при отказе — JSON, чтобы
+провайдер повторил.
+
+## Симулятор `test-psp`
+
+`routes/api.php:162`, без авторизации. Проводит **только** платежи тестового
+коннектора (`TestPspController.php:123`), переход — через state machine под
+блокировкой. Платёж боевого коннектора — 404. До этого любой, зная `pay_…`
+(он в `client_secret` чекаута), переводил в `succeeded` любой платёж.
 
 ## Маршрутизация
 
@@ -137,8 +158,31 @@ $request->attributes->set('merchant_id', $apiKeyModel->merchant_account_id);
 с префиксом `pro_` (`..._000003:13`), но по нему никто не аутентифицируется.
 Профиль — это разметка, а не граница. **Разделить проекты профилями нечем.**
 
+**Тип ключа — из `api_keys.type`** (`ResolveApiKey.php`): `publishable`
+остаётся publishable, `admin` из таблицы работает как secret мерчанта.
+Глобальный admin API — только ключ из `PAYSWITCH_ADMIN_API_KEY`; в production
+ключ короче 32 символов или равный тестовому значению не принимается. На проде
+он был дословно `admin_test_key_for_development` из `.env.example` —
+ротирован 15.09.2026.
+
+**`key_prefix` не уникален.** У ULID-ключей одной миллисекунды первые 20
+символов совпадают; ключ выбирается среди кандидатов по `hash_equals` хэша, а
+отзыв и срок проверяются только после совпадения. Отсюда плавал
+`TenantIsolationTest`.
+
+**Идемпотентность — заголовок `Idempotency-Key`** на `POST /api/v1/payments` и
+`POST /api/v1/refunds`, уникален в пределах мерчанта (индекс
+`(merchant_account_id, idempotency_key)`). Повтор — 200 и
+`Idempotent-Replayed: true`, к PSP не ходит; тот же ключ с другими параметрами —
+422 `idempotency_key_reused`. Возврат с неизвестным исходом у PSP остаётся
+`pending` и отдаёт 502 `refund_pending` с ключом в `errors[0].meta.refund_id` —
+повторять с тем же ключом. Genesis и invoicing заголовок шлют.
+
 Панель ходит другим путём: `ResolveMerchantContext.php:17` читает заголовок
-`X-Merchant-Key` и проверяет `$user->hasAccessToMerchant()` на `:34`.
+`X-Merchant-Key` и проверяет `$user->hasAccessToMerchant()`. Маршруты панели
+вне `resolve.merchant` (организации, список мерчантов, профили по мерчанту)
+отдают только то, где у пользователя есть роль; роли меняет только admin
+организации роли; ключ подписи профиля видит только admin мерчанта.
 
 ### Genesis
 
@@ -198,7 +242,7 @@ cd widget && npm run test
 - панель держит его путевой зависимостью (`dashboard/package.json:62` —
   `"@payswitch/js": "file:../widget"`), а CI перед сборкой перетирает свежей
   сборкой: `rm -rf node_modules/@payswitch/js; cp -r ../widget node_modules/@payswitch/js`
-  (`deploy.yml:32`);
+  (`deploy/deploy.sh`);
 - invoicing-service кладёт `payswitch.mjs` прямо в исходники чекаута
   (`resources/js/checkout/vendor/`).
 
@@ -217,35 +261,56 @@ cd widget && npm run test
 Локальный хак в `EventLogController` с тех пор мёртвый и его стоит снять.
 
 **Слушатели `PaymentStatusChanged` срабатывали дважды.** Laravel обнаруживает
-слушателей в `app/Listeners` сам (`bootstrap/app.php:22` → `withEvents()`,
-`$shouldDiscoverEvents = true`), а `AppServiceProvider::boot()` регистрировал те
-же три класса ещё и явно через `Event::listen`. `LogPaymentAudit`,
-`SendWebhookNotification` и `DepositToWallet` отрабатывали по два раза, в
-`webhook_events` ложились две строки, **мерчанту уходило по два вебхука**.
+слушателей в `app/Listeners` сам (`bootstrap/app.php:22` → `withEvents()`), а
+`AppServiceProvider::boot()` регистрировал их ещё и явно. Мерчанту уходило по два
+вебхука — на проде 24 платежа до 11.09. Починено `7970658`, явных
+`Event::listen` нет; регрессия в `tests/Feature/Listeners/PaymentListenersTest.php`.
 
-В проде хуже: `deploy.yml:41` делает `php artisan event:cache` и замораживает
-задвоение в кэше.
+**Уведомление создаётся после коммита статуса — и может не создаться.**
+`WebhookEvent` делает синхронный слушатель. Упал любой слушатель — статус уже
+`succeeded`, события нет, повтор PSP не проходит. Так на проде 11.09 потеряны
+уведомления платежей 117 и 118: удалённый `DepositToWallet` остался в старой
+автозагрузке. Догоняет `ReconcileWebhookEventsJob` (`routes/console.php:14`,
+каждые 5 минут): платежи в уведомляемом статусе старше 2 минут и моложе 7 дней
+без события с этим `content->status`.
 
-Правка лежит **в рабочем дереве и не закоммичена**: явные `Event::listen`
-убраны, на их месте комментарий в `AppServiceProvider.php:50`, в
-`tests/Feature/Listeners/PaymentListenersTest.php` добавлена регрессия на
-`WebhookEvent::count() === 1`.
+**Вебхук мерчанту не выбрасывается молча.** Нет адреса — `last_error` и
+повтор по расписанию; кончились 16 попыток (~18 часов) — `Log::error` и
+`failed_jobs`. Адрес — из профиля платежа, `business_profile_id` события
+заполнен. Ключ подписи профиля хранится зашифрованным на `APP_KEY` — **`APP_KEY`
+не менять**. В теле `created`/`updated` — время события, а не последней
+попытки; `event_id` ещё и заголовком `x-webhook-event-id`.
+
+**Истечение — 15 минут от создания платежа.** `CleanExpiredPaymentsJob` переводит
+`requires_customer_action` в `expired` под блокировкой и сообщает мерчанту.
+Поздний Pay всё равно проводится (см. «Состояния платежа»).
+
+**`like` на sqlite регистронезависим, на Postgres — нет.** Поиск в панели был
+регистрозависимым на проде при зелёных тестах. Только `whereLike`.
 
 ## Выкладка
 
-`.github/workflows/deploy.yml` — пуш в `main`, `appleboy/ssh-action`, хост
-`equity.su`, пользователь `deploy`, каталог `/var/www/psapi.gnzs.pro`. Тянет
-`git pull`, ставит зависимости, собирает виджет и панель с
-`VITE_BACKEND_URL=https://psapi.gnzs.pro`, мигрирует, делает `config:cache`,
-`route:cache`, `view:cache`, `event:cache` и перезапускает
-`payswitch-worker:*`.
+Один способ — `deploy/deploy.sh` на `85.198.101.184` от root, после пуша в
+`main`:
 
-**Workflow падает, выкатывают руками.** Команды из него годятся как справка,
-запускать надо по ssh.
+```bash
+ssh root@85.198.101.184 'cd /var/www/psapi.gnzs.pro && bash deploy/deploy.sh'
+```
 
-**Два разных боевых пути.** CI кладёт в `/var/www/psapi.gnzs.pro`, а README
-описывает `/var/www/payswitch` с доменом `your-domain.com` и без сборки виджета
-(`README.md:201` и далее). Правильный — путь из CI; README отстал.
+Скрипт: git и composer от `deploy`, сборка виджета и панели
+(`VITE_BACKEND_URL=https://psapi.gnzs.pro`), `pg_dump` в `/var/backups/psapi`
+(последние десять), `migrate`, `config:clear`, `route:clear`, `event:clear`,
+`view:clear`, `queue:restart`, крон из `deploy/cron.d`.
+
+**git только от `deploy`.** От root git оставлял в `.git` объекты root, fetch
+от `deploy` падал, и приходилось снова идти от root. Если fetch упал на правах —
+`chown -R deploy:www-data .git`. На сервере `core.fileMode=false`.
+
+Workflow `deploy.yml` удалён: он шёл на тот же хост от `deploy`, падал и делал
+`event:cache` от `deploy`, который `www-data` не перезаписывает.
+
+README описывает `/var/www/payswitch` и `your-domain.com` (`README.md:201` и
+далее) — отстал.
 
 **php-fpm работает от `www-data`** (`README.md:175`, supervisor `user=www-data`
 на `:285`, `chown -R www-data:www-data` на `:308`). Артизан руками:
@@ -259,14 +324,17 @@ env HOME=/tmp sudo -u www-data php artisan <команда>
 
 **`config:clear`, а не `optimize:clear`.** `CACHE_STORE=database`
 (`.env.example:44`), `SESSION_DRIVER=database` (`:30`) — `optimize:clear`
-вычищает ту же таблицу и разлогинивает всю панель. В репозитории этого
-предупреждения нигде нет, только `:cache`-варианты в workflow.
+вычищает ту же таблицу и разлогинивает всю панель.
 
 **Зелёные тесты не значат рабочий Postgres.** Набор гоняется на sqlite в
-памяти с `RefreshDatabase`. Всё, что расходится между диалектами — блокировки,
-частичные индексы, типы, сортировка — на sqlite зелёное. Перед тем как верить
-прогону, повторить на Postgres. (В invoicing-service от этого отказались и
-гоняют тесты прямо на Postgres — там без него не проверить advisory-локи.)
+памяти с `RefreshDatabase`; блокировки, типы и `like` там другие. До 15.09 на
+Postgres не запускались 46 тестов панели — фикстуры писали дату в integer.
+Перед выкладкой прогнать и там:
+
+```bash
+createdb payswitch_pg
+DB_CONNECTION=pgsql DB_HOST=127.0.0.1 DB_DATABASE=payswitch_pg DB_USERNAME=$USER DB_PASSWORD= ./vendor/bin/pest
+```
 
 ## Команды
 
