@@ -29,6 +29,7 @@ final readonly class WebhookReceiverService
         private MerchantRepositoryInterface $merchantRepository,
         private PaymentIntentRepositoryInterface $paymentRepository,
         private RefundRepositoryInterface $refundRepository,
+        private WebhookService $webhookService,
     ) {}
 
     /**
@@ -115,7 +116,7 @@ final readonly class WebhookReceiverService
             : (string) ($payload['type'] ?? '');
 
         if (str_contains($eventType, 'refund')) {
-            $this->processRefundWebhook($payload, $merchantAccountId, $connectorName);
+            $this->processRefundWebhook($connector, $payload, $eventType, $merchantAccountId, $connectorName);
 
             return null;
         }
@@ -361,23 +362,32 @@ final readonly class WebhookReceiverService
      *
      * @param  array<string, mixed>  $payload
      */
-    private function processRefundWebhook(array $payload, int $merchantAccountId, string $connectorName): void
-    {
-        $connectorRefundId = $payload['object']['id'] ?? null;
-        if (! $connectorRefundId) {
+    private function processRefundWebhook(
+        ConnectorInterface $connector,
+        array $payload,
+        string $eventType,
+        int $merchantAccountId,
+        string $connectorName,
+    ): void {
+        // YooKassa nests the refund, CloudPayments sends its transaction flat.
+        $connectorRefundId = $payload['object']['id'] ?? $payload['TransactionId'] ?? null;
+        if (! is_scalar($connectorRefundId) || (string) $connectorRefundId === '') {
             return;
         }
+        $connectorRefundId = (string) $connectorRefundId;
 
-        $refund = $this->refundRepository->findByConnectorRefundId((string) $connectorRefundId, $merchantAccountId);
+        $refund = $this->refundRepository->findByConnectorRefundId($connectorRefundId, $merchantAccountId);
         if (! $refund) {
+            if (str_contains($eventType, 'succeeded')) {
+                $this->recordProviderRefund($connector, $payload, $connectorRefundId, $merchantAccountId, $connectorName);
+            }
+
             return;
         }
 
         if ($refund->status === RefundStatus::Succeeded || $refund->status === RefundStatus::Failed) {
             return;
         }
-
-        $eventType = $payload['type'] ?? '';
 
         if (str_contains($eventType, 'succeeded')) {
             $this->refundRepository->updateRefund($refund, [
@@ -389,6 +399,58 @@ final readonly class WebhookReceiverService
                 'status' => RefundStatus::Failed,
                 'connector' => $connectorName,
             ]);
+        }
+    }
+
+    /**
+     * A refund we did not make: done in the provider's cabinet. The payer already has the
+     * money back, so the merchant — and whoever credited the payment — must hear of it.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function recordProviderRefund(
+        ConnectorInterface $connector,
+        array $payload,
+        string $connectorRefundId,
+        int $merchantAccountId,
+        string $connectorName,
+    ): void {
+        $paymentId = $connector->extractPaymentIdFromWebhook($payload);
+        $amount = $this->notifiedAmount($connector, $payload);
+        $payment = $paymentId ? $this->paymentRepository->findByKeyOrNull($paymentId, $merchantAccountId) : null;
+
+        if (! $payment || $amount === null || ($payment->connector !== null && $payment->connector !== $connectorName)) {
+            Log::warning('Refund notification for a payment we cannot match', [
+                'connector' => $connectorName,
+                'connector_refund_id' => $connectorRefundId,
+                'payment_id' => $paymentId,
+            ]);
+
+            return;
+        }
+
+        $refund = DB::transaction(function () use ($payment, $amount, $connectorRefundId, $merchantAccountId, $connectorName) {
+            // The provider repeats notifications; the lock keeps two copies from both passing
+            // the lookup above.
+            $this->paymentRepository->findByIdLocked($payment->id);
+            if ($this->refundRepository->findByConnectorRefundId($connectorRefundId, $merchantAccountId)) {
+                return null;
+            }
+
+            return $this->refundRepository->create([
+                'payment_intent_id' => $payment->id,
+                'merchant_account_id' => $merchantAccountId,
+                'amount' => $amount,
+                'currency' => $payment->currency,
+                'status' => RefundStatus::Succeeded,
+                'reason' => 'Refunded at the provider',
+                'connector' => $connectorName,
+                'connector_refund_id' => $connectorRefundId,
+            ]);
+        });
+
+        if ($refund) {
+            $this->webhookService->dispatchForRefund($refund, $payment);
         }
     }
 }

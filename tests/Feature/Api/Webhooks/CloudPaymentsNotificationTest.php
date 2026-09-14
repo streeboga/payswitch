@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -20,6 +21,8 @@ use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
+use Streeboga\PaymentData\Models\Refund;
+use Streeboga\PaymentData\Models\WebhookEvent;
 
 covers(WebhookReceiverService::class);
 
@@ -284,6 +287,81 @@ test('a payment paid through the notification can be refunded through the API', 
 
     expect($refund->status)->toBe(RefundStatus::Succeeded);
     Http::assertSent(fn ($request) => $request['TransactionId'] === '777003');
+});
+
+// --- Б6: уведомления Refund и Cancel ---
+
+function cpRefundParams(PaymentIntent $payment, array $overrides = []): array
+{
+    return array_merge([
+        'TransactionId' => 990001,
+        'PaymentTransactionId' => 777001,
+        'Amount' => '20.00',
+        'DateTime' => '2026-09-14 12:00:00',
+        'OperationType' => 'Refund',
+        'InvoiceId' => $payment->key,
+        'AccountId' => 'user@example.com',
+    ], $overrides);
+}
+
+test('refund made in the provider cabinet is recorded and the merchant is told', function () {
+    Queue::fake();
+    $payment = cpPayment($this->merchant, ['status' => PaymentStatus::Succeeded, 'amount_received' => 5000]);
+
+    cpNotify($this, cpRefundParams($payment))->assertOk()->assertExactJson(['code' => 0]);
+    // CloudPayments repeats a notification it is not sure we got.
+    cpNotify($this, cpRefundParams($payment))->assertOk();
+
+    $refund = Refund::sole();
+    expect($refund->status)->toBe(RefundStatus::Succeeded)
+        ->and($refund->merchant_account_id)->toBe($this->merchant->id)
+        ->and($refund->payment_intent_id)->toBe($payment->id)
+        ->and($refund->amount)->toBe(2000)
+        ->and($refund->currency)->toBe('RUB')
+        ->and($refund->connector)->toBe('cloudpayments')
+        ->and($refund->connector_refund_id)->toBe('990001')
+        ->and($payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
+
+    $event = WebhookEvent::sole();
+    expect($event->event_type)->toBe('refund_succeeded')
+        ->and($event->content['refund_id'])->toBe($refund->key)
+        ->and($event->content['payment_id'])->toBe($payment->key)
+        ->and($event->content['amount'])->toBe(2000);
+});
+
+test('refund notification for a refund we already know creates nothing', function () {
+    Queue::fake();
+    $payment = cpPayment($this->merchant, ['status' => PaymentStatus::Succeeded, 'amount_received' => 5000]);
+    Refund::create([
+        'payment_intent_id' => $payment->id,
+        'merchant_account_id' => $this->merchant->id,
+        'amount' => 2000,
+        'currency' => 'RUB',
+        'status' => RefundStatus::Succeeded,
+        'connector' => 'cloudpayments',
+        'connector_refund_id' => '990001',
+    ]);
+
+    cpNotify($this, cpRefundParams($payment))->assertOk();
+
+    expect(Refund::count())->toBe(1)
+        ->and(WebhookEvent::count())->toBe(0);
+});
+
+test('cancel notification cancels an authorized payment', function () {
+    Event::fake([PaymentStatusChanged::class]);
+    $payment = cpPayment($this->merchant, ['status' => PaymentStatus::RequiresCapture, 'capture_method' => CaptureMethod::Manual]);
+
+    cpNotify($this, [
+        'TransactionId' => 777004,
+        'Amount' => '50.00',
+        'DateTime' => '2026-09-14 12:00:00',
+        'InvoiceId' => $payment->key,
+        'AccountId' => 'user@example.com',
+    ])->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Cancelled);
+    Event::assertDispatched(PaymentStatusChanged::class);
 });
 
 test('check with the billed amount and currency on a payable payment gets 0', function () {

@@ -165,6 +165,11 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
             return (string) $payload['type'];
         }
 
+        // Before Status: money going back to the payer must never read as a payment.
+        if (($payload['OperationType'] ?? null) === 'Refund') {
+            return 'refund.succeeded';
+        }
+
         $status = $payload['Status'] ?? null;
 
         if ($status === 'Completed' || $status === 'Authorized') {
@@ -178,6 +183,14 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
         // Fail comes with the decline reason and, unlike Pay and Check, without Status.
         if ($status === 'Declined' || isset($payload['ReasonCode'])) {
             return 'payment.failed';
+        }
+
+        // Cancel (an authorization voided) has nothing of its own, only the bare set below.
+        // Taken strictly: a receipt notification also carries TransactionId and InvoiceId,
+        // and must not void a payment.
+        $cancelFields = ['TransactionId', 'Amount', 'DateTime', 'InvoiceId', 'AccountId', 'Email', 'Data', 'JsonData'];
+        if (isset($payload['TransactionId']) && array_diff(array_keys($payload), $cancelFields) === []) {
+            return 'payment.canceled';
         }
 
         return '';

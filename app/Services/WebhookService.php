@@ -9,7 +9,9 @@ use App\Jobs\DeliverWebhookJob;
 use App\Repositories\Contracts\WebhookEventRepositoryInterface;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Models\PaymentIntent;
+use Streeboga\PaymentData\Models\Refund;
 
 final readonly class WebhookService
 {
@@ -48,6 +50,30 @@ final readonly class WebhookService
                 // события описывает судьбу платежа, а не то, чьи это деньги
                 // и что с ними делать. Это решает Genesis (Р28).
                 'metadata' => $payment->metadata ?? [],
+            ],
+        ]);
+
+        DeliverWebhookJob::dispatch($webhookEvent->id);
+    }
+
+    /**
+     * Уведомление мерчанту о возврате. Один источник для возврата через API и
+     * возврата, о котором сообщил провайдер (сделан в его кабинете).
+     */
+    public function dispatchForRefund(Refund $refund, PaymentIntent $payment): void
+    {
+        $webhookEvent = $this->webhookRepository->create([
+            'event_type' => $refund->status === RefundStatus::Succeeded
+                ? WebhookEventType::RefundSucceeded->value
+                : WebhookEventType::RefundFailed->value,
+            'merchant_account_id' => $refund->merchant_account_id,
+            'payment_intent_id' => $payment->id,
+            'content' => [
+                'refund_id' => $refund->key,
+                'payment_id' => $payment->key,
+                'amount' => $refund->amount,
+                'currency' => $refund->currency,
+                'status' => $refund->status->value,
             ],
         ]);
 
