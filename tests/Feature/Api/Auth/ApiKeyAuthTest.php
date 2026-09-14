@@ -74,6 +74,26 @@ test('valid admin key authenticates for admin endpoints', function () {
     expect($response->status())->not->toBe(401);
 });
 
+test('weak admin key is not accepted in production', function (string $weakKey) {
+    config(['payswitch.admin_api_key' => $weakKey]);
+    $this->app->detectEnvironment(fn () => 'production');
+
+    $this->postJson('/api/v1/organizations', ['name' => 'New Org'], ['api-key' => $weakKey])
+        ->assertStatus(401);
+})->with([
+    'known value from .env.example' => 'admin_test_key_for_development',
+    'shorter than 32 characters' => 'short_but_unique_admin_key_1234',
+]);
+
+test('strong admin key is accepted in production', function () {
+    $strongKey = bin2hex(random_bytes(32));
+    config(['payswitch.admin_api_key' => $strongKey]);
+    $this->app->detectEnvironment(fn () => 'production');
+
+    $this->postJson('/api/v1/organizations', ['name' => 'New Org'], ['api-key' => $strongKey])
+        ->assertCreated();
+});
+
 test('secret key on admin endpoint returns 403', function () {
     [$merchant, $rawKey] = createMerchantWithApiKey();
 

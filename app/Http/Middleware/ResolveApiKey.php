@@ -40,6 +40,20 @@ final class ResolveApiKey
         return $next($request);
     }
 
+    /**
+     * На проде admin-ключ был дословно тестовым значением из .env.example.
+     * Слабый или известный ключ в production не открывает admin API вовсе —
+     * лучше отказ, чем открытая дверь.
+     */
+    private function adminKeyAcceptable(string $adminKey): bool
+    {
+        if (! app()->environment('production')) {
+            return true;
+        }
+
+        return strlen($adminKey) >= 32 && $adminKey !== 'admin_test_key_for_development';
+    }
+
     private function resolve(Request $request): void
     {
         $apiKey = $request->header('api-key');
@@ -50,7 +64,7 @@ final class ResolveApiKey
 
         // Check admin key before length validation (admin keys may have any length)
         $adminKey = config('payswitch.admin_api_key');
-        if ($adminKey && is_string($adminKey) && hash_equals($adminKey, $apiKey)) {
+        if ($adminKey && is_string($adminKey) && $this->adminKeyAcceptable($adminKey) && hash_equals($adminKey, $apiKey)) {
             $request->attributes->set('api_key_type', 'admin');
 
             return;
