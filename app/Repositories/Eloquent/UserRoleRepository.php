@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repositories\Eloquent;
 
+use App\Enums\UserRole as UserRoleEnum;
 use App\Models\UserRole;
 use App\Repositories\Contracts\UserRoleRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
@@ -38,6 +39,16 @@ final readonly class UserRoleRepository implements UserRoleRepositoryInterface
     public function findOrFail(string $roleId): UserRole
     {
         return UserRole::findOrFail($roleId);
+    }
+
+    public function findByUserAndOrganization(int|string $userId, int|string $organizationId): ?UserRole
+    {
+        return UserRole::where('user_id', $userId)->where('organization_id', $organizationId)->first();
+    }
+
+    public function countAdmins(int|string $organizationId): int
+    {
+        return UserRole::where('organization_id', $organizationId)->where('role', UserRoleEnum::Admin)->count();
     }
 
     public function update(UserRole $role, string $newRole): void

@@ -50,6 +50,7 @@ final class UserRoleController extends Controller
     {
         /** @var array{user_id: int|string, organization_id: int|string, role: string} $validated */
         $validated = $request->validated();
+        Gate::authorize('user-role.assign', [$validated['organization_id']]);
 
         $role = $this->userRoleService->assignRole($validated);
 
@@ -67,7 +68,10 @@ final class UserRoleController extends Controller
     {
         $validated = $request->validated();
 
-        $role = $this->userRoleService->updateRole($roleId, $validated['role']);
+        $role = $this->userRoleService->findRole($roleId);
+        Gate::authorize('user-role.update', [$role->organization_id]);
+
+        $role = $this->userRoleService->updateRole($role, $validated['role']);
 
         return (new UserRoleResource($role))->toResponse($request);
     }
@@ -81,7 +85,10 @@ final class UserRoleController extends Controller
     #[Response(204, description: 'Role revoked')]
     public function destroy(string $roleId): JsonResponse
     {
-        $this->userRoleService->deleteRole($roleId);
+        $role = $this->userRoleService->findRole($roleId);
+        Gate::authorize('user-role.delete', [$role->organization_id]);
+
+        $this->userRoleService->deleteRole($role);
 
         return response()->json(null, 204);
     }
