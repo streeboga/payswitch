@@ -112,11 +112,18 @@ final class TochkaConnector implements ConnectorInterface
             'amount' => $this->formatAmount($params['amount'] ?? 0),
         ];
 
-        return $this->makeRequest(
+        $result = $this->makeRequest(
             'POST',
             "/acquiring/v1.0/payments/{$paymentId}/refund",
             $body,
         );
+
+        // 5xx — исход неизвестен, а не отказ. Ключа идемпотентности у Точки нет.
+        if (! $result['success'] && preg_match('/^5\d\d$/', (string) $result['code'])) {
+            $result['code'] = 'connector_error';
+        }
+
+        return $result;
     }
 
     public function void(array $params): array

@@ -113,6 +113,12 @@ final class TBankConnector implements ConnectorInterface
             $requestParams['Amount'] = $params['amount'];
         }
 
+        // ExternalRequestId — идемпотентность Cancel: повтор с тем же id отдаёт состояние
+        // первой операции, а не возвращает второй раз. Для СБП T-Bank его не учитывает.
+        if (! empty($params['refund_id'])) {
+            $requestParams['ExternalRequestId'] = $params['refund_id'];
+        }
+
         return $this->makeRequest('Cancel', $requestParams);
     }
 

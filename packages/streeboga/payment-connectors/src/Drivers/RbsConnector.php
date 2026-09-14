@@ -112,10 +112,19 @@ final class RbsConnector implements ConnectorInterface
 
     public function refund(array $params): array
     {
-        return $this->makeRequest('refund.do', [
+        // Идемпотентности у refund.do нет — refund_id передать некуда.
+        $result = $this->makeRequest('refund.do', [
             'orderId' => $params['transaction_id'] ?? '',
             'amount' => $this->formatAmount($params['amount'] ?? 0),
         ]);
+
+        // makeRequest считает успехом отсутствие errorCode, а 5xx с HTML его тоже не содержит.
+        // Успешный refund.do всегда отвечает errorCode "0".
+        if ($result['success'] && ! isset($result['data']['errorCode'])) {
+            return ['success' => false, 'transaction_id' => null, 'message' => 'Unparsed RBS response', 'code' => 'connector_error', 'data' => $result['data']];
+        }
+
+        return $result;
     }
 
     public function void(array $params): array

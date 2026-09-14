@@ -88,10 +88,11 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
 
     public function refund(array $params): array
     {
+        // X-Request-ID — идемпотентность CloudPayments: повтор с тем же id отдаёт первый ответ.
         return $this->makeRequest('/payments/refund', [
             'TransactionId' => $params['transaction_id'] ?? '',
             'Amount' => ($params['amount'] ?? 0) / 100,
-        ]);
+        ], $params['refund_id'] ?? null);
     }
 
     public function void(array $params): array
@@ -212,10 +213,11 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
         }
     }
 
-    private function makeRequest(string $endpoint, array $data): array
+    private function makeRequest(string $endpoint, array $data, ?string $requestId = null): array
     {
         try {
             $response = Http::withBasicAuth($this->publicId, $this->apiSecret)
+                ->withHeaders($requestId ? ['X-Request-ID' => $requestId] : [])
                 ->timeout(30)
                 ->post($this->baseUrl.$endpoint, $data);
 
