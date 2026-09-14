@@ -10,6 +10,7 @@ use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
+use Streeboga\PaymentData\Models\PaymentIntent;
 
 covers(TestPaymentService::class);
 
@@ -168,4 +169,21 @@ test('test payment with description stores it', function () {
         ->assertJsonPath('data.attributes.currency', 'GBP')
         ->assertJsonPath('data.attributes.description', 'Integration test payment')
         ->assertJsonPath('data.attributes.status', 'succeeded');
+});
+
+// П13: env() вне config после config:cache возвращает null — адрес панели
+// брался из запасного localhost:3000.
+test('create-only return_url points to configured frontend url', function () {
+    config(['app.frontend_url' => 'https://panel.example.com/']);
+
+    $response = $this->actingAs($this->user)
+        ->postJson('/api/v1/dashboard/test-payments/create-only', [
+            'amount' => 5000,
+            'currency' => 'RUB',
+            'connector_name' => 'test',
+        ], $this->headers)
+        ->assertCreated();
+
+    $payment = PaymentIntent::where('key', $response->json('data.id'))->firstOrFail();
+    expect($payment->return_url)->toBe("https://panel.example.com/payments/{$payment->key}");
 });

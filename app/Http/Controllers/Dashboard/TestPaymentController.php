@@ -67,7 +67,7 @@ final class TestPaymentController extends Controller
             'connector_name' => ['sometimes', 'string'],
         ]);
 
-        $frontendUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/');
+        $frontendUrl = rtrim((string) config('app.frontend_url', 'http://localhost:3000'), '/');
 
         $dto = CreatePaymentData::from([
             'amount' => $request->integer('amount'),
