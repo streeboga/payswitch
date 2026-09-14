@@ -15,6 +15,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Streeboga\PaymentData\Models\WebhookEvent;
 use Streeboga\PaymentData\Support\WebhookSigner;
 
 final class DeliverWebhookJob implements ShouldQueue
@@ -43,8 +44,16 @@ final class DeliverWebhookJob implements ShouldQueue
             return;
         }
 
-        $profile = $merchantRepository->findProfileByMerchant($event->merchant_account_id);
+        // Адрес — профиля платежа. Профиль мерчанта — только для событий без
+        // профиля (старые строки): у мерчанта их может быть несколько.
+        $profile = ($event->business_profile_id ? $merchantRepository->findProfileById($event->business_profile_id) : null)
+            ?? $merchantRepository->findProfileByMerchant($event->merchant_account_id);
+
         if (! $profile || ! $profile->webhook_url) {
+            // Не выбрасывать: адрес могут прописать позже, событие — деньги получателя.
+            Log::warning("No webhook URL configured for event {$event->key}", ['merchant_account_id' => $event->merchant_account_id]);
+            $this->retryOrFail($webhookRepository, $event, 'No webhook URL configured');
+
             return;
         }
 
@@ -66,7 +75,11 @@ final class DeliverWebhookJob implements ShouldQueue
             'event_id' => $event->key,
             'event_type' => $event->event_type,
             'content' => $event->content,
-            'updated' => $event->updated_at->toIso8601String(),
+            // Время факта, а не последней попытки: updated_at сдвигается на
+            // каждой неудаче, и ретрай старого события выглядел бы новее
+            // следующего. `updated` оставлен ради совместимости с приёмниками.
+            'created' => $event->created_at->toIso8601String(),
+            'updated' => $event->created_at->toIso8601String(),
         ], JSON_THROW_ON_ERROR);
 
         $signature = WebhookSigner::sign($payload, $profile->payment_response_hash_key);
@@ -76,6 +89,7 @@ final class DeliverWebhookJob implements ShouldQueue
                 ->withHeaders([
                     'Content-Type' => 'application/json',
                     'x-webhook-signature-512' => $signature,
+                    'x-webhook-event-id' => $event->key,
                 ])
                 ->withBody($payload, 'application/json')
                 ->post($profile->webhook_url);
@@ -87,30 +101,54 @@ final class DeliverWebhookJob implements ShouldQueue
             }
 
             $error = Str::limit("HTTP {$response->status()}: {$response->body()}", 1000);
-            $webhookRepository->markFailed($event, $event->delivery_attempts + 1, $error);
         } catch (\Exception $e) {
-            $webhookRepository->markFailed($event, $event->delivery_attempts + 1, $e->getMessage());
+            $error = $e->getMessage();
         }
 
-        // If we've exhausted all retries, the job framework handles it
-        if ($event->delivery_attempts >= config('payswitch.webhook.max_attempts', 16)) {
-            $webhookRepository->markFailed($event, $event->delivery_attempts, 'Max delivery attempts exceeded');
+        $this->retryOrFail($webhookRepository, $event, $error);
+    }
+
+    /**
+     * Неудачная попытка: записать ошибку и либо уйти на повтор по расписанию,
+     * либо, когда попытки кончились, провалить job — тогда вызовется failed()
+     * и запись ляжет в failed_jobs.
+     */
+    private function retryOrFail(WebhookEventRepositoryInterface $webhookRepository, WebhookEvent $event, string $error): void
+    {
+        $attempts = $event->delivery_attempts + 1;
+        $webhookRepository->markFailed($event, $attempts, $error);
+
+        $exception = new \RuntimeException("Webhook delivery failed for event {$event->key} after {$attempts} attempts");
+
+        if ($attempts >= config('payswitch.webhook.max_attempts', 16)) {
+            $this->fail($exception);
 
             return;
         }
 
-        // Rethrow to trigger retry with backoff
-        throw new \RuntimeException("Webhook delivery failed for event {$event->key}");
+        throw $exception;
     }
 
     public function failed(\Throwable $e): void
     {
         $webhookRepository = app(WebhookEventRepositoryInterface::class);
         $event = $webhookRepository->findById($this->webhookEventId);
+
+        // Настоящую причину не затирать — дописать к ней.
         if ($event) {
-            $webhookRepository->markFailed($event, $event->delivery_attempts, 'Permanently failed: '.$e->getMessage());
+            $webhookRepository->markFailed(
+                $event,
+                $event->delivery_attempts,
+                ($event->last_error ? $event->last_error.' | ' : '').'permanently failed: '.$e->getMessage(),
+            );
         }
-        Log::error("Webhook delivery permanently failed for event {$this->webhookEventId}", [
+
+        Log::error('Webhook delivery permanently failed for event '.($event->key ?? $this->webhookEventId), [
+            'webhook_event_id' => $this->webhookEventId,
+            'merchant_account_id' => $event?->merchant_account_id,
+            'payment_id' => $event?->content['payment_id'] ?? null,
+            'attempts' => $event?->delivery_attempts,
+            'last_error' => $event?->last_error,
             'error' => $e->getMessage(),
         ]);
     }

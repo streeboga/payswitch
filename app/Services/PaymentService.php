@@ -381,9 +381,23 @@ final readonly class PaymentService
         $pspStatus = $result['data']['status'] ?? null;
         $newStatus = $pspStatus ? $connector->mapPaymentStatusToInternal($pspStatus) : null;
 
-        $previousStatus = $payment->status->value;
+        if (! $newStatus || $newStatus === $payment->status) {
+            return $payment;
+        }
 
-        if ($newStatus && $newStatus !== $payment->status) {
+        // Пока шёл запрос к PSP, статус мог сменить вебхук. Решение — на
+        // заблокированной строке, иначе sync затрёт `failed` на `succeeded`
+        // или объявит тот же переход второй раз.
+        $previousStatus = null;
+        $payment = DB::transaction(function () use ($paymentKey, $merchantAccountId, $newStatus, $syncableStatuses, &$previousStatus) {
+            $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
+
+            if ($payment->status === $newStatus || ! in_array($payment->status, $syncableStatuses, true)) {
+                return $payment;
+            }
+
+            $currentStatus = $payment->status;
+
             // Some terminal statuses (e.g. succeeded) may not be directly reachable
             // from the current status. Transition through an intermediate status if needed.
             if (! PaymentStateMachine::canTransition($payment->status, $newStatus)) {
@@ -391,7 +405,6 @@ final readonly class PaymentService
                 if (PaymentStateMachine::canTransition($payment->status, $intermediate)
                     && PaymentStateMachine::canTransition($intermediate, $newStatus)) {
                     $this->paymentRepository->update($payment, ['status' => $intermediate]);
-                    $payment->refresh();
                 } else {
                     Log::warning("Sync: cannot transition payment {$payment->key} from {$payment->status->value} to target status");
 
@@ -404,8 +417,13 @@ final readonly class PaymentService
                 $updateData['amount_received'] = $payment->amount;
             }
             $this->paymentRepository->update($payment, $updateData);
-            $payment->refresh();
+            $previousStatus = $currentStatus->value;
 
+            return $payment->refresh();
+        });
+
+        // Событие — после коммита и только если статус сменил этот вызов.
+        if ($previousStatus !== null) {
             $this->dispatchStatusChanged($payment, $previousStatus);
         }
 

@@ -167,9 +167,18 @@ final readonly class MerchantRepository implements MerchantRepositoryInterface
         return $connector;
     }
 
+    public function findProfileById(int $id): ?BusinessProfile
+    {
+        return BusinessProfile::find($id);
+    }
+
+    /**
+     * Профиль мерчанта по умолчанию — самый ранний. Без порядка Postgres
+     * вправе вернуть любой из нескольких.
+     */
     public function findProfileByMerchant(int|string $merchantAccountId): ?BusinessProfile
     {
-        return $this->profileQuery()->forMerchant($merchantAccountId)->first();
+        return $this->profileQuery()->forMerchant($merchantAccountId)->oldest()->first();
     }
 
     public function findMerchantByKeyOrNull(string $key): ?MerchantAccount

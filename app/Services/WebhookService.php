@@ -31,6 +31,8 @@ final readonly class WebhookService
         $webhookEvent = $this->webhookRepository->create([
             'event_type' => $eventType,
             'merchant_account_id' => $payment->merchant_account_id,
+            // Доставка берёт адрес из профиля платежа, а не любого профиля мерчанта.
+            'business_profile_id' => $payment->business_profile_id,
             'payment_intent_id' => $payment->id,
             'content' => [
                 'payment_id' => $payment->key,

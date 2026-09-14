@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Events\PaymentStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
@@ -254,4 +257,45 @@ test('sync when PSP returns unknown status leaves payment unchanged', function (
 
     $payment->refresh();
     expect($payment->status)->toBe(PaymentStatus::Processing);
+});
+
+test('sync does not overwrite a status a concurrent webhook just set', function () {
+    Event::fake([PaymentStatusChanged::class]);
+    $payment = createPaymentInStatus(PaymentStatus::Processing);
+
+    // Вебхук PSP коммитит `failed` между чтением платежа в sync и записью.
+    MerchantConnectorAccount::retrieved(function () use ($payment) {
+        DB::table('payment_intents')->where('id', $payment->id)->update(['status' => PaymentStatus::Failed->value]);
+    });
+
+    $this->postJson("/api/v1/payments/{$payment->key}/sync", [], syncApiHeaders())->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Failed);
+    Event::assertNotDispatched(PaymentStatusChanged::class);
+});
+
+test('sync does not announce a transition a concurrent webhook already made', function () {
+    Event::fake([PaymentStatusChanged::class]);
+    $payment = createPaymentInStatus(PaymentStatus::Processing);
+
+    MerchantConnectorAccount::retrieved(function () use ($payment) {
+        DB::table('payment_intents')->where('id', $payment->id)->update(['status' => PaymentStatus::Succeeded->value]);
+    });
+
+    $this->postJson("/api/v1/payments/{$payment->key}/sync", [], syncApiHeaders())
+        ->assertOk()
+        ->assertJsonPath('data.attributes.status', 'succeeded');
+
+    Event::assertNotDispatched(PaymentStatusChanged::class);
+});
+
+test('sync announces its own transition exactly once', function () {
+    Event::fake([PaymentStatusChanged::class]);
+    $payment = createPaymentInStatus(PaymentStatus::RequiresCustomerAction);
+
+    $this->postJson("/api/v1/payments/{$payment->key}/sync", [], syncApiHeaders())->assertOk();
+
+    Event::assertDispatchedTimes(PaymentStatusChanged::class, 1);
+    Event::assertDispatched(PaymentStatusChanged::class, fn ($e) => $e->previousStatus === 'requires_customer_action'
+        && $e->payment->status === PaymentStatus::Succeeded);
 });

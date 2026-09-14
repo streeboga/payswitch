@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Repositories\Eloquent;
 
 use App\Builders\PaymentIntentQueryBuilder;
+use App\Enums\WebhookEventType;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
@@ -180,5 +183,25 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         return PaymentIntent::whereNotNull('expires_on')
             ->where('expires_on', '<', now())
             ->whereIn('status', $statuses);
+    }
+
+    /**
+     * @param  array<int, PaymentStatus>  $statuses
+     * @return Builder<PaymentIntent>
+     */
+    public function findWithoutWebhookForCurrentStatus(array $statuses, \DateTimeInterface $from, \DateTimeInterface $to): Builder
+    {
+        return PaymentIntent::whereIn('status', $statuses)
+            ->whereBetween('updated_at', [$from, $to])
+            ->whereNotExists(function (QueryBuilder $query) {
+                // content — json, не jsonb: сравнение идёт по тексту
+                // (->> в Postgres, json_extract в sqlite).
+                $query->selectRaw('1')
+                    ->from('webhook_events')
+                    ->whereColumn('webhook_events.payment_intent_id', 'payment_intents.id')
+                    ->whereColumn('webhook_events.content->status', 'payment_intents.status')
+                    // У возвратов тот же payment_intent_id и свой status.
+                    ->whereNotIn('webhook_events.event_type', [WebhookEventType::RefundSucceeded->value, WebhookEventType::RefundFailed->value]);
+            });
     }
 }

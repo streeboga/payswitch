@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Events\PaymentStatusChanged;
+use App\Listeners\LogPaymentAudit;
 use App\Models\User;
 use App\Models\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
-use Streeboga\PaymentData\Models\PaymentAuditLog;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\WebhookEvent;
 
@@ -31,7 +32,7 @@ beforeEach(function () {
         'status' => PaymentStatus::Succeeded,
         'capture_method' => 'automatic',
         'authentication_type' => 'no_three_ds',
-        'session_expiry' => now()->addMinutes(15),
+        'session_expiry' => 900,
     ]);
 });
 
@@ -45,15 +46,8 @@ test('event logs returns paginated json:api response', function () {
         'delivery_attempts' => 1,
     ]);
 
-    PaymentAuditLog::create([
-        'payment_intent_id' => $this->payment->id,
-        'merchant_account_id' => $this->merchant->id,
-        'action' => 'status_changed',
-        'previous_status' => 'processing',
-        'new_status' => 'succeeded',
-        'actor' => 'system',
-        'created_at' => now(),
-    ]);
+    // Аудит пишет слушатель в activity_log (spatie), а не payment_audit_log.
+    (new LogPaymentAudit)->handle(new PaymentStatusChanged($this->payment, 'processing'));
 
     $response = $this->actingAs($this->user)
         ->getJson('/api/v1/dashboard/event-logs', $this->headers);
@@ -72,21 +66,41 @@ test('event logs filters by type', function () {
         'delivery_attempts' => 1,
     ]);
 
-    PaymentAuditLog::create([
-        'payment_intent_id' => $this->payment->id,
-        'merchant_account_id' => $this->merchant->id,
-        'action' => 'status_changed',
-        'previous_status' => 'processing',
-        'new_status' => 'succeeded',
-        'actor' => 'system',
-        'created_at' => now(),
-    ]);
+    // Аудит пишет слушатель в activity_log (spatie), а не payment_audit_log.
+    (new LogPaymentAudit)->handle(new PaymentStatusChanged($this->payment, 'processing'));
 
     $response = $this->actingAs($this->user)
         ->getJson('/api/v1/dashboard/event-logs?filter[type]=webhook', $this->headers);
 
     $response->assertOk()
         ->assertJsonPath('meta.total', 1);
+});
+
+test('status change from activity log keeps the api format', function () {
+    (new LogPaymentAudit)->handle(new PaymentStatusChanged($this->payment, 'processing'));
+
+    $otherOrg = Organization::create(['name' => 'Other']);
+    $other = MerchantAccount::create(['org_id' => $otherOrg->id, 'name' => 'Other']);
+    $foreign = PaymentIntent::create([
+        'merchant_account_id' => $other->id,
+        'amount' => 5000,
+        'currency' => 'USD',
+        'status' => PaymentStatus::Succeeded,
+        'capture_method' => 'automatic',
+    ]);
+    (new LogPaymentAudit)->handle(new PaymentStatusChanged($foreign, 'processing'));
+
+    $response = $this->actingAs($this->user)
+        ->getJson('/api/v1/dashboard/event-logs?filter[type]=status_change', $this->headers);
+
+    $response->assertOk()
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.type', 'event-logs')
+        ->assertJsonPath('data.0.attributes.event_type', 'status_change')
+        ->assertJsonPath('data.0.attributes.action', 'status_changed')
+        ->assertJsonPath('data.0.attributes.resource_id', $this->payment->key)
+        ->assertJsonPath('data.0.attributes.status', 'succeeded')
+        ->assertJsonPath('data.0.attributes.detail', 'processing → succeeded');
 });
 
 test('event logs require authentication', function () {

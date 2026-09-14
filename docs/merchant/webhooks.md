@@ -12,6 +12,7 @@ Payswitch отправляет HTTP-уведомления на ваш серв�
 POST {ваш webhook_url}
 Content-Type: application/json
 x-webhook-signature-512: <подпись>
+x-webhook-event-id: <event_id>
 ```
 
 ### Тело запроса
@@ -30,9 +31,14 @@ x-webhook-signature-512: <подпись>
       "order_id": "ORD-5678"
     }
   },
+  "created": "2026-03-24T12:00:00Z",
   "updated": "2026-03-24T12:00:00Z"
 }
 ```
+
+`created` — время события в payswitch, повторы доставки его не меняют. `updated`
+сейчас равно `created`. Порядок доставки не гарантирован: повтор старого события
+может прийти после нового, сравнивайте `created` и не откатывайте статус назад.
 
 ## Типы событий
 
