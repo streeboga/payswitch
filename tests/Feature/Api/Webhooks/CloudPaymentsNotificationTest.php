@@ -2,18 +2,23 @@
 
 declare(strict_types=1);
 
+use App\DataTransferObjects\Refund\CreateRefundData;
 use App\Events\PaymentStatusChanged;
+use App\Services\RefundService;
 use App\Services\WebhookReceiverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\MerchantConnectorAccount;
 use Streeboga\PaymentData\Models\Organization;
+use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
 
 covers(WebhookReceiverService::class);
@@ -216,6 +221,69 @@ test('amount_received is the amount the provider quotes, converted to minor unit
 
     expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
         ->and($payment->fresh()->amount_received)->toBe(13750);
+});
+
+// --- Б6: TransactionId и попытка ---
+
+function cpAttempt(PaymentIntent $payment, string $connector = 'cloudpayments'): PaymentAttempt
+{
+    return PaymentAttempt::create([
+        'payment_intent_id' => $payment->id,
+        'connector' => $connector,
+        'status' => 'requires_action',
+        'amount' => $payment->amount,
+    ]);
+}
+
+test('pay marks the attempt succeeded and keeps the provider transaction id', function () {
+    $payment = cpPayment($this->merchant);
+    $attempt = cpAttempt($payment);
+    $foreign = cpAttempt(cpPayment($this->merchant));
+
+    cpNotify($this, cpPayParams($payment, ['TransactionId' => 777001]))->assertOk();
+
+    expect($attempt->fresh()->status)->toBe('succeeded')
+        ->and($attempt->fresh()->connector_transaction_id)->toBe('777001')
+        ->and($foreign->fresh()->status)->toBe('requires_action')
+        ->and($foreign->fresh()->connector_transaction_id)->toBeNull();
+});
+
+test('fail notification fails the payment and the attempt', function () {
+    $payment = cpPayment($this->merchant);
+    $attempt = cpAttempt($payment);
+
+    // Fail carries Reason and ReasonCode, and no AuthCode.
+    cpNotify($this, [
+        'TransactionId' => 777002,
+        'Amount' => '50.00',
+        'Currency' => 'RUB',
+        'InvoiceId' => $payment->key,
+        'OperationType' => 'Payment',
+        'Reason' => 'InsufficientFunds',
+        'ReasonCode' => 5051,
+    ])->assertOk();
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Failed)
+        ->and($attempt->fresh()->status)->toBe('failed')
+        ->and($attempt->fresh()->connector_transaction_id)->toBe('777002');
+});
+
+test('a payment paid through the notification can be refunded through the API', function () {
+    Http::fake([
+        'api.cloudpayments.ru/payments/refund' => Http::response(['Success' => true, 'Model' => ['TransactionId' => 888001]]),
+    ]);
+    $payment = cpPayment($this->merchant);
+    cpAttempt($payment);
+
+    cpNotify($this, cpPayParams($payment, ['TransactionId' => 777003]))->assertOk();
+
+    $refund = app(RefundService::class)->create(
+        new CreateRefundData(payment_id: $payment->key, amount: 2000),
+        $this->merchant->id,
+    );
+
+    expect($refund->status)->toBe(RefundStatus::Succeeded);
+    Http::assertSent(fn ($request) => $request['TransactionId'] === '777003');
 });
 
 test('check with the billed amount and currency on a payable payment gets 0', function () {

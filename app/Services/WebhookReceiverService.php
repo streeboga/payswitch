@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\PaymentAttemptStatus;
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
@@ -210,6 +211,7 @@ final readonly class WebhookReceiverService
                 $updateData['amount_received'] = $notifiedAmount ?? $lockedPayment->amount;
             }
             $this->paymentRepository->update($lockedPayment, $updateData);
+            $this->recordAttemptOutcome($lockedPayment, $connectorName, $updateData['status'], $payload);
 
             $lockedPayment->refresh();
 
@@ -221,6 +223,47 @@ final readonly class WebhookReceiverService
         }
 
         return null;
+    }
+
+    /**
+     * Carry the outcome over to the payment's attempt, with the provider's transaction id.
+     *
+     * Refund and capture look for a succeeded attempt, sync for one with a transaction id.
+     * Without this a payment confirmed by notification stayed with a `requires_action`
+     * attempt and no id, and nothing could be done with it but from the provider's cabinet.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function recordAttemptOutcome(PaymentIntent $payment, string $connectorName, PaymentStatus $status, array $payload): void
+    {
+        $failed = $status === PaymentStatus::Failed;
+        if (! $failed && ! in_array($status, [PaymentStatus::Succeeded, PaymentStatus::RequiresCapture, PaymentStatus::RequiresMerchantAction], true)) {
+            return;
+        }
+
+        $transactionId = $payload['TransactionId'] ?? null;
+        $attributes = array_filter([
+            'status' => $failed ? PaymentAttemptStatus::Failed->value : PaymentAttemptStatus::Succeeded->value,
+            'connector_transaction_id' => is_scalar($transactionId) ? (string) $transactionId : null,
+        ], fn ($value) => $value !== null);
+
+        // A late success may follow a Fail that already closed the attempt.
+        $open = $failed ? ['requires_action', 'processing'] : ['requires_action', 'processing', 'failed'];
+
+        $attempt = $payment->paymentAttempts()
+            ->where('connector', $connectorName)
+            ->whereIn('status', $open)
+            ->latest('id')
+            ->first();
+
+        if ($attempt) {
+            $attempt->update($attributes);
+        } elseif (! $failed) {
+            $this->paymentRepository->createAttempt($payment, $attributes + [
+                'connector' => $connectorName,
+                'amount' => $payment->amount,
+            ]);
+        }
     }
 
     /**

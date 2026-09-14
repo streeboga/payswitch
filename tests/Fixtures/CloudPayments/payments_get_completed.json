@@ -1,0 +1,27 @@
+{
+    "Model": {
+        "ReasonCode": 0,
+        "PublicId": "pk_test_123",
+        "TransactionId": 504735239,
+        "Amount": 50.00,
+        "Currency": "RUB",
+        "PaymentAmount": 50.00,
+        "PaymentCurrency": "RUB",
+        "InvoiceId": "pay_01TESTSYNC",
+        "AccountId": "user@example.com",
+        "CreatedDateIso": "2026-09-14T12:00:00",
+        "AuthDateIso": "2026-09-14T12:00:05",
+        "ConfirmDateIso": "2026-09-14T12:00:05",
+        "AuthCode": "A1B2C3",
+        "TestMode": true,
+        "CardFirstSix": "424242",
+        "CardLastFour": "4242",
+        "CardType": "Visa",
+        "Status": "Completed",
+        "StatusCode": 3,
+        "Reason": "Approved",
+        "CardHolderMessage": "Оплата успешно проведена"
+    },
+    "Success": true,
+    "Message": null
+}

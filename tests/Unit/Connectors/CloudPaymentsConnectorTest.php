@@ -246,6 +246,47 @@ test('mapWebhookEventToStatus maps correctly', function () {
     expect($c->mapWebhookEventToStatus('unknown.event'))->toBeNull();
 });
 
+test('getPaymentStatus asks /payments/get by TransactionId and exposes Model.Status', function () {
+    $fixture = json_decode((string) file_get_contents(__DIR__.'/../../Fixtures/CloudPayments/payments_get_completed.json'), true);
+    Http::fake(['api.cloudpayments.ru/payments/get' => Http::response($fixture)]);
+
+    $c = cloudPaymentsConnector();
+    $result = $c->getPaymentStatus(['transaction_id' => '504735239']);
+
+    Http::assertSent(fn ($request) => $request->url() === 'https://api.cloudpayments.ru/payments/get'
+        && $request['TransactionId'] === '504735239');
+    expect($result['success'])->toBeTrue()
+        ->and($result['transaction_id'])->toBe(504735239)
+        ->and($result['data']['status'])->toBe('Completed')
+        ->and($c->mapPaymentStatusToInternal($result['data']['status']))->toBe(PaymentStatus::Succeeded);
+});
+
+test('getPaymentStatus without a transaction id finds the payment by InvoiceId', function () {
+    Http::fake(['api.cloudpayments.ru/v2/payments/find' => Http::response([
+        'Success' => true,
+        'Model' => [
+            ['TransactionId' => 1, 'InvoiceId' => 'pay_01X', 'Status' => 'Declined'],
+            ['TransactionId' => 2, 'InvoiceId' => 'pay_01X', 'Status' => 'Completed'],
+        ],
+    ])]);
+
+    $result = cloudPaymentsConnector()->getPaymentStatus(['payment_id' => 'pay_01X']);
+
+    Http::assertSent(fn ($request) => $request['InvoiceId'] === 'pay_01X');
+    expect($result['transaction_id'])->toBe(2)
+        ->and($result['data']['status'])->toBe('Completed');
+});
+
+test('mapPaymentStatusToInternal knows every Model.Status', function () {
+    $c = cloudPaymentsConnector();
+
+    expect($c->mapPaymentStatusToInternal('AwaitingAuthentication'))->toBe(PaymentStatus::RequiresCustomerAction)
+        ->and($c->mapPaymentStatusToInternal('Authorized'))->toBe(PaymentStatus::RequiresCapture)
+        ->and($c->mapPaymentStatusToInternal('Completed'))->toBe(PaymentStatus::Succeeded)
+        ->and($c->mapPaymentStatusToInternal('Cancelled'))->toBe(PaymentStatus::Cancelled)
+        ->and($c->mapPaymentStatusToInternal('Declined'))->toBe(PaymentStatus::Failed);
+});
+
 test('extractPaymentIdFromWebhook extracts InvoiceId', function () {
     $c = cloudPaymentsConnector();
 
