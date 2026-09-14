@@ -105,9 +105,24 @@ test('check is refused with 13 for a payment that can no longer be paid', functi
 })->with([
     'succeeded' => PaymentStatus::Succeeded,
     'requires_capture' => PaymentStatus::RequiresCapture,
-    'failed' => PaymentStatus::Failed,
     'cancelled' => PaymentStatus::Cancelled,
 ]);
+
+test('check on a declined payment gets 0: the payer retries in the same widget', function () {
+    // Fail переводит платёж в failed, а CloudPayments на повторе с тем же InvoiceId
+    // снова спрашивает Check. Отказ здесь не дал бы оплатить счёт после первой
+    // отклонённой карты.
+    $payment = cpPayment($this->merchant, ['status' => PaymentStatus::Failed]);
+
+    cpNotify($this, cpCheckParams($payment))->assertOk()->assertExactJson(['code' => 0]);
+});
+
+test('a pay we failed to record gets 500, so the provider repeats it', function () {
+    $payment = cpPayment($this->merchant);
+    Event::listen(PaymentStatusChanged::class, fn () => throw new RuntimeException('listener down'));
+
+    cpNotify($this, cpPayParams($payment))->assertStatus(500);
+});
 
 test('check is refused with 20 for an expired payment', function () {
     $payment = cpPayment($this->merchant, ['status' => PaymentStatus::Expired]);
@@ -357,6 +372,32 @@ test('refund notification for a refund we already know creates nothing', functio
 
     expect(Refund::count())->toBe(1)
         ->and(WebhookEvent::count())->toBe(0);
+});
+
+test('refund notification that beats our own refund settles it instead of creating a second', function () {
+    Queue::fake();
+    $payment = cpPayment($this->merchant, ['status' => PaymentStatus::Succeeded, 'amount_received' => 5000]);
+    cpAttempt($payment)->update(['status' => 'succeeded', 'connector_transaction_id' => '777001']);
+
+    // Провайдер уже вернул деньги и шлёт уведомление, пока наш запрос возврата ещё
+    // ждёт ответа: наш pending без connector_refund_id.
+    Http::fake([
+        'api.cloudpayments.ru/payments/refund' => function () use ($payment) {
+            cpNotify($this, cpRefundParams($payment))->assertOk();
+
+            return Http::response(['Success' => true, 'Model' => ['TransactionId' => 990001]]);
+        },
+    ]);
+
+    $refund = app(RefundService::class)->create(
+        new CreateRefundData(payment_id: $payment->key, amount: 2000),
+        $this->merchant->id,
+    );
+
+    expect(Refund::count())->toBe(1)
+        ->and($refund->fresh()->status)->toBe(RefundStatus::Succeeded)
+        ->and($refund->fresh()->connector_refund_id)->toBe('990001')
+        ->and(WebhookEvent::where('event_type', 'refund_succeeded')->count())->toBe(1);
 });
 
 test('cancel notification cancels an authorized payment', function () {

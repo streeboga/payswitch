@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Jobs\ReconcileWebhookEventsJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\MerchantAccount;
 use Streeboga\PaymentData\Models\Organization;
@@ -92,4 +93,15 @@ test('leaves alone notified, too fresh, too old and non-final payments', functio
     runReconcile();
 
     expect(WebhookEvent::count())->toBe(1);
+});
+
+test('a second reconcile is not queued while the first has not finished', function () {
+    // withoutOverlapping() в расписании держит мьютекс только на постановку:
+    // два прогона параллельно слали бы одни и те же платежи дважды.
+    Queue::fake();
+
+    ReconcileWebhookEventsJob::dispatch();
+    ReconcileWebhookEventsJob::dispatch();
+
+    Queue::assertPushed(ReconcileWebhookEventsJob::class, 1);
 });

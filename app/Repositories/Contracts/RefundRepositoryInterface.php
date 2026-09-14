@@ -30,6 +30,11 @@ interface RefundRepositoryInterface
 
     public function findByConnectorRefundId(string $connectorRefundId, int|string $merchantAccountId): ?Refund;
 
+    /** Our own refund still waiting for the provider's id, the same amount — locked. */
+    public function findPendingUnmatchedLocked(int $paymentIntentId, int $amount): ?Refund;
+
+    public function findByIdLocked(int $id): ?Refund;
+
     /**
      * @param  array<string, mixed>  $attributes
      */

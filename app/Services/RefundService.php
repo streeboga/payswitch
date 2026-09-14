@@ -108,6 +108,17 @@ final readonly class RefundService
         $status = $succeeded ? RefundStatus::Succeeded : RefundStatus::Failed;
 
         DB::transaction(function () use ($refund, $payment, $result, $succeeded, $status) {
+            // Уведомление провайдера о возврате могло прийти раньше нашего ответа и
+            // уже провести этот возврат (WebhookReceiverService::recordProviderRefund).
+            // Второй раз не проводим и второй refund_succeeded не шлём. Модель не
+            // подменяем: по wasRecentlyCreated контроллер отличает 201 от повтора.
+            $locked = $this->refundRepository->findByIdLocked($refund->id);
+            if ($locked && $locked->status !== RefundStatus::Pending) {
+                $refund->refresh();
+
+                return;
+            }
+
             $this->refundRepository->updateRefund($refund, [
                 'status' => $status,
                 'connector_refund_id' => $result['transaction_id'] ?? null,
@@ -122,7 +133,7 @@ final readonly class RefundService
             $this->webhookService->dispatchForRefund($refund->refresh(), $payment);
         });
 
-        if (! $succeeded) {
+        if (! $succeeded && $refund->status !== RefundStatus::Succeeded) {
             throw new PaymentException(
                 $result['message'] ?? 'Refund failed at connector',
                 'refund_failed',

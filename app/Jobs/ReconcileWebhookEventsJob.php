@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Services\WebhookService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -26,9 +27,17 @@ use Streeboga\PaymentData\Models\PaymentIntent;
  * ponytail: сверка по расписанию, а не outbox в транзакции статуса — outbox,
  * если окно в 5 минут станет недопустимым.
  */
-final class ReconcileWebhookEventsJob implements ShouldQueue
+final class ReconcileWebhookEventsJob implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable;
+
+    /**
+     * withoutOverlapping() в расписании держит мьютекс только на постановку в
+     * очередь. Затянулась очередь — два прогона берут два воркера и оба шлют
+     * одни и те же платежи с разными event_id. Уникальность держится до конца
+     * работы job.
+     */
+    public int $uniqueFor = 600;
 
     /** Статусы, о которых мерчанту уходит уведомление. */
     private const array STATUSES = [

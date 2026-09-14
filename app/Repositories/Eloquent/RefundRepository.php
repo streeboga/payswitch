@@ -85,6 +85,23 @@ final readonly class RefundRepository implements RefundRepositoryInterface
             ->first();
     }
 
+    public function findPendingUnmatchedLocked(int $paymentIntentId, int $amount): ?Refund
+    {
+        return Refund::query()
+            ->where('payment_intent_id', $paymentIntentId)
+            ->where('status', RefundStatus::Pending)
+            ->where('amount', $amount)
+            ->whereNull('connector_refund_id')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->first();
+    }
+
+    public function findByIdLocked(int $id): ?Refund
+    {
+        return Refund::query()->whereKey($id)->lockForUpdate()->first();
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

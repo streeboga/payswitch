@@ -81,16 +81,28 @@ final readonly class WebhookReceiverService
 
         try {
             $refusal = $this->processWebhook($connector, $mca->merchant_account_id, $payload, $mca->connector_name);
+        } catch (\TypeError|\ValueError $e) {
+            // Тело не той формы: повтор его не исправит, отказываем без 500.
+            Log::error('Webhook payload of the wrong shape', [
+                'mca_key' => $mcaKey,
+                'error' => $e->getMessage(),
+            ]);
+
+            $refusal = 'unacceptable';
         } catch (\Throwable $e) {
-            // Throwable, not Exception: a payload of the wrong shape surfaces as a TypeError
-            // and used to escape as a 500.
             Log::error('Webhook processing failed', [
                 'mca_key' => $mcaKey,
                 'error' => $e->getMessage(),
             ]);
 
-            // We do not know what we just failed to record, so we do not vouch for it.
-            $refusal = 'unacceptable';
+            // Check — вопрос «можно ли списать»: не знаем ответа — не ручаемся.
+            if ($connector instanceof WebhookEventReading && $connector->webhookEventType($payload) === WebhookEventReading::CHECK) {
+                $refusal = 'unacceptable';
+            } else {
+                // Отчёт о списании, который мы не записали (база, слушатель): ответ
+                // 200 с отказом провайдер не повторяет, 5xx — повторит.
+                return ['status' => 'error', 'code' => 500];
+            }
         }
 
         return [
@@ -289,6 +301,9 @@ final readonly class WebhookReceiverService
             PaymentStatus::RequiresConfirmation,
             PaymentStatus::RequiresCustomerAction,
             PaymentStatus::Processing,
+            // Отказ по карте не закрывает счёт: плательщик повторяет в том же виджете
+            // с тем же InvoiceId, и CloudPayments сначала спрашивает Check.
+            PaymentStatus::Failed,
         ];
         if (! in_array($payment->status, $payable, true)) {
             Log::warning('Check refused: payment can no longer be paid', [
@@ -436,6 +451,17 @@ final readonly class WebhookReceiverService
             $this->paymentRepository->findByIdLocked($payment->id);
             if ($this->refundRepository->findByConnectorRefundId($connectorRefundId, $merchantAccountId)) {
                 return null;
+            }
+
+            // Наш собственный возврат, чей ответ от провайдера ещё не записан (или
+            // потерян по таймауту): уведомление пришло раньше. Проводим его, а не
+            // заводим второй — иначе сумма возвратов удваивается.
+            $ours = $this->refundRepository->findPendingUnmatchedLocked($payment->id, $amount);
+            if ($ours) {
+                return $this->refundRepository->updateRefund($ours, [
+                    'status' => RefundStatus::Succeeded,
+                    'connector_refund_id' => $connectorRefundId,
+                ]);
             }
 
             return $this->refundRepository->create([
