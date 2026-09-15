@@ -33,6 +33,12 @@ export const dashboardConnectors = {
     return parseCollection(doc)
   },
 
+  /** Connector names the backend lets a merchant add (verified live). */
+  async connectable(): Promise<string[]> {
+    const res = await api.get('dashboard/connectors/connectable').json<{ data: string[] }>()
+    return res.data
+  },
+
   async get(key: string) {
     const doc = await api
       .get(`dashboard/connectors/${key}`)

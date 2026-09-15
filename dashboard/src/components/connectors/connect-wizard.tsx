@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
+import { dashboardConnectors } from '@/api/endpoints/dashboard-connectors'
 import {
   CreditCard,
   TestTube,
@@ -238,6 +240,11 @@ function Step1SelectType({
   onSelect: (name: ConnectorName) => void
 }) {
   const { t } = useTranslation()
+  // Unverified drivers stay in code but are not offered: the backend decides.
+  const { data: connectable = [] } = useQuery({
+    queryKey: ['dashboard-connectors', 'connectable'],
+    queryFn: () => dashboardConnectors.connectable(),
+  })
 
   return (
     <div className="space-y-4">
@@ -245,7 +252,7 @@ function Step1SelectType({
         {t('connectWizard.credentialsIntro')}
       </p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {CONNECTOR_TYPES.map((ct) => {
+        {CONNECTOR_TYPES.filter((ct) => connectable.includes(ct.name)).map((ct) => {
           const Icon = ct.icon
           const isSelected = selected === ct.name
 

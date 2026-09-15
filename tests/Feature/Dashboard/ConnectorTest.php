@@ -25,7 +25,7 @@ test('connectors list returns json:api response', function () {
     MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
@@ -45,7 +45,7 @@ test('connector create returns 201', function () {
 
     $response = $this->actingAs($this->user)
         ->postJson('/api/v1/dashboard/connectors', [
-            'connector_name' => 'stripe',
+            'connector_name' => 'cloudpayments',
             'connector_type' => 'fiz_operations',
             'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
             'profile_id' => $profile->key,
@@ -54,14 +54,14 @@ test('connector create returns 201', function () {
 
     $response->assertStatus(201)
         ->assertJsonPath('data.type', 'connectors')
-        ->assertJsonPath('data.attributes.connector_name', 'stripe');
+        ->assertJsonPath('data.attributes.connector_name', 'cloudpayments');
 });
 
 test('connector delete returns 204', function () {
     $mca = MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
@@ -84,7 +84,7 @@ test('connector show returns concrete attributes', function () {
     $mca = MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
-        'connector_name' => 'adyen',
+        'connector_name' => 'test_sbp',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'key_adyen'],
         'payment_methods_enabled' => [['payment_method' => 'card'], ['payment_method' => 'wallet']],
@@ -96,7 +96,7 @@ test('connector show returns concrete attributes', function () {
 
     $response->assertOk()
         ->assertJsonPath('data.type', 'connectors')
-        ->assertJsonPath('data.attributes.connector_name', 'adyen')
+        ->assertJsonPath('data.attributes.connector_name', 'test_sbp')
         ->assertJsonPath('data.attributes.connector_type', 'fiz_operations')
         ->assertJsonPath('data.attributes.test_mode', false)
         ->assertJsonPath('data.attributes.disabled', false)
@@ -109,7 +109,7 @@ test('connector update credentials via PATCH', function () {
     $mca = MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_old'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
@@ -123,7 +123,7 @@ test('connector update credentials via PATCH', function () {
 
     $response->assertOk()
         ->assertJsonPath('data.type', 'connectors')
-        ->assertJsonPath('data.attributes.connector_name', 'stripe');
+        ->assertJsonPath('data.attributes.connector_name', 'cloudpayments');
 
     $mca->refresh();
     expect($mca->connector_account_details)->toMatchArray(['api_key' => 'sk_new']);
@@ -133,7 +133,7 @@ test('connector update payment methods via PATCH', function () {
     $mca = MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
@@ -156,7 +156,7 @@ test('connector enable/disable toggle via PATCH', function () {
     $mca = MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
@@ -193,7 +193,7 @@ test('connector delete removes record from database', function () {
     $mca = MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
@@ -233,7 +233,7 @@ test('connector update validation fails with invalid types', function () {
     $mca = MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
@@ -256,7 +256,7 @@ test('connector create with payment_methods_enabled asserts values', function ()
 
     $response = $this->actingAs($this->user)
         ->postJson('/api/v1/dashboard/connectors', [
-            'connector_name' => 'adyen',
+            'connector_name' => 'test_sbp',
             'connector_type' => 'fiz_operations',
             'connector_account_details' => ['auth_type' => 'BodyKey', 'merchant_id' => 'adyen_mid'],
             'profile_id' => $profile->key,
@@ -265,7 +265,7 @@ test('connector create with payment_methods_enabled asserts values', function ()
         ], $this->headers);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.attributes.connector_name', 'adyen')
+        ->assertJsonPath('data.attributes.connector_name', 'test_sbp')
         ->assertJsonPath('data.attributes.test_mode', false)
         ->assertJsonPath('data.attributes.payment_methods_enabled', [
             ['payment_method' => 'card'],
@@ -276,14 +276,14 @@ test('connector create with payment_methods_enabled asserts values', function ()
 test('connector create without profile_id uses default profile', function () {
     $response = $this->actingAs($this->user)
         ->postJson('/api/v1/dashboard/connectors', [
-            'connector_name' => 'checkout',
+            'connector_name' => 'test',
             'connector_type' => 'fiz_operations',
             'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'pk_test'],
             'test_mode' => true,
         ], $this->headers);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.attributes.connector_name', 'checkout');
+        ->assertJsonPath('data.attributes.connector_name', 'test');
 
     $connector = MerchantConnectorAccount::latest('id')->first();
     expect($connector->business_profile_id)->toBe($this->merchant->businessProfiles->first()->id);
@@ -295,7 +295,7 @@ test('connectors list returns correct connector_name values for multiple connect
     MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $profileId,
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_1'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
@@ -305,7 +305,7 @@ test('connectors list returns correct connector_name values for multiple connect
     MerchantConnectorAccount::create([
         'merchant_account_id' => $this->merchant->id,
         'business_profile_id' => $profileId,
-        'connector_name' => 'adyen',
+        'connector_name' => 'test_sbp',
         'connector_type' => 'fiz_operations',
         'connector_account_details' => ['auth_type' => 'BodyKey', 'merchant_id' => 'mid'],
         'payment_methods_enabled' => [['payment_method' => 'bank_transfer']],
@@ -319,5 +319,20 @@ test('connectors list returns correct connector_name values for multiple connect
         ->assertJsonCount(2, 'data');
 
     $names = collect($response->json('data'))->pluck('attributes.connector_name')->sort()->values()->all();
-    expect($names)->toBe(['adyen', 'stripe']);
+    expect($names)->toBe(['cloudpayments', 'test_sbp']);
+});
+
+test('dashboard offers only connectable connectors', function () {
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/dashboard/connectors/connectable', $this->headers)
+        ->assertOk()
+        ->assertExactJson(['data' => ['cloudpayments', 'test', 'test_sbp']]);
+
+    $this->actingAs($this->user)
+        ->postJson('/api/v1/dashboard/connectors', [
+            'connector_name' => 'tbank',
+            'connector_type' => 'fiz_operations',
+            'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'x'],
+        ], $this->headers)
+        ->assertStatus(422);
 });

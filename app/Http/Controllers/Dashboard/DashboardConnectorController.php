@@ -42,6 +42,16 @@ final class DashboardConnectorController extends Controller
     }
 
     /**
+     * Connectable connectors
+     *
+     * Connector names a merchant may add: drivers verified live.
+     */
+    public function connectable(): JsonResponse
+    {
+        return response()->json(['data' => config('payswitch.connectable')]);
+    }
+
+    /**
      * Create connector
      *
      * Add a new payment connector to the current merchant.

@@ -41,6 +41,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Connectable Connectors
+    |--------------------------------------------------------------------------
+    |
+    | Which connectors a merchant may add. Drivers not verified live stay in the
+    | registry above but cannot be chosen. Verified live: CloudPayments (test
+    | cards) and the test connectors.
+    |
+    */
+
+    'connectable' => array_values(array_filter(explode(',', (string) env('PAYSWITCH_CONNECTABLE', 'cloudpayments,test,test_sbp')))),
+
+    /*
+    |--------------------------------------------------------------------------
     | Unsigned Webhooks
     |--------------------------------------------------------------------------
     |

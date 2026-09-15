@@ -15,6 +15,7 @@ import { ConnectWizard } from '@/components/connectors/connect-wizard'
 vi.mock('@/api/endpoints/dashboard-connectors', () => ({
   dashboardConnectors: {
     list: vi.fn().mockReturnValue(new Promise(() => {})),
+    connectable: vi.fn().mockResolvedValue(['cloudpayments', 'test', 'test_sbp']),
     get: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
@@ -67,12 +68,12 @@ function renderWithProviders() {
 afterEach(cleanup)
 
 describe('ConnectWizard', () => {
-  it('renders step 1 — connector selection', async () => {
+  it('renders step 1 — only connectable connectors', async () => {
     renderWithProviders()
     expect(await screen.findByText('connectWizard.title')).toBeDefined()
-    expect(await screen.findByText('Stripe')).toBeDefined()
     expect(await screen.findByText('CloudPayments')).toBeDefined()
     expect(await screen.findByText('Test')).toBeDefined()
+    expect(screen.queryByText('Stripe')).toBeNull()
   })
 
   it('renders step indicator', async () => {

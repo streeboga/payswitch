@@ -103,6 +103,7 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     // Connectors (Story 13-2)
     Route::get('/connectors', [DashboardConnectorController::class, 'index']);
     Route::post('/connectors', [DashboardConnectorController::class, 'store']);
+    Route::get('/connectors/connectable', [DashboardConnectorController::class, 'connectable']);
     Route::get('/connectors/{connectorKey}', [DashboardConnectorController::class, 'show']);
     Route::patch('/connectors/{connectorKey}', [DashboardConnectorController::class, 'update']);
     Route::delete('/connectors/{connectorKey}', [DashboardConnectorController::class, 'destroy']);

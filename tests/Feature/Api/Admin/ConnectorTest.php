@@ -18,7 +18,7 @@ beforeEach(function () {
 
 test('can add stripe connector to merchant', function () {
     $response = $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'profile_id' => $this->profile->key,
         'connector_account_details' => [
@@ -38,14 +38,14 @@ test('can add stripe connector to merchant', function () {
 
     $response->assertStatus(201)
         ->assertJsonPath('data.type', 'connectors')
-        ->assertJsonPath('data.attributes.connector_name', 'stripe');
+        ->assertJsonPath('data.attributes.connector_name', 'cloudpayments');
 
     expect($response->json('data.id'))->toStartWith('mca_');
 });
 
 test('connector credentials are stored encrypted', function () {
     $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'profile_id' => $this->profile->key,
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test_secret'],
@@ -59,7 +59,7 @@ test('connector credentials are stored encrypted', function () {
 
 test('can list connectors for merchant', function () {
     // Create 2 connectors
-    foreach (['stripe', 'yookassa'] as $name) {
+    foreach (['cloudpayments', 'test'] as $name) {
         $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
             'connector_name' => $name,
             'connector_type' => 'fiz_operations',
@@ -80,7 +80,7 @@ test('can list connectors for merchant', function () {
 
 test('can delete connector', function () {
     $create = $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'profile_id' => $this->profile->key,
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'test'],
@@ -98,7 +98,7 @@ test('can delete connector', function () {
 
 test('can update connector via PATCH', function () {
     $create = $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
-        'connector_name' => 'stripe',
+        'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'profile_id' => $this->profile->key,
         'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'old'],
@@ -117,4 +117,13 @@ test('can update connector via PATCH', function () {
 
     $response->assertOk()
         ->assertJsonPath('data.attributes.disabled', true);
+});
+
+test('unverified connector cannot be added', function () {
+    $this->postJson("/api/v1/merchants/{$this->merchant->key}/connectors", [
+        'connector_name' => 'yookassa',
+        'connector_type' => 'fiz_operations',
+        'profile_id' => $this->profile->key,
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'test'],
+    ], ['api-key' => 'admin_test_key'])->assertStatus(422);
 });
