@@ -67,6 +67,13 @@ export function TestPspPage() {
           body: JSON.stringify({ action }),
         })
         const json = await res.json()
+        // Настоящий провайдер после оплаты сразу уводит плательщика обратно к
+        // мерчанту. Экран с кнопками «в магазин» и «в панель» был лишней
+        // остановкой на платёжных страницах. replace — чтобы «назад» не вёл сюда.
+        if (json.data.attributes.return_url) {
+          window.location.replace(json.data.attributes.return_url)
+          return
+        }
         setResult({
           success: json.data.attributes.success,
           return_url: json.data.attributes.return_url,
