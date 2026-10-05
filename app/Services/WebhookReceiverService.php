@@ -30,6 +30,7 @@ final readonly class WebhookReceiverService
         private PaymentIntentRepositoryInterface $paymentRepository,
         private RefundRepositoryInterface $refundRepository,
         private WebhookService $webhookService,
+        private RefundResultService $refundResults,
     ) {}
 
     /**
@@ -401,20 +402,27 @@ final readonly class WebhookReceiverService
             return;
         }
 
-        if ($refund->status === RefundStatus::Succeeded || $refund->status === RefundStatus::Failed) {
+        // Как и платёж: коннектор из URL двигает только свои возвраты.
+        if ($refund->connector !== null && $refund->connector !== $connectorName) {
+            Log::warning('Refund webhook from a connector that does not conduct the refund', [
+                'refund_id' => $refund->key,
+                'refund_connector' => $refund->connector,
+                'webhook_connector' => $connectorName,
+            ]);
+
             return;
         }
 
-        if (str_contains($eventType, 'succeeded')) {
-            $this->refundRepository->updateRefund($refund, [
-                'status' => RefundStatus::Succeeded,
-                'connector' => $connectorName,
-            ]);
-        } elseif (str_contains($eventType, 'failed') || str_contains($eventType, 'canceled')) {
-            $this->refundRepository->updateRefund($refund, [
-                'status' => RefundStatus::Failed,
-                'connector' => $connectorName,
-            ]);
+        // Статус и refund_succeeded / refund_failed мерчанту — в одной транзакции под
+        // блокировкой; уже итоговый возврат не трогается.
+        $status = match (true) {
+            str_contains($eventType, 'succeeded') => RefundStatus::Succeeded,
+            str_contains($eventType, 'failed'), str_contains($eventType, 'canceled') => RefundStatus::Failed,
+            default => null,
+        };
+
+        if ($status !== null) {
+            $this->refundResults->settle($refund, $status);
         }
     }
 
