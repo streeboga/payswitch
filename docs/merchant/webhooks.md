@@ -68,9 +68,17 @@ x-webhook-event-id: <event_id>
   "amount": 50000,
   "currency": "RUB",
   "status": "succeeded",
-  "idempotency_key": "ваш-ключ-из-заголовка-Idempotency-Key"
+  "idempotency_key": "ваш-ключ-из-заголовка-Idempotency-Key",
+  "metadata": { "order_id": "ORD-5678" },
+  "project_id": null,
+  "operation_id": null,
+  "order_id": null
 }
 ```
+
+`metadata`, `project_id`, `operation_id`, `order_id` — данные платежа, по которому
+сделан возврат, как вы их передали при создании платежа. Те же три поля
+`project_id`, `operation_id`, `order_id` есть и в `content` событий платежа.
 
 `idempotency_key` — ваш собственный ключ из заголовка `Idempotency-Key` запроса
 `POST /api/v1/refunds`. По нему событие сопоставляется с вашим возвратом, даже

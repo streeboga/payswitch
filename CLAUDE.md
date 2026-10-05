@@ -78,9 +78,22 @@ PSP — факт, а не наше решение: 3DS или СБП дольш�
 совпали с намерением (`error_code` `amount_mismatch`/`currency_mismatch`), или
 оплатили отменённый платёж. Разбирает человек.
 
-`amount_received` — сумма из уведомления провайдера в минорных единицах, а не
-копия `amount`. Сверяется только верхний уровень (`Amount`, `amount`,
-`OutSum`): у Stripe и YooKassa сумма глубже, для них это пока копия.
+`amount_received` — сумма, названная провайдером, в минорных единицах, а не
+копия `amount`. Читает её `App\Support\ProviderAmount::minor()`: верхний уровень
+(`Amount`, `amount`, `OutSum`), `object.amount.value` (YooKassa) и
+`data.object.amount` (Stripe), в единицах коннектора.
+
+**Успех без суммы — не оплата** (06.10.2026). Правило одно на уведомление, `sync`
+и синхронный ответ `purchase` (`ProviderAmount::paidStatus()`): сумма названа и
+равна выставленной — `succeeded`; не названа — `processing` с `error_code`
+`amount_unconfirmed` и событием `payment_status_changed`; названа другая —
+`requires_merchant_action` / `amount_mismatch`. Из `processing` платёж выводит
+уведомление с суммой или `POST /payments/{id}/sync` — **сам payswitch провайдера
+не переспрашивает**. Успех без суммы по `expired`/`failed` уходит в
+`requires_merchant_action`. Обратный вызов RBS суммы не несёт: такой платёж ждёт
+`sync` (Сбер и Альфа сейчас не подключаются — `PAYSWITCH_CONNECTABLE`). Холд
+(`requires_capture`) не сверяется: денег он не взял. Тестовый коннектор сумму в
+ответе называет; сторонний тестовый драйвер без `data.amount` даст `processing`.
 
 ## Подпись вебхуков от PSP
 
@@ -178,6 +191,22 @@ $request->attributes->set('merchant_id', $apiKeyModel->merchant_account_id);
 `pending` и отдаёт 502 `refund_pending` с ключом в `errors[0].meta.refund_id` —
 повторять с тем же ключом. Genesis и invoicing заголовок шлют.
 
+**Захват и отмена — тоже по `Idempotency-Key`** (06.10.2026), но ключ уникален в
+пределах платежа и лежит в `payment_actions` (действие, сумма). Повтор — платёж
+как есть и `Idempotent-Replayed: true`, без похода к PSP; тот же ключ с другим
+действием или суммой — 422 `idempotency_key_reused`. Проверка и запись — под
+блокировкой платежа в той же транзакции, что и переход: ключ остаётся только у
+проведённого действия. После 502 (`capture_failed`, `void_failed`) записи нет, и
+повтор идёт к PSP снова — от двойного списания там защищает ключ самого
+провайдера (Stripe, YooKassa строят его из `payment_id`, который захват теперь
+передаёт). «Действия в ожидании» (`pending_action` конвейера) нет.
+
+**Бизнес-поля** `project_id`, `operation_id`, `order_id` (06.10.2026) —
+необязательные строки до 128 символов в `POST /payments`; хранятся на
+`payment_intents`, отдаются в ресурсе платежа и в `content` событий платежа и
+возврата. Payswitch их не толкует и по ним не ищет. В событии возврата едет и
+`metadata` платежа: по `metadata.purpose` Genesis решает, кому событие отдать.
+
 Перенос работы конвейера от 05.10.2026 (сверка возвратов, хэш тела запроса,
 контракт выплаты — всё выключено флагами) описан в `docs/pipeline-port-2026-10.md`.
 
@@ -248,10 +277,15 @@ cd widget && npm run test
 - invoicing-service кладёт `payswitch.mjs` прямо в исходники чекаута
   (`resources/js/checkout/vendor/`).
 
-**Документация мерчанту при этом врёт.** `docs/merchant/quickstart.md:66` и
-`docs/merchant/widget.md:10` предлагают `npm install @payswitch/js`, а
-`widget.md:20` — CDN `https://cdn.payswitch.example.com/...`. Ни то, ни другое
-не существует.
+**По адресу виджет не отдаёт никто, и это не поломка.** Маршрута или каталога
+`/widget/` нет ни в Laravel (`routes/`, `public/`), ни в выкладке:
+`https://psapi.gnzs.pro/widget/payswitch.js` отвечает 404 по построению. Ни
+Genesis, ни invoicing его оттуда не ждут — оба импортируют вложенный
+`payswitch.mjs` и передают адрес API через `customBackendUrl`. Документация
+мерчанту (`docs/merchant/widget.md`, `quickstart.md`) с 06.10.2026 говорит то же:
+сборку кладут к себе. Раздавать её со своего адреса понадобится только для
+стороннего мерчанта без сборки — тогда приёмник должен копировать `widget/dist`
+в `public/widget/` (или nginx — отдавать каталог), с долгим кэшем по имени версии.
 
 ## Грабли
 
