@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Contracts;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Streeboga\PaymentData\Models\Refund;
 
 interface RefundRepositoryInterface
@@ -34,6 +35,13 @@ interface RefundRepositoryInterface
     public function findPendingUnmatchedLocked(int $paymentIntentId, int $amount): ?Refund;
 
     public function findByIdLocked(int $id): ?Refund;
+
+    /**
+     * Pending refunds the provider has given an id to, last touched within the window.
+     *
+     * @return Builder<Refund>
+     */
+    public function pendingWithProviderReference(\DateTimeInterface $from, \DateTimeInterface $to): Builder;
 
     /**
      * @param  array<string, mixed>  $attributes

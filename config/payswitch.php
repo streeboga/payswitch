@@ -78,6 +78,23 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Refund Reconciliation
+    |--------------------------------------------------------------------------
+    |
+    | Возврат с неизвестным исходом остаётся pending (502 refund_pending). Включено —
+    | раз в десять минут ReconcilePendingRefundsJob спрашивает у провайдера судьбу
+    | pending-возвратов, которым провайдер уже дал свой id, и пишет итог с событием
+    | мерчанту. Только чтение: возврат повторно не отправляется. Умеют отвечать
+    | коннекторы с RefundStatusQueryable (сейчас — YooKassa).
+    |
+    */
+
+    'refund' => [
+        'reconcile_enabled' => (bool) env('PAYSWITCH_REFUND_RECONCILE_ENABLED', false),
+    ],
+
     'idempotency' => [
         'compare_request_hash' => (bool) env('PAYSWITCH_IDEMPOTENCY_COMPARE_REQUEST_HASH', false),
     ],

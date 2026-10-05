@@ -8,13 +8,14 @@ use Illuminate\Support\Facades\Http;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
 use Streeboga\PaymentConnectors\DirectMethod;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
+use Streeboga\PaymentData\Contracts\RefundStatusQueryable;
 use Streeboga\PaymentData\Contracts\WebhookEventReading;
 use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\SessionResultType;
 use Symfony\Component\HttpFoundation\IpUtils;
 
-final class YooKassaConnector implements ConnectorInterface, WebhookEventReading
+final class YooKassaConnector implements ConnectorInterface, RefundStatusQueryable, WebhookEventReading
 {
     /**
      * Pseudo-header the webhook receiver puts the real peer address in. It is written after
@@ -117,6 +118,34 @@ final class YooKassaConnector implements ConnectorInterface, WebhookEventReading
         }
 
         return $result;
+    }
+
+    /**
+     * GET /refunds/{id}: читает уже принятый возврат, ничего не отправляет.
+     *
+     * @see https://yookassa.ru/developers/api#get_refund
+     */
+    public function getRefundStatus(string $reference): array
+    {
+        $data = $this->makeRequest('GET', '/refunds/'.rawurlencode($reference), [])['data'] ?? [];
+
+        // Ошибка, 404, чужой объект — не знаем, а не «отказано».
+        $status = ($data['id'] ?? null) === $reference ? ($data['status'] ?? null) : null;
+        $value = $data['amount']['value'] ?? null;
+        $currency = $data['amount']['currency'] ?? null;
+        $paymentId = $data['payment_id'] ?? null;
+
+        return [
+            'status' => match ($status) {
+                'succeeded' => 'succeeded',
+                'canceled' => 'failed',
+                'pending' => 'pending',
+                default => 'unknown',
+            },
+            'amount' => is_numeric($value) ? (int) round(((float) $value) * 100) : null,
+            'currency' => is_string($currency) ? $currency : null,
+            'payment_transaction_id' => is_string($paymentId) ? $paymentId : null,
+        ];
     }
 
     public function void(array $params): array

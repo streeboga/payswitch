@@ -7,6 +7,7 @@ namespace App\Repositories\Eloquent;
 use App\Builders\RefundQueryBuilder;
 use App\Repositories\Contracts\RefundRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Models\Refund;
 
@@ -100,6 +101,15 @@ final readonly class RefundRepository implements RefundRepositoryInterface
     public function findByIdLocked(int $id): ?Refund
     {
         return Refund::query()->whereKey($id)->lockForUpdate()->first();
+    }
+
+    public function pendingWithProviderReference(\DateTimeInterface $from, \DateTimeInterface $to): Builder
+    {
+        return Refund::query()
+            ->where('status', RefundStatus::Pending)
+            ->whereNotNull('connector_refund_id')
+            ->whereNotNull('connector')
+            ->whereBetween('updated_at', [$from, $to]);
     }
 
     /**

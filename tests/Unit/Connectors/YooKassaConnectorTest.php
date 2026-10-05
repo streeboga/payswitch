@@ -283,3 +283,28 @@ test('purchase with token uses payment_method_id', function () {
             && ! isset($body['payment_method_data']);
     });
 });
+
+test('getRefundStatus читает возврат GET-запросом и приводит сумму к минорным единицам', function () {
+    Http::fake([
+        'api.yookassa.ru/v3/refunds/yk_ref_789' => Http::response([
+            'id' => 'yk_ref_789',
+            'status' => 'canceled',
+            'payment_id' => 'yk_txn_abc123',
+            'amount' => ['value' => '30.50', 'currency' => 'RUB'],
+        ]),
+    ]);
+
+    expect(yooKassaConnector()->getRefundStatus('yk_ref_789'))->toBe([
+        'status' => 'failed',
+        'amount' => 3050,
+        'currency' => 'RUB',
+        'payment_transaction_id' => 'yk_txn_abc123',
+    ]);
+    Http::assertSent(fn ($request) => $request->method() === 'GET');
+});
+
+test('getRefundStatus: ошибка или чужой id — unknown, а не отказ', function () {
+    Http::fake(['*' => Http::response(['type' => 'error', 'code' => 'not_found', 'id' => 'e1'], 404)]);
+
+    expect(yooKassaConnector()->getRefundStatus('yk_ref_789')['status'])->toBe('unknown');
+});
