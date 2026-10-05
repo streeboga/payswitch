@@ -52,10 +52,25 @@ final readonly class WebhookService
                 // события описывает судьбу платежа, а не то, чьи это деньги
                 // и что с ними делать. Это решает Genesis (Р28).
                 'metadata' => $payment->metadata ?? [],
+                ...$this->businessIdentity($payment),
             ],
         ]);
 
         DeliverWebhookJob::dispatch($webhookEvent->id);
+    }
+
+    /**
+     * Бизнес-поля мерчанта, как он их прислал при создании платежа; не присланное — null.
+     *
+     * @return array{project_id: string|null, operation_id: string|null, order_id: string|null}
+     */
+    private function businessIdentity(PaymentIntent $payment): array
+    {
+        return [
+            'project_id' => $payment->project_id,
+            'operation_id' => $payment->operation_id,
+            'order_id' => $payment->order_id,
+        ];
     }
 
     /**
@@ -81,6 +96,7 @@ final readonly class WebhookService
                 // возврат, даже если ответ на запрос потерял и refund_id не
                 // знает. null — возврат заведён без ключа (кабинет провайдера).
                 'idempotency_key' => $refund->idempotency_key,
+                ...$this->businessIdentity($payment),
             ],
         ]);
 

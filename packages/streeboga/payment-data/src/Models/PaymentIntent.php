@@ -40,6 +40,9 @@ use Streeboga\PaymentData\Support\IdGenerator;
  * @property Carbon|null $expires_on
  * @property string|null $idempotency_key
  * @property string|null $request_hash
+ * @property string|null $project_id
+ * @property string|null $operation_id
+ * @property string|null $order_id
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -69,6 +72,9 @@ class PaymentIntent extends Model
         'expires_on',
         'idempotency_key',
         'request_hash',
+        'project_id',
+        'operation_id',
+        'order_id',
     ];
 
     protected function casts(): array
