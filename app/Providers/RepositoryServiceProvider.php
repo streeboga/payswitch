@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Contracts\PayoutAuthorizationVerifier;
 use App\Repositories\Contracts\AnalyticsRepositoryInterface;
 use App\Repositories\Contracts\AuditLogRepositoryInterface;
 use App\Repositories\Contracts\ConnectorHealthRepositoryInterface;
@@ -36,6 +37,7 @@ use App\Repositories\Eloquent\SavedFilterRepository;
 use App\Repositories\Eloquent\UserPreferenceRepository;
 use App\Repositories\Eloquent\UserRoleRepository;
 use App\Repositories\Eloquent\WebhookEventRepository;
+use App\Services\Payout\DisabledPayoutAuthorizationVerifier;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 
@@ -43,6 +45,8 @@ final class RepositoryServiceProvider extends ServiceProvider
 {
     /** @var array<string, string> */
     public array $bindings = [
+        // Выплаты закрыты: пока нет принятого верификатора Genesis, подтверждение отказывает.
+        PayoutAuthorizationVerifier::class => DisabledPayoutAuthorizationVerifier::class,
         AnalyticsRepositoryInterface::class => AnalyticsRepository::class,
         AuditLogRepositoryInterface::class => AuditLogRepository::class,
         ConnectorHealthRepositoryInterface::class => ConnectorHealthRepository::class,
