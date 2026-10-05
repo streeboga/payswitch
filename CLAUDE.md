@@ -178,6 +178,9 @@ $request->attributes->set('merchant_id', $apiKeyModel->merchant_account_id);
 `pending` и отдаёт 502 `refund_pending` с ключом в `errors[0].meta.refund_id` —
 повторять с тем же ключом. Genesis и invoicing заголовок шлют.
 
+Перенос работы конвейера от 05.10.2026 (сверка возвратов, хэш тела запроса,
+контракт выплаты — всё выключено флагами) описан в `docs/pipeline-port-2026-10.md`.
+
 Панель ходит другим путём: `ResolveMerchantContext.php:17` читает заголовок
 `X-Merchant-Key` и проверяет `$user->hasAccessToMerchant()`. Маршруты панели
 вне `resolve.merchant` (организации, список мерчантов, профили по мерчанту)
