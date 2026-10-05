@@ -93,3 +93,14 @@ test('платёж без назначения даёт пустую metadata, �
     expect($event->content)->toHaveKey('metadata')
         ->and($event->content['metadata'])->toBe([]);
 });
+
+test('назначение платежа едет и в событии возврата', function () {
+    payWith(['purpose' => 'invoice_payment', 'invoice_key' => 'inv_1']);
+    $paymentId = WebhookEvent::query()->where('event_type', 'payment_succeeded')->sole()->content['payment_id'];
+
+    test()->postJson('/api/v1/refunds', ['payment_id' => $paymentId, 'amount' => 1000], ['api-key' => test()->rawKey])->assertCreated();
+
+    $content = WebhookEvent::query()->where('event_type', 'refund_succeeded')->sole()->content;
+    expect($content['metadata'])->toBe(['purpose' => 'invoice_payment', 'invoice_key' => 'inv_1'])
+        ->and($content['amount'])->toBe(1000);
+});

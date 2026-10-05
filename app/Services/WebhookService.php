@@ -96,6 +96,10 @@ final readonly class WebhookService
                 // возврат, даже если ответ на запрос потерял и refund_id не
                 // знает. null — возврат заведён без ключа (кабинет провайдера).
                 'idempotency_key' => $refund->idempotency_key,
+                // Как и у события платежа: приёмник решает, чей это возврат, по назначению
+                // платежа. Без него Genesis не узнаёт возврат по счёту и не передаёт его
+                // инвойсингу — тот ждёт итог возврата только отсюда.
+                'metadata' => $payment->metadata ?? [],
                 ...$this->businessIdentity($payment),
             ],
         ]);
