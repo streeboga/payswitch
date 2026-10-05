@@ -26,6 +26,7 @@ use Streeboga\PaymentData\Support\IdGenerator;
  * @property string|null $error_message
  * @property array<string, mixed>|null $metadata
  * @property string|null $idempotency_key
+ * @property string|null $request_hash
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read PaymentIntent $paymentIntent
@@ -46,6 +47,7 @@ class Refund extends Model
         'error_message',
         'metadata',
         'idempotency_key',
+        'request_hash',
     ];
 
     protected function casts(): array

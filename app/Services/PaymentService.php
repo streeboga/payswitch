@@ -10,6 +10,7 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use App\Support\CanonicalRequest;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -79,6 +80,7 @@ final readonly class PaymentService
             'expires_on' => now()->addSeconds($expiry),
             'amount_capturable' => $dto->amount,
             'idempotency_key' => $dto->idempotency_key,
+            'request_hash' => $dto->idempotency_key !== null ? $this->requestHash($dto) : null,
         ];
 
         try {
@@ -111,7 +113,30 @@ final readonly class PaymentService
             );
         }
 
+        // Строки, созданные до появления хэша, сравниваются только по сумме и валюте.
+        if ($existing->request_hash !== null && ! hash_equals($existing->request_hash, $this->requestHash($dto))) {
+            if (config('payswitch.idempotency.compare_request_hash')) {
+                throw new PaymentException(
+                    'Idempotency-Key was already used with different parameters',
+                    'idempotency_key_reused',
+                    'invalid_request_error',
+                    422,
+                );
+            }
+
+            Log::warning('Idempotency-Key replayed with a different request body', ['payment_id' => $existing->key]);
+        }
+
         return $existing;
+    }
+
+    /**
+     * Без самого ключа и без данных карты: хэш номера карты в базе — тот же номер
+     * для перебора.
+     */
+    private function requestHash(CreatePaymentData $dto): string
+    {
+        return CanonicalRequest::hash(array_diff_key($dto->toArray(), ['idempotency_key' => true, 'payment_method_data' => true]));
     }
 
     private function resolveBusinessProfileId(?string $profileKey, int|string $merchantAccountId): int

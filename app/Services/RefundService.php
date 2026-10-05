@@ -8,6 +8,7 @@ use App\DataTransferObjects\Refund\CreateRefundData;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Repositories\Contracts\RefundRepositoryInterface;
+use App\Support\CanonicalRequest;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -157,7 +158,26 @@ final readonly class RefundService
             );
         }
 
+        // Строки, созданные до появления хэша, сравниваются только по сумме и платежу.
+        if ($existing->request_hash !== null && ! hash_equals($existing->request_hash, $this->requestHash($dto))) {
+            if (config('payswitch.idempotency.compare_request_hash')) {
+                throw new PaymentException(
+                    'Idempotency-Key was already used with different parameters',
+                    'idempotency_key_reused',
+                    'invalid_request_error',
+                    422,
+                );
+            }
+
+            Log::warning('Idempotency-Key replayed with a different request body', ['refund_id' => $existing->key]);
+        }
+
         return $existing;
+    }
+
+    private function requestHash(CreateRefundData $dto): string
+    {
+        return CanonicalRequest::hash(array_diff_key($dto->toArray(), ['idempotency_key' => true]));
     }
 
     /**
@@ -236,6 +256,7 @@ final readonly class RefundService
             'connector' => $connectorName,
             'metadata' => $dto->metadata,
             'idempotency_key' => $dto->idempotency_key,
+            'request_hash' => $dto->idempotency_key !== null ? $this->requestHash($dto) : null,
         ]);
 
         return [

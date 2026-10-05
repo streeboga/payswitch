@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Repositories\Contracts\RefundRepositoryInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
 use Streeboga\PaymentData\Models\MerchantAccount;
@@ -240,4 +241,73 @@ test('ключ возврата мерчанта A у мерчанта B соз�
 
     expect($b->json('data.id'))->not->toBe($a->json('data.id'))
         ->and(Refund::count())->toBe(2);
+});
+
+// --- Хэш тела запроса (PAYSWITCH_IDEMPOTENCY_COMPARE_REQUEST_HASH) ---
+
+test('хэш тела: выключено — повтор с другим описанием отдаёт прежний платёж и пишет в лог', function () {
+    Log::spy();
+    $key = idempotencyMerchant('Hash off');
+    $headers = ['api-key' => $key, 'Idempotency-Key' => 'hash-off'];
+
+    $first = $this->postJson('/api/v1/payments', idempotentPaymentBody(['description' => 'A']), $headers)->assertStatus(201);
+
+    $this->postJson('/api/v1/payments', idempotentPaymentBody(['description' => 'B']), $headers)
+        ->assertStatus(200)
+        ->assertHeader('Idempotent-Replayed', 'true')
+        ->assertJsonPath('data.id', $first->json('data.id'));
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn ($message) => str_contains($message, 'different request body'))->once();
+});
+
+test('хэш тела: включено — повтор с другим описанием получает 422 idempotency_key_reused, честный повтор — 200', function () {
+    config(['payswitch.idempotency.compare_request_hash' => true]);
+    $key = idempotencyMerchant('Hash on');
+    $headers = ['api-key' => $key, 'Idempotency-Key' => 'hash-on'];
+
+    $first = $this->postJson('/api/v1/payments', idempotentPaymentBody(['description' => 'A', 'metadata' => ['b' => 2, 'a' => 1]]), $headers)->assertStatus(201);
+
+    $this->postJson('/api/v1/payments', idempotentPaymentBody(['description' => 'B', 'metadata' => ['b' => 2, 'a' => 1]]), $headers)
+        ->assertStatus(422)
+        ->assertJsonPath('errors.0.code', 'idempotency_key_reused');
+
+    // Порядок ключей и данные карты в хэш не входят.
+    $body = idempotentPaymentBody(['description' => 'A', 'metadata' => ['a' => 1, 'b' => 2]]);
+    $body['payment_method_data']['card']['card_cvc'] = '999';
+    $this->postJson('/api/v1/payments', $body, $headers)
+        ->assertStatus(200)
+        ->assertJsonPath('data.id', $first->json('data.id'));
+
+    expect(PaymentIntent::count())->toBe(1);
+});
+
+test('хэш тела: платёж, созданный до появления хэша, повторяется как раньше', function () {
+    config(['payswitch.idempotency.compare_request_hash' => true]);
+    $key = idempotencyMerchant('Hash legacy');
+    $headers = ['api-key' => $key, 'Idempotency-Key' => 'hash-legacy'];
+
+    $this->postJson('/api/v1/payments', idempotentPaymentBody(['description' => 'A']), $headers)->assertStatus(201);
+    PaymentIntent::query()->update(['request_hash' => null]);
+
+    $this->postJson('/api/v1/payments', idempotentPaymentBody(['description' => 'B']), $headers)->assertStatus(200);
+});
+
+test('хэш тела возврата сохраняется; честный повтор проходит и при включённом сравнении', function () {
+    // Тело возврата сегодня — только платёж и сумма (reason и metadata запрос не
+    // принимает), их и так сравнивает idempotency_key_reused. Хэш лежит на вырост.
+    config(['payswitch.idempotency.compare_request_hash' => true]);
+    $key = idempotencyMerchant('Hash refund');
+    $paymentId = $this->postJson('/api/v1/payments', idempotentPaymentBody(), ['api-key' => $key])->assertStatus(201)->json('data.id');
+    $headers = ['api-key' => $key, 'Idempotency-Key' => 'hash-refund'];
+
+    $this->postJson('/api/v1/refunds', ['payment_id' => $paymentId, 'amount' => 1000], $headers)->assertStatus(201);
+    $this->postJson('/api/v1/refunds', ['amount' => 1000, 'payment_id' => $paymentId], $headers)->assertStatus(200);
+
+    expect(Refund::sole()->request_hash)->toHaveLength(64);
+
+    Refund::query()->update(['request_hash' => str_repeat('0', 64)]);
+    $this->postJson('/api/v1/refunds', ['payment_id' => $paymentId, 'amount' => 1000], $headers)
+        ->assertStatus(422)
+        ->assertJsonPath('errors.0.code', 'idempotency_key_reused');
 });
