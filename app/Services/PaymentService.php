@@ -11,6 +11,7 @@ use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Support\CanonicalRequest;
+use App\Support\ProviderAmount;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -541,10 +542,24 @@ final readonly class PaymentService
         }
 
         $connector = ConnectorFactory::resolve($mca);
-        $result = $connector->getPaymentStatus(['transaction_id' => $lastAttempt->connector_transaction_id]);
+        $result = $connector->getPaymentStatus([
+            'transaction_id' => $lastAttempt->connector_transaction_id,
+            // Настоящим провайдерам не нужны: сумму они называют сами. Тестовый коннектор
+            // их возвращает — своей памяти у симулятора нет.
+            'amount' => $payment->amount,
+            'currency' => $payment->currency,
+        ]);
 
         $pspStatus = $result['data']['status'] ?? null;
         $newStatus = $pspStatus ? $connector->mapPaymentStatusToInternal($pspStatus) : null;
+
+        // «Оплачено» без суммы — processing, с чужой суммой — на разбор мерчанту.
+        // ponytail: валюту здесь не сверяем — её сверяет приёмник уведомлений; добавить,
+        // когда появится мультивалютный провайдер с sync.
+        $confirmedAmount = ProviderAmount::minor($connector, $result['data'] ?? []);
+        if ($newStatus === PaymentStatus::Succeeded) {
+            $newStatus = ProviderAmount::paidStatus($confirmedAmount, $payment->amount);
+        }
 
         if (! $newStatus || $newStatus === $payment->status) {
             return $payment;
@@ -554,7 +569,7 @@ final readonly class PaymentService
         // заблокированной строке, иначе sync затрёт `failed` на `succeeded`
         // или объявит тот же переход второй раз.
         $previousStatus = null;
-        $payment = DB::transaction(function () use ($paymentKey, $merchantAccountId, $newStatus, $syncableStatuses, &$previousStatus) {
+        $payment = DB::transaction(function () use ($paymentKey, $merchantAccountId, $newStatus, $confirmedAmount, $syncableStatuses, &$previousStatus) {
             $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
 
             if ($payment->status === $newStatus || ! in_array($payment->status, $syncableStatuses, true)) {
@@ -579,7 +594,10 @@ final readonly class PaymentService
 
             $updateData = ['status' => $newStatus];
             if ($newStatus === PaymentStatus::Succeeded) {
-                $updateData['amount_received'] = $payment->amount;
+                $updateData['amount_received'] = $confirmedAmount;
+            }
+            if (in_array($newStatus, [PaymentStatus::Succeeded, PaymentStatus::Processing, PaymentStatus::RequiresMerchantAction], true)) {
+                $updateData += ProviderAmount::errorFor($newStatus);
             }
             $this->paymentRepository->update($payment, $updateData);
             $previousStatus = $currentStatus->value;

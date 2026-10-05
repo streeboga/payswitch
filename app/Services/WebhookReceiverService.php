@@ -9,6 +9,7 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Repositories\Contracts\RefundRepositoryInterface;
+use App\Support\ProviderAmount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,7 +18,6 @@ use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Contracts\WebhookAcknowledging;
 use Streeboga\PaymentData\Contracts\WebhookEventReading;
-use Streeboga\PaymentData\Enums\AmountUnit;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Models\PaymentIntent;
@@ -183,8 +183,8 @@ final readonly class WebhookReceiverService
             // and our own verdict on the payment does not undo it.
             $charged = $newStatus === PaymentStatus::Succeeded || $newStatus === PaymentStatus::RequiresCapture;
 
-            // What the provider says it took. A notification that quotes no amount (Stripe,
-            // YooKassa nest it elsewhere) is credited with what we billed, as before.
+            // What the provider says it took. A success that quotes no amount is not a
+            // payment yet: see the `processing` branch below.
             $notifiedAmount = $this->notifiedAmount($connector, $payload);
             $mismatch = $charged && $notifiedAmount !== null
                 ? $this->mismatch($connector, $payload, $lockedPayment, $notifiedAmount)
@@ -206,6 +206,28 @@ final readonly class WebhookReceiverService
                     'payment_id' => $lockedPayment->key,
                     'connector' => $connectorName,
                 ]);
+            } elseif ($newStatus === PaymentStatus::Succeeded && $notifiedAmount === null) {
+                // «Оплачено» без суммы — ещё не оплата: зачислять нечего. Платёж ждёт в
+                // processing уведомления с суммой или sync; из конечного статуса в processing
+                // пути нет — такой отдаётся на решение мерчанту.
+                Log::warning('Webhook reports success without an amount', [
+                    'payment_id' => $lockedPayment->key,
+                    'from' => $from->value,
+                    'connector' => $connectorName,
+                ]);
+                $waiting = match (true) {
+                    // Уже ждёт суммы или уже у мерчанта на разборе — двигать нечего.
+                    in_array($from, [PaymentStatus::Processing, PaymentStatus::RequiresMerchantAction], true) => null,
+                    PaymentStateMachine::canTransition($from, PaymentStatus::Processing) => PaymentStatus::Processing,
+                    PaymentStateMachine::canConfirmByProvider($from, PaymentStatus::RequiresMerchantAction) => PaymentStatus::RequiresMerchantAction,
+                    default => null,
+                };
+                if ($waiting === null) {
+                    return null;
+                }
+                $updateData['status'] = $waiting;
+                $updateData['error_code'] = ProviderAmount::UNCONFIRMED;
+                $updateData['error_message'] = ProviderAmount::errorFor(PaymentStatus::Processing)['error_message'];
             } elseif ($charged && ! PaymentStateMachine::canTransition($from, $newStatus)
                 && PaymentStateMachine::canConfirmByProvider($from, $newStatus)) {
                 // 3DS or SBP outlasting the payment's lifetime, or a second try after a Fail.
@@ -222,7 +244,9 @@ final readonly class WebhookReceiverService
             }
 
             if ($updateData['status'] === PaymentStatus::Succeeded) {
-                $updateData['amount_received'] = $notifiedAmount ?? $lockedPayment->amount;
+                $updateData['amount_received'] = $notifiedAmount;
+                // Сумма подтверждена: пометка ожидания, если была, снимается.
+                $updateData += ['error_code' => null, 'error_message' => null];
             }
             $this->paymentRepository->update($lockedPayment, $updateData);
             $this->recordAttemptOutcome($lockedPayment, $connectorName, $updateData['status'], $payload);
@@ -333,15 +357,7 @@ final readonly class WebhookReceiverService
      */
     private function notifiedAmount(ConnectorInterface $connector, array $payload): ?int
     {
-        $amount = $payload['Amount'] ?? $payload['amount'] ?? $payload['OutSum'] ?? null;
-
-        if (! is_numeric($amount)) {
-            return null;
-        }
-
-        return $connector::capabilities()->amountUnit === AmountUnit::Rubles
-            ? (int) round(((float) $amount) * 100)
-            : (int) round((float) $amount);
+        return ProviderAmount::minor($connector, $payload);
     }
 
     /**

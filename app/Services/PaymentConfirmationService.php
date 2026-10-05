@@ -8,6 +8,7 @@ use App\DataTransferObjects\Payment\ConfirmPaymentData;
 use App\Enums\PaymentAttemptStatus;
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use App\Support\ProviderAmount;
 use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentConnectors\ConnectorErrorNormalizer;
 use Streeboga\PaymentConnectors\ConnectorFactory;
@@ -105,7 +106,7 @@ final readonly class PaymentConfirmationService
             $unknownOutcome = false;
 
             if ($result['success']) {
-                $this->applySuccessStatus($payment, $mca->connector_name);
+                $this->applySuccessStatus($payment, $mca, $result);
             } elseif (($result['code'] ?? null) === 'requires_action') {
                 $this->applyRequiresActionStatus($payment, $mca->connector_name, $result);
             } elseif (ConnectorErrorNormalizer::isIndeterminate($result)) {
@@ -121,7 +122,7 @@ final readonly class PaymentConfirmationService
                     $fallbackResult = $this->executeConnectorCall($payment, $fallbackMca, $connectorParams);
 
                     if ($fallbackResult['success']) {
-                        $this->applySuccessStatus($payment, $fallbackMca->connector_name);
+                        $this->applySuccessStatus($payment, $fallbackMca, $fallbackResult);
                     } elseif (ConnectorErrorNormalizer::isIndeterminate($fallbackResult)) {
                         $this->applyUnknownOutcomeStatus($payment, $fallbackMca->connector_name, $fallbackResult);
                         $unknownOutcome = true;
@@ -307,17 +308,26 @@ final readonly class PaymentConfirmationService
         return $result;
     }
 
-    private function applySuccessStatus(PaymentIntent $payment, string $connectorName): void
+    /**
+     * Списание без холда: оплаченным платёж делает только названная провайдером сумма,
+     * равная выставленной. Не названа — processing до уведомления с суммой или sync,
+     * названа другая — на разбор мерчанту. Холд (manual) денег ещё не взял — сверять нечего.
+     *
+     * @param  array<string, mixed>  $result
+     */
+    private function applySuccessStatus(PaymentIntent $payment, MerchantConnectorAccount $mca, array $result): void
     {
+        $confirmedAmount = ProviderAmount::minor(ConnectorFactory::resolve($mca), is_array($result['data'] ?? null) ? $result['data'] : []);
         $newStatus = $payment->capture_method === CaptureMethod::Manual
             ? PaymentStatus::RequiresCapture
-            : PaymentStatus::Succeeded;
+            : ProviderAmount::paidStatus($confirmedAmount, $payment->amount);
 
         PaymentStateMachine::assertTransition($payment->status, $newStatus);
         $this->paymentRepository->update($payment, [
             'status' => $newStatus,
-            'amount_received' => $newStatus === PaymentStatus::Succeeded ? $payment->amount : null,
-            'connector' => $connectorName,
+            'amount_received' => $newStatus === PaymentStatus::Succeeded ? $confirmedAmount : null,
+            'connector' => $mca->connector_name,
+            ...ProviderAmount::errorFor($newStatus),
         ]);
     }
 

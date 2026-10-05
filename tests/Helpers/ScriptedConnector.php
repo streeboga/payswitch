@@ -14,7 +14,8 @@ use Streeboga\PaymentData\Enums\SessionResultType;
 /**
  * Коннектор, отвечающий заранее заданным: массивом результата или исключением.
  *
- * Не заданный метод отвечает успехом. Все вызовы пишутся в $calls.
+ * Не заданный метод отвечает успехом и, как настоящий провайдер, называет сумму, которую
+ * ему передали. Все вызовы пишутся в $calls.
  */
 final class ScriptedConnector implements ConnectorInterface
 {
@@ -49,7 +50,7 @@ final class ScriptedConnector implements ConnectorInterface
     private function answer(string $method, array $params): array
     {
         self::$calls[] = [$method, $params];
-        $scripted = self::$script[$method] ?? ['success' => true, 'transaction_id' => "scripted_{$method}_".count(self::$calls), 'code' => 'ok', 'message' => 'ok', 'data' => []];
+        $scripted = self::$script[$method] ?? ['success' => true, 'transaction_id' => "scripted_{$method}_".count(self::$calls), 'code' => 'ok', 'message' => 'ok', 'data' => array_filter(['amount' => $params['amount'] ?? null])];
 
         if ($scripted instanceof \Closure) {
             $scripted = $scripted($params);
@@ -125,7 +126,7 @@ final class ScriptedConnector implements ConnectorInterface
 
     public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus
     {
-        return null;
+        return PaymentStatus::tryFrom($rawStatus);
     }
 
     public function createPaymentSession(array $params): array
