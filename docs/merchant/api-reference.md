@@ -34,6 +34,7 @@ POST /api/v1/payments
 | `return_url` | string | нет | URL для перенаправления после оплаты. Должен быть валидным URL |
 | `metadata` | object | нет | Произвольные пары ключ-значение для хранения дополнительных данных |
 | `project_id`, `operation_id`, `order_id` | string | нет | Ваши идентификаторы проекта, операции и заказа, до 128 символов каждый. Payswitch их не толкует: хранит и возвращает в ответах и в `content` событий платежа и возврата. Не переданное — `null` |
+| `receipt` | object | нет | Кассовый чек (54-ФЗ): `taxation_system` (`osn`, `usn_income`, `usn_income_outcome`, `esn`, `patent`), необязательный `email` покупателя и `items` — от одной позиции с `label`, `quantity`, `price`, `amount` (копейки), `vat` (`none`, `0`, `5`, `7`, `10`, `20`, `22`), `payment_method` (`full_prepayment`, `prepayment`, `advance`, `full_payment`), `payment_object` (`commodity`, `service`, `payment`, `another`). Сумма `items.*.amount` обязана равняться `amount`, иначе 422. Чек пробивает касса провайдера (сейчас — CloudPayments/CloudKassir); номер и ссылка выданного чека появляются в `receipt_id` и `receipt_url` платежа |
 | `session_expiry` | integer | нет | Время жизни сессии в секундах. Диапазон: 60–86400 (по умолчанию 3600) |
 
 #### Пример запроса

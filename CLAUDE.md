@@ -207,6 +207,18 @@ $request->attributes->set('merchant_id', $apiKeyModel->merchant_account_id);
 возврата. Payswitch их не толкует и по ним не ищет. В событии возврата едет и
 `metadata` платежа: по `metadata.purpose` Genesis решает, кому событие отдать.
 
+**Кассовый чек** (`receipt` в `POST /payments`, 05.10.2026): состав хранится в
+`payment_intents.receipt`, сумма позиций обязана равняться `amount` (422). В коды
+кассы словарь переводит только `CloudPaymentsConnector::receiptData()` —
+`CustomerReceipt` в обёртке `CloudPayments` уходит в `data` виджета (`cp.pay`) и
+в `JsonData` оплаты по криптограмме; суммы у кассы в рублях, `vat: none` — это
+`null`, а не 0. Остальные коннекторы `receipt` не читают. Уведомление Receipt
+CloudKassir узнаётся по `FiscalSign`/`QrCodeUrl` (`WebhookEventReading::RECEIPT`),
+подпись та же (`Content-HMAC`), статус не двигает: чек прихода пишет `receipt_id`
+и `receipt_url`, чек возврата и чек без нашего заказа принимаются (`code: 0`) и
+ничего не меняют. В кабинете CloudPayments адрес уведомления Receipt — тот же,
+что у Pay/Check. Держит `tests/Feature/Api/PaymentReceiptTest.php`.
+
 Перенос работы конвейера от 05.10.2026 (сверка возвратов, хэш тела запроса,
 контракт выплаты — всё выключено флагами) описан в `docs/pipeline-port-2026-10.md`.
 

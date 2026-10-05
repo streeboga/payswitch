@@ -79,6 +79,7 @@ final readonly class PaymentService
             'project_id' => $dto->project_id,
             'operation_id' => $dto->operation_id,
             'order_id' => $dto->order_id,
+            'receipt' => $dto->receipt,
             'session_expiry' => $expiry,
             'attempt_count' => 1,
             'expires_on' => now()->addSeconds($expiry),

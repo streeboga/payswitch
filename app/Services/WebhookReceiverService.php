@@ -134,14 +134,18 @@ final readonly class WebhookReceiverService
             return null;
         }
 
+        // Чек не наш (пробит из кабинета кассы, без номера заказа) — принять и забыть:
+        // отказ заставил бы кассу повторять его сто раз.
+        $orphan = $eventType === WebhookEventReading::RECEIPT ? null : 'unacceptable';
+
         $paymentId = $connector->extractPaymentIdFromWebhook($payload);
         if (! $paymentId) {
-            return 'unacceptable';
+            return $orphan;
         }
 
         $payment = $this->paymentRepository->findByKeyOrNull($paymentId, $merchantAccountId);
         if (! $payment) {
-            return 'unacceptable';
+            return $orphan;
         }
 
         // The URL names one connector of the merchant, and some of them sign nothing (the
@@ -158,6 +162,18 @@ final readonly class WebhookReceiverService
 
         if ($eventType === WebhookEventReading::CHECK) {
             return $this->checkRefusal($connector, $payload, $payment);
+        }
+
+        if ($eventType === WebhookEventReading::RECEIPT) {
+            // Чек прихода — он про этот платёж; чек возврата (IncomeReturn) его не затирает.
+            if (($payload['Type'] ?? 'Income') === 'Income') {
+                $this->paymentRepository->update($payment, [
+                    'receipt_id' => isset($payload['Id']) ? (string) $payload['Id'] : null,
+                    'receipt_url' => isset($payload['Url']) ? (string) $payload['Url'] : null,
+                ]);
+            }
+
+            return null;
         }
 
         $newStatus = $connector->mapWebhookEventToStatus($eventType);

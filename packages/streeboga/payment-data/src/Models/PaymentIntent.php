@@ -43,6 +43,9 @@ use Streeboga\PaymentData\Support\IdGenerator;
  * @property string|null $project_id
  * @property string|null $operation_id
  * @property string|null $order_id
+ * @property array{taxation_system: string, email?: string, items: list<array<string, int|string>>}|null $receipt
+ * @property string|null $receipt_id
+ * @property string|null $receipt_url
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -75,6 +78,9 @@ class PaymentIntent extends Model
         'project_id',
         'operation_id',
         'order_id',
+        'receipt',
+        'receipt_id',
+        'receipt_url',
     ];
 
     protected function casts(): array
@@ -84,6 +90,7 @@ class PaymentIntent extends Model
             'capture_method' => CaptureMethod::class,
             'authentication_type' => AuthenticationType::class,
             'metadata' => 'array',
+            'receipt' => 'array',
             'expires_on' => 'datetime',
         ];
     }

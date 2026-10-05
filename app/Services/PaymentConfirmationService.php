@@ -84,6 +84,8 @@ final readonly class PaymentConfirmationService
                 'currency' => $payment->currency,
                 'description' => $payment->description,
                 'return_url' => $returnUrl,
+                'customer_id' => $payment->customer_id,
+                'receipt' => $payment->receipt,
             ];
 
             // Redirect flow: no card data and no saved token — create a PSP session
