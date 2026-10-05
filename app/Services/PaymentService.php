@@ -322,11 +322,21 @@ final readonly class PaymentService
         return $this->confirmationService->confirm($paymentKey, $dto, $merchantAccountId);
     }
 
-    public function capture(string $paymentKey, int $amount, int|string $merchantAccountId): PaymentIntent
+    /**
+     * С Idempotency-Key повтор того же захвата отдаёт платёж как есть ($replayed === true):
+     * к провайдеру не ходит и второй раз не списывает. Тот же ключ с другим действием или
+     * суммой — 422 idempotency_key_reused. Ключ запоминается только у проведённого действия:
+     * после отказа или неизвестного исхода (502) повтор идёт к провайдеру снова.
+     */
+    public function capture(string $paymentKey, int $amount, int|string $merchantAccountId, ?string $idempotencyKey = null, bool &$replayed = false): PaymentIntent
     {
-        $result = DB::transaction(function () use ($paymentKey, $amount, $merchantAccountId) {
+        $result = DB::transaction(function () use ($paymentKey, $amount, $merchantAccountId, $idempotencyKey, &$replayed) {
             $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
             $previousStatus = $payment->status->value;
+
+            if ($replayed = $this->alreadyDone($payment, $idempotencyKey, 'capture', $amount)) {
+                return ['payment' => $payment, 'previousStatus' => null];
+            }
 
             if (! in_array($payment->status, [PaymentStatus::RequiresCapture, PaymentStatus::PartiallyCapturedAndCapturable], true)) {
                 throw new InvalidStateTransitionException($payment->status->value, PaymentStatus::Succeeded->value);
@@ -364,6 +374,8 @@ final readonly class PaymentService
                 'amount' => $amount,
                 'currency' => $payment->currency,
                 'transaction_id' => $lastAttempt->connector_transaction_id,
+                // По нему Stripe и YooKassa строят свой ключ идемпотентности захвата.
+                'payment_id' => $payment->key,
             ]);
 
             if (! $result['success']) {
@@ -375,28 +387,39 @@ final readonly class PaymentService
                 ? PaymentStatus::PartiallyCapturedAndCapturable
                 : PaymentStatus::Succeeded;
 
-            PaymentStateMachine::assertTransition($payment->status, $newStatus);
+            // Второй частичный захват оставляет платёж в том же статусе — это не переход.
+            if ($newStatus !== $payment->status) {
+                PaymentStateMachine::assertTransition($payment->status, $newStatus);
+            }
             $this->paymentRepository->update($payment, [
                 'status' => $newStatus,
                 'amount_received' => ($payment->amount_received ?? 0) + $amount,
                 'amount_capturable' => $remaining,
             ]);
+            $this->rememberAction($payment, $idempotencyKey, 'capture', $amount);
 
             $payment->refresh();
 
             return ['payment' => $payment, 'previousStatus' => $previousStatus];
         });
 
-        $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
+        if ($result['previousStatus'] !== null) {
+            $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
+        }
 
         return $result['payment'];
     }
 
-    public function cancel(string $paymentKey, int|string $merchantAccountId): PaymentIntent
+    /** Идемпотентность — как у capture(). */
+    public function cancel(string $paymentKey, int|string $merchantAccountId, ?string $idempotencyKey = null, bool &$replayed = false): PaymentIntent
     {
-        $result = DB::transaction(function () use ($paymentKey, $merchantAccountId) {
+        $result = DB::transaction(function () use ($paymentKey, $merchantAccountId, $idempotencyKey, &$replayed) {
             $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
             $previousStatus = $payment->status->value;
+
+            if ($replayed = $this->alreadyDone($payment, $idempotencyKey, 'cancel', null)) {
+                return ['payment' => $payment, 'previousStatus' => null];
+            }
 
             if ($payment->status === PaymentStatus::RequiresCapture && $payment->connector) {
                 $lastAttempt = $this->paymentRepository->findLastSuccessfulAttempt($payment);
@@ -418,15 +441,48 @@ final readonly class PaymentService
 
             PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Cancelled);
             $this->paymentRepository->update($payment, ['status' => PaymentStatus::Cancelled]);
+            $this->rememberAction($payment, $idempotencyKey, 'cancel', null);
 
             $payment->refresh();
 
             return ['payment' => $payment, 'previousStatus' => $previousStatus];
         });
 
-        $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
+        if ($result['previousStatus'] !== null) {
+            $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
+        }
 
         return $result['payment'];
+    }
+
+    /**
+     * Проведено ли уже это действие с этим ключом. Зовётся под блокировкой платежа, поэтому
+     * два одновременных повтора не пройдут оба.
+     */
+    private function alreadyDone(PaymentIntent $payment, ?string $idempotencyKey, string $action, ?int $amount): bool
+    {
+        $done = $idempotencyKey !== null ? $this->paymentRepository->findAction($payment, $idempotencyKey) : null;
+        if ($done === null) {
+            return false;
+        }
+
+        if ($done->action !== $action || $done->amount !== $amount) {
+            throw new PaymentException(
+                'Idempotency-Key was already used with different parameters',
+                'idempotency_key_reused',
+                'invalid_request_error',
+                422,
+            );
+        }
+
+        return true;
+    }
+
+    private function rememberAction(PaymentIntent $payment, ?string $idempotencyKey, string $action, ?int $amount): void
+    {
+        if ($idempotencyKey !== null) {
+            $this->paymentRepository->recordAction($payment, $idempotencyKey, $action, $amount);
+        }
     }
 
     /**

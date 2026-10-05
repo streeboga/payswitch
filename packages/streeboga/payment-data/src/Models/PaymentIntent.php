@@ -111,6 +111,11 @@ class PaymentIntent extends Model
         return $this->hasMany(PaymentAttempt::class);
     }
 
+    public function actions(): HasMany
+    {
+        return $this->hasMany(PaymentAction::class);
+    }
+
     public function refunds(): HasMany
     {
         return $this->hasMany(Refund::class);

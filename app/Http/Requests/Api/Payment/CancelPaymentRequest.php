@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\Payment;
 
-use App\DataTransferObjects\Payment\CapturePaymentData;
 use Illuminate\Foundation\Http\FormRequest;
 
-class CapturePaymentRequest extends FormRequest
+final class CancelPaymentRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
@@ -19,12 +18,6 @@ class CapturePaymentRequest extends FormRequest
     {
         return [
             'idempotency_key' => ['nullable', 'string', 'max:255'],
-            'amount_to_capture' => ['required', 'integer', 'min:1'],
         ];
-    }
-
-    public function toDto(): CapturePaymentData
-    {
-        return CapturePaymentData::from($this->validated());
     }
 }

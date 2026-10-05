@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Requests\Api\Payment\CancelPaymentRequest;
 use App\Http\Requests\Api\Payment\CapturePaymentRequest;
 use App\Http\Requests\Api\Payment\ConfirmPaymentRequest;
 use App\Http\Requests\Api\Payment\StorePaymentRequest;
@@ -19,6 +20,7 @@ use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Streeboga\PaymentData\Models\PaymentIntent;
 
 #[Group(name: 'Payments', description: 'Create, confirm, capture and cancel payment intents', weight: 1)]
 final class PaymentController extends Controller
@@ -140,7 +142,14 @@ final class PaymentController extends Controller
      * Capture a payment intent.
      *
      * Captures a previously authorized payment intent. Allows partial capture.
+     *
+     * Idempotency: with an `Idempotency-Key` header a repeat of the same capture returns the
+     * payment as it is, with `Idempotent-Replayed: true`, and captures nothing again. The same
+     * key with another amount or action is rejected with 422 `idempotency_key_reused`. The key
+     * is kept only for a capture that went through: after a refusal or an unknown outcome (502)
+     * a repeat goes to the PSP again.
      */
+    #[HeaderParameter('Idempotency-Key', description: 'Client-generated key, up to 255 characters, unique per payment', required: false, type: 'string')]
     #[PathParameter('paymentKey', description: 'Payment intent public key', example: 'pi_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Payment captured')]
     #[Response(404, description: 'Payment not found')]
@@ -148,26 +157,42 @@ final class PaymentController extends Controller
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
 
-        $payment = $this->paymentService->capture($paymentKey, $request->toDto()->amount_to_capture, $merchantAccountId);
+        $dto = $request->toDto();
 
-        return (new PaymentIntentResource($payment))->toResponse($request);
+        $replayed = false;
+        $payment = $this->paymentService->capture($paymentKey, $dto->amount_to_capture, $merchantAccountId, $dto->idempotency_key, $replayed);
+
+        return $this->actionResponse($payment, $replayed, $request);
     }
 
     /**
      * Cancel a payment intent.
      *
      * Cancels a payment intent that has not yet been captured or completed.
+     *
+     * Idempotency: same as capture — a repeat with the same `Idempotency-Key` returns the
+     * cancelled payment with `Idempotent-Replayed: true` instead of an invalid-transition error.
      */
+    #[HeaderParameter('Idempotency-Key', description: 'Client-generated key, up to 255 characters, unique per payment', required: false, type: 'string')]
     #[PathParameter('paymentKey', description: 'Payment intent public key', example: 'pi_01jd5x7k3m9p2q4r6s8t0v')]
     #[Response(200, description: 'Payment cancelled')]
     #[Response(404, description: 'Payment not found')]
     #[Response(502, description: 'Void at the connector failed: payment is not cancelled; void_failed')]
-    public function cancel(string $paymentKey, Request $request): JsonResponse
+    public function cancel(string $paymentKey, CancelPaymentRequest $request): JsonResponse
     {
         $merchantAccountId = $request->attributes->get('merchant_id');
-        $payment = $this->paymentService->cancel($paymentKey, $merchantAccountId);
 
-        return (new PaymentIntentResource($payment))->toResponse($request);
+        $replayed = false;
+        $payment = $this->paymentService->cancel($paymentKey, $merchantAccountId, $request->validated('idempotency_key'), $replayed);
+
+        return $this->actionResponse($payment, $replayed, $request);
+    }
+
+    private function actionResponse(PaymentIntent $payment, bool $replayed, Request $request): JsonResponse
+    {
+        $resource = new PaymentIntentResource($payment);
+
+        return ($replayed ? $resource->withHeader('Idempotent-Replayed', 'true') : $resource)->toResponse($request);
     }
 
     /**

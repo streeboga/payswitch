@@ -8,6 +8,7 @@ use App\Builders\PaymentIntentQueryBuilder;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Models\PaymentAction;
 use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
@@ -57,6 +58,11 @@ interface PaymentIntentRepositoryInterface
     public function findLastSuccessfulAttempt(PaymentIntent $payment): ?PaymentAttempt;
 
     public function findLastAttemptWithTransaction(PaymentIntent $payment): ?PaymentAttempt;
+
+    /** Захват или отмена, уже проведённые над платежом с этим ключом идемпотентности. */
+    public function findAction(PaymentIntent $payment, string $idempotencyKey): ?PaymentAction;
+
+    public function recordAction(PaymentIntent $payment, string $idempotencyKey, string $action, ?int $amount): void;
 
     public function findPaymentMethodByKey(string $key, int|string $merchantAccountId): ?PaymentMethod;
 

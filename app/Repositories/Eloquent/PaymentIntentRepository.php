@@ -11,6 +11,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Streeboga\PaymentData\Enums\PaymentStatus;
+use Streeboga\PaymentData\Models\PaymentAction;
 use Streeboga\PaymentData\Models\PaymentAttempt;
 use Streeboga\PaymentData\Models\PaymentIntent;
 use Streeboga\PaymentData\Models\PaymentMethod;
@@ -125,6 +126,17 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
     {
         /** @var PaymentAttempt|null */
         return $payment->paymentAttempts()->whereNotNull('connector_transaction_id')->latest()->first();
+    }
+
+    public function findAction(PaymentIntent $payment, string $idempotencyKey): ?PaymentAction
+    {
+        /** @var PaymentAction|null */
+        return $payment->actions()->where('idempotency_key', $idempotencyKey)->first();
+    }
+
+    public function recordAction(PaymentIntent $payment, string $idempotencyKey, string $action, ?int $amount): void
+    {
+        $payment->actions()->create(['idempotency_key' => $idempotencyKey, 'action' => $action, 'amount' => $amount]);
     }
 
     public function findPaymentMethodByKey(string $key, int|string $merchantAccountId): ?PaymentMethod
