@@ -30,6 +30,7 @@ final class RefundResource extends JsonApiResource
             'error_code' => $this->error_code,
             'error_message' => $this->error_message,
             'metadata' => $this->metadata,
+            'idempotency_key' => $this->idempotency_key,
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

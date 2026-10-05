@@ -77,6 +77,10 @@ final readonly class WebhookService
                 'amount' => $refund->amount,
                 'currency' => $refund->currency,
                 'status' => $refund->status->value,
+                // Собственный ключ вызывающего: по нему приёмник найдёт свой
+                // возврат, даже если ответ на запрос потерял и refund_id не
+                // знает. null — возврат заведён без ключа (кабинет провайдера).
+                'idempotency_key' => $refund->idempotency_key,
             ],
         ]);
 

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
@@ -18,6 +19,7 @@ use Streeboga\PaymentData\Models\Organization;
 use Streeboga\PaymentData\Models\Refund;
 use Streeboga\PaymentData\Models\WebhookEvent;
 use Streeboga\PaymentData\Support\IdGenerator;
+use Streeboga\PaymentData\Support\WebhookSigner;
 use Tests\Helpers\ScriptedConnector;
 
 uses(RefreshDatabase::class);
@@ -144,4 +146,52 @@ test('провайдер вызывается вне транзакции с б�
 
     expect($levelAtPsp)->toBe($baseLevel)
         ->and(ScriptedConnector::callsTo('refund')[0]['refund_id'])->toBe(Refund::sole()->key);
+});
+
+test('событие возврата несёт ключ идемпотентности вызывающего, ответ и чтение — тоже; подпись покрывает поле', function () {
+    Queue::fake();
+
+    $refundId = refundRequest(['Idempotency-Key' => 'cn_abc_refund'])
+        ->assertStatus(201)
+        ->assertJsonPath('data.attributes.idempotency_key', 'cn_abc_refund')
+        ->json('data.id');
+
+    $this->getJson("/api/v1/refunds/{$refundId}", ['api-key' => $this->rawKey])
+        ->assertOk()
+        ->assertJsonPath('data.attributes.idempotency_key', 'cn_abc_refund');
+
+    $event = refundEvents()->sole();
+    expect($event->content)->toMatchArray(['refund_id' => $refundId, 'idempotency_key' => 'cn_abc_refund']);
+
+    $profile = BusinessProfile::sole();
+    $profile->update(['webhook_url' => 'https://merchant.example.com/webhook']);
+    Http::fake(['*' => Http::response('ok', 200)]);
+    app()->call([new DeliverWebhookJob($event->id), 'handle']);
+
+    Http::assertSent(function ($request) use ($profile) {
+        $key = $profile->refresh()->payment_response_hash_key;
+        $body = $request->body();
+        $tampered = str_replace('cn_abc_refund', 'cn_xyz_refund', $body);
+
+        return json_decode($body, true)['content']['idempotency_key'] === 'cn_abc_refund'
+            && WebhookSigner::verify($body, $request->header('x-webhook-signature-512')[0], $key)
+            && hash_equals(WebhookSigner::signWithTimestamp($body, $key, (int) $request->header('x-webhook-timestamp')[0]), $request->header('x-webhook-signature')[0])
+            && ! WebhookSigner::verify($tampered, $request->header('x-webhook-signature-512')[0], $key);
+    });
+});
+
+test('refund_failed тоже несёт ключ; возврат без ключа — поле есть и оно null', function () {
+    Queue::fake();
+    ScriptedConnector::$script['refund'] = ['success' => false, 'transaction_id' => null, 'message' => 'Insufficient balance', 'code' => 'refund_declined'];
+    refundRequest(['Idempotency-Key' => 'cn_fail_refund'])->assertStatus(502);
+
+    ScriptedConnector::$script['refund'] = ['success' => true, 'transaction_id' => 'r2', 'code' => 'ok'];
+    refundRequest()->assertStatus(201)->assertJsonPath('data.attributes.idempotency_key', null);
+
+    $events = refundEvents()->orderBy('id')->get();
+    expect($events[0]->event_type)->toBe('refund_failed')
+        ->and($events[0]->content['idempotency_key'])->toBe('cn_fail_refund')
+        ->and($events[1]->event_type)->toBe('refund_succeeded')
+        ->and(array_key_exists('idempotency_key', $events[1]->content))->toBeTrue()
+        ->and($events[1]->content['idempotency_key'])->toBeNull();
 });

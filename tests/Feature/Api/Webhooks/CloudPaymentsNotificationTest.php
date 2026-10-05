@@ -352,7 +352,9 @@ test('refund made in the provider cabinet is recorded and the merchant is told',
     expect($event->event_type)->toBe('refund_succeeded')
         ->and($event->content['refund_id'])->toBe($refund->key)
         ->and($event->content['payment_id'])->toBe($payment->key)
-        ->and($event->content['amount'])->toBe(2000);
+        ->and($event->content['amount'])->toBe(2000)
+        // Возврат из кабинета провайдера заведён без ключа вызывающего.
+        ->and($event->content['idempotency_key'])->toBeNull();
 });
 
 test('refund notification for a refund we already know creates nothing', function () {

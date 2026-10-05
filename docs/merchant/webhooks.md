@@ -59,6 +59,26 @@ x-webhook-event-id: <event_id>
 | `refund_succeeded` | Возврат успешно выполнен |
 | `refund_failed` | Возврат отклонён |
 
+`content` события возврата:
+
+```json
+{
+  "refund_id": "ref_def456",
+  "payment_id": "pay_abc123",
+  "amount": 50000,
+  "currency": "RUB",
+  "status": "succeeded",
+  "idempotency_key": "ваш-ключ-из-заголовка-Idempotency-Key"
+}
+```
+
+`idempotency_key` — ваш собственный ключ из заголовка `Idempotency-Key` запроса
+`POST /api/v1/refunds`. По нему событие сопоставляется с вашим возвратом, даже
+если ответ на запрос потерян и `refund_id` вы не узнали. `null`, если возврат
+создан без ключа (например, сделан в кабинете провайдера). Поле входит в
+подписанное тело, как и все остальные. То же поле отдают `POST /api/v1/refunds`
+и `GET /api/v1/refunds/{key}`.
+
 ## Проверка подписи
 
 Каждый вебхук подписывается с помощью HMAC-SHA512. Подпись передаётся в заголовке `x-webhook-signature-512`.
