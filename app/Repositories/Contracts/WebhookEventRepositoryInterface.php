@@ -16,6 +16,13 @@ interface WebhookEventRepositoryInterface
 
     public function findById(int $id): ?WebhookEvent;
 
+    /**
+     * Undelivered events with attempts left, untouched since $before — oldest first.
+     *
+     * @return list<int>
+     */
+    public function undeliveredIds(\DateTimeInterface $before, int $limit): array;
+
     public function findByKeyForMerchant(string $key, int|string $merchantId): WebhookEvent;
 
     /**

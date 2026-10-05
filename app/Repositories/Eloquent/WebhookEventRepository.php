@@ -56,6 +56,19 @@ final readonly class WebhookEventRepository implements WebhookEventRepositoryInt
         return $builder->orderByLatest()->paginate(min($perPage, 100));
     }
 
+    public function undeliveredIds(\DateTimeInterface $before, int $limit): array
+    {
+        return array_values(WebhookEvent::query()
+            ->where('delivered', false)
+            ->where('delivery_attempts', '<', (int) config('payswitch.webhook.max_attempts', 16))
+            ->where('updated_at', '<', $before)
+            ->orderBy('id')
+            ->limit($limit)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all());
+    }
+
     public function markDelivered(WebhookEvent $event, int $attempts): void
     {
         $event->update([

@@ -36,4 +36,23 @@ final readonly class WebhookEventService
 
         return $event;
     }
+
+    /**
+     * Снова ставит в очередь уже записанные недоставленные события: задание доставки
+     * потеряно (очередь чистили, воркер убит). Новых событий и денег не создаёт —
+     * event_id и тело те же, приёмник отличает повтор по event_id.
+     *
+     * Событие, чьё задание ещё живо и ждёт своего повтора, получит второе задание и
+     * лишнюю попытку — поэтому только вручную и только нетронутые дольше $olderThanMinutes.
+     */
+    public function retryUndelivered(int $limit, int $olderThanMinutes): int
+    {
+        $ids = $this->webhookEventRepository->undeliveredIds(now()->subMinutes(max(0, $olderThanMinutes)), max(1, min($limit, 1000)));
+
+        foreach ($ids as $id) {
+            DeliverWebhookJob::dispatch($id);
+        }
+
+        return count($ids);
+    }
 }
