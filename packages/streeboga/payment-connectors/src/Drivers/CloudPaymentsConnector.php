@@ -89,11 +89,19 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
 
     public function refund(array $params): array
     {
+        // У payments/refund три параметра: TransactionId, Amount и JsonData — «любые другие
+        // данные, в том числе инструкции для формирования онлайн-чека». Своего поля причины
+        // нет: она уходит в JsonData.comment. Состав чека возврата — тот же CustomerReceipt;
+        // без него касса строит чек по исходному, поэтому при частичном возврате платежа с
+        // чеком состав передаёт мерчант.
+        // @see https://developers.cloudpayments.ru/#vozvrat-deneg
+        $data = array_filter(['comment' => $params['reason'] ?? null]) + $this->receiptData($params);
+
         // X-Request-ID — идемпотентность CloudPayments: повтор с тем же id отдаёт первый ответ.
         return $this->makeRequest('/payments/refund', [
             'TransactionId' => $params['transaction_id'] ?? '',
             'Amount' => ($params['amount'] ?? 0) / 100,
-        ], $params['refund_id'] ?? null);
+        ] + ($data === [] ? [] : ['JsonData' => json_encode($data)]), $params['refund_id'] ?? null);
     }
 
     public function void(array $params): array

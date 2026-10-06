@@ -195,3 +195,18 @@ test('refund_failed тоже несёт ключ; возврат без ключ
         ->and(array_key_exists('idempotency_key', $events[1]->content))->toBeTrue()
         ->and($events[1]->content['idempotency_key'])->toBeNull();
 });
+
+test('причина и состав чека возврата доходят до коннектора; чек не на сумму возврата — 422', function () {
+    $receipt = ['taxation_system' => 'usn_income', 'items' => [[
+        'label' => 'Товар', 'quantity' => 1, 'price' => 4000, 'amount' => 4000,
+        'vat' => 'none', 'payment_method' => 'full_payment', 'payment_object' => 'commodity',
+    ]]];
+    $body = ['payment_id' => $this->paymentId, 'amount' => 4000, 'reason' => 'Отказ от товара', 'receipt' => $receipt];
+
+    $this->postJson('/api/v1/refunds', ['amount' => 3999] + $body, ['api-key' => $this->rawKey])
+        ->assertStatus(422)->assertJsonPath('errors.0.source.pointer', '/receipt/items');
+    $this->postJson('/api/v1/refunds', $body, ['api-key' => $this->rawKey])->assertCreated();
+
+    expect(ScriptedConnector::callsTo('refund'))->toHaveCount(1)
+        ->and(ScriptedConnector::callsTo('refund')[0])->toMatchArray(['reason' => 'Отказ от товара', 'receipt' => $receipt]);
+});

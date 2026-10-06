@@ -42,8 +42,19 @@ final class StorePaymentRequest extends FormRequest
             'payment_method_data.*' => ['sometimes'],
             'connector' => ['sometimes', 'string'],
             'idempotency_key' => ['nullable', 'string', 'max:255'],
-            // Кассовый чек (54-ФЗ), суммы в минимальных единицах. Словарь общий с мерчантом;
-            // в коды кассы его переводит коннектор.
+            ...self::receiptRules(),
+        ];
+    }
+
+    /**
+     * Кассовый чек (54-ФЗ), суммы в минимальных единицах. Словарь общий с мерчантом;
+     * в коды кассы его переводит коннектор. Тот же состав принимает возврат.
+     *
+     * @return array<string, array<int, mixed>|string>
+     */
+    public static function receiptRules(): array
+    {
+        return [
             'receipt' => ['sometimes', 'nullable', 'array'],
             'receipt.taxation_system' => ['required_with:receipt', 'string', 'in:osn,usn_income,usn_income_outcome,esn,patent'],
             'receipt.email' => ['sometimes', 'nullable', 'email', 'max:254'],

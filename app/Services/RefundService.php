@@ -78,6 +78,8 @@ final readonly class RefundService
                 'amount' => $refund->amount,
                 'currency' => $payment->currency,
                 'transaction_id' => $transactionId,
+                'reason' => $refund->reason,
+                'receipt' => $dto->receipt,
             ]);
         } catch (\Throwable $e) {
             $result = ['success' => false, 'message' => $e->getMessage(), 'code' => 'connector_exception'];

@@ -236,6 +236,12 @@ CloudKassir узнаётся по `FiscalSign`/`QrCodeUrl` (`WebhookEventReading
 и `receipt_url`, чек возврата и чек без нашего заказа принимаются (`code: 0`) и
 ничего не меняют. В кабинете CloudPayments адрес уведомления Receipt — тот же,
 что у Pay/Check. Держит `tests/Feature/Api/PaymentReceiptTest.php`.
+`POST /refunds` (06.10.2026) передаёт коннектору `reason` и необязательный `receipt`
+(те же правила, сумма позиций = сумме возврата, не хранится): у CloudPayments
+`payments/refund` знает только `TransactionId`, `Amount` и `JsonData`, поэтому причина
+идёт в `JsonData.comment`, состав чека возврата — туда же `CustomerReceipt`. Без
+`receipt` чек возврата касса строит сама по исходному — при частичном возврате
+состав передаёт мерчант.
 
 Перенос работы конвейера от 05.10.2026 (сверка возвратов, хэш тела запроса,
 контракт выплаты — всё выключено флагами) описан в `docs/pipeline-port-2026-10.md`.
