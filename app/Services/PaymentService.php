@@ -171,7 +171,7 @@ final readonly class PaymentService
     /**
      * Get available payment methods with smart method/connector resolution.
      *
-     * @return array{mode: string, methods: list<array<string, mixed>>, connectors: list<array<string, mixed>>}
+     * @return array{mode: string, methods: list<array<string, mixed>>, connectors: list<array<string, mixed>>, default_connector?: string}
      */
     public function getAvailablePaymentMethods(PaymentIntent $payment, ?string $locale = null): array
     {
@@ -204,7 +204,8 @@ final readonly class PaymentService
             $hasAnyDirectMethod = false;
 
             foreach ($enabledMethods as $method) {
-                if ($capabilities->supportsDirectMethod($method)) {
+                $directMethod = $capabilities->getDirectMethod($method);
+                if ($directMethod !== null) {
                     $hasAnyDirectMethod = true;
 
                     // First connector wins for each method
@@ -213,7 +214,6 @@ final readonly class PaymentService
                     }
 
                     $seenMethods[$method] = true;
-                    $directMethod = $capabilities->getDirectMethod($method);
 
                     $methods[] = [
                         'method' => $method,
@@ -255,12 +255,12 @@ final readonly class PaymentService
             $defaultConnector = $connectorEntries[0]['connector_key'];
         }
 
-        return [
-            'mode' => $mode,
-            'methods' => array_values($methods),
-            'connectors' => array_values($connectorEntries),
-            ...($defaultConnector ? ['default_connector' => $defaultConnector] : []),
-        ];
+        $result = ['mode' => $mode, 'methods' => $methods, 'connectors' => $connectorEntries];
+        if ($defaultConnector) {
+            $result['default_connector'] = $defaultConnector;
+        }
+
+        return $result;
     }
 
     /**
@@ -291,14 +291,15 @@ final readonly class PaymentService
      *
      * Handles both ['card', 'sbp'] and [['payment_method' => 'card']] formats.
      *
+     * @param  array<int|string, mixed>  $methods
      * @return list<string>
      */
     private function normalizeEnabledMethods(array $methods): array
     {
-        return array_map(
+        return array_values(array_map(
             fn (mixed $m): string => is_array($m) ? ($m['payment_method'] ?? '') : (string) $m,
             $methods,
-        );
+        ));
     }
 
     /**

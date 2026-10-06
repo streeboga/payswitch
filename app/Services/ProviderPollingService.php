@@ -8,7 +8,6 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Repositories\Contracts\RefundRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -177,7 +176,7 @@ final readonly class ProviderPollingService
     }
 
     /**
-     * @return array{poll_attempts: int, next_poll_at: Carbon|null}
+     * @return array{poll_attempts: int, next_poll_at: \DateTimeInterface|null}
      */
     private static function after(int $attempts): array
     {

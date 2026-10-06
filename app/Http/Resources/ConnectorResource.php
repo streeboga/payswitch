@@ -42,12 +42,8 @@ final class ConnectorResource extends JsonApiResource
     /** @return array<string, string> */
     private function maskedCredentials(): array
     {
-        $details = $this->connector_account_details ?? [];
-        if (! is_array($details)) {
-            return [];
-        }
         $masked = [];
-        foreach ($details as $key => $value) {
+        foreach ($this->connector_account_details as $key => $value) {
             if (! is_string($value) || $value === '') {
                 $masked[$key] = '';
 
@@ -63,7 +59,7 @@ final class ConnectorResource extends JsonApiResource
 
     private function buildWebhookUrl(): string
     {
-        $merchantKey = $this->merchantAccount?->key ?? '';
+        $merchantKey = $this->merchantAccount->key ?? '';
         $baseUrl = rtrim(config('app.url'), '/');
 
         return "{$baseUrl}/api/v1/webhooks/{$merchantKey}/{$this->key}";
