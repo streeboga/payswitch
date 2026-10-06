@@ -60,6 +60,10 @@ final class ConnectorFactory
             throw new \InvalidArgumentException("Unknown connector: {$mca->connector_name}");
         }
 
+        if (is_a($driverClass, Drivers\TestConnector::class, true) && ! config('payswitch.test_connectors_enabled', false)) {
+            throw new \InvalidArgumentException("Connector {$mca->connector_name} is disabled in this environment");
+        }
+
         $credentials = $mca->connector_account_details;
         if (! is_array($credentials)) {
             $credentials = [];

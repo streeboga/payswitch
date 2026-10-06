@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Jobs\DeliverWebhookJob;
+use App\Repositories\Contracts\MerchantRepositoryInterface;
+use App\Repositories\Contracts\WebhookEventRepositoryInterface;
 use App\Services\WebhookService;
-use App\Support\UrlSafetyValidator;
+use App\Support\OutboundUrlGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Http;
@@ -102,11 +104,11 @@ test('exhausted attempts: job fails loudly and keeps the real error', function (
     expect($failed)->toBeTrue()
         ->and($event->delivered)->toBeFalse()
         ->and($event->delivery_attempts)->toBe(config('payswitch.webhook.max_attempts'))
-        ->and($event->last_error)->toContain('HTTP 500: upstream down')
+        ->and($event->last_error)->toContain('HTTP 500')
         ->and($event->last_error)->toContain('permanently failed');
     Log::shouldHaveReceived('error')->withArgs(
         fn ($message, $context = []) => str_contains($message, $event->key)
-            && str_contains($context['last_error'] ?? '', 'HTTP 500: upstream down'),
+            && str_contains($context['last_error'] ?? '', 'HTTP 500'),
     );
 });
 
@@ -233,7 +235,37 @@ test('body carries the time of the fact, not of the last attempt, and is signed'
 });
 
 test('blocks SSRF to private IPs', function () {
-    expect(UrlSafetyValidator::isSafe('https://example.com/webhook'))->toBeTrue();
-    expect(UrlSafetyValidator::isSafe('http://localhost/webhook'))->toBeFalse();
-    expect(UrlSafetyValidator::isSafe('http://127.0.0.1/webhook'))->toBeFalse();
+    expect(OutboundUrlGuard::isSafe('https://example.com/webhook'))->toBeTrue();
+    expect(OutboundUrlGuard::isSafe('http://localhost/webhook'))->toBeFalse();
+    expect(OutboundUrlGuard::isSafe('http://127.0.0.1/webhook'))->toBeFalse();
+});
+
+test('delivery is pinned to the checked ip, does not follow redirects and keeps the body out of last_error', function () {
+    Http::fake(['*' => Http::response('secret-internal-body', 302, ['Location' => 'http://169.254.169.254/'])]);
+
+    try {
+        (new DeliverWebhookJob($this->event->id))->handle(
+            app(WebhookEventRepositoryInterface::class),
+            app(MerchantRepositoryInterface::class),
+        );
+    } catch (RuntimeException) {
+    }
+
+    Http::assertSentCount(1);
+    Http::assertSent(fn ($request) => true);
+    $error = $this->event->fresh()->last_error;
+    expect($error)->toBe('HTTP 302')->not->toContain('secret-internal-body');
+});
+
+test('rebound dns to a private address blocks delivery on this attempt', function () {
+    OutboundUrlGuard::$resolver = fn (): array => ['10.0.0.5'];
+    Http::fake();
+
+    (new DeliverWebhookJob($this->event->id))->handle(
+        app(WebhookEventRepositoryInterface::class),
+        app(MerchantRepositoryInterface::class),
+    );
+
+    Http::assertNothingSent();
+    expect($this->event->fresh()->last_error)->toContain('blocked');
 });
