@@ -321,3 +321,11 @@ test('uses basic auth with publicId and apiSecret', function () {
         return str_starts_with($authHeader, 'Basic ');
     });
 });
+
+test('verifyWebhookSignature refuses when the secret is empty (HMAC with an empty key is forgeable)', function () {
+    $connector = new CloudPaymentsConnector(['public_id' => 'pk', 'api_secret' => '']);
+    $payload = '{"TransactionId":1}';
+    $forged = base64_encode(hash_hmac('sha256', $payload, '', true));
+
+    expect($connector->verifyWebhookSignature($payload, ['content-hmac' => $forged]))->toBeFalse();
+});

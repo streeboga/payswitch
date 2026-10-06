@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
+use Streeboga\PaymentConnectors\Drivers\TestConnector;
 use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
 use Streeboga\PaymentData\Contracts\ConnectorInterface;
 use Streeboga\PaymentData\Contracts\WebhookAcknowledging;
@@ -150,7 +151,10 @@ final readonly class WebhookReceiverService
 
         // The URL names one connector of the merchant, and some of them sign nothing (the
         // test ones). A payment another connector conducts is not this one's to move.
-        if ($payment->connector !== null && $payment->connector !== $connectorName) {
+        // A payment no connector conducts yet (connector null) is not a signing connector's
+        // to move unless it signs: an unsigned one (test) could finish any unconfirmed payment.
+        $unsigned = $connector instanceof TestConnector && ! config('payswitch.allow_unsigned_webhooks');
+        if (($payment->connector !== null && $payment->connector !== $connectorName) || ($payment->connector === null && $unsigned)) {
             Log::warning('Webhook from a connector that does not conduct the payment', [
                 'payment_id' => $payment->key,
                 'payment_connector' => $payment->connector,

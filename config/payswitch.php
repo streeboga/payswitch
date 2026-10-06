@@ -11,6 +11,8 @@ use Streeboga\PaymentConnectors\Drivers\TestConnector;
 use Streeboga\PaymentConnectors\Drivers\TochkaConnector;
 use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
 
+$test_connectors_enabled = (bool) env('PAYSWITCH_TEST_CONNECTORS', in_array(env('APP_ENV', 'production'), ['local', 'testing'], true));
+
 return [
 
     /*
@@ -50,7 +52,23 @@ return [
     |
     */
 
-    'connectable' => array_values(array_filter(explode(',', (string) env('PAYSWITCH_CONNECTABLE', 'cloudpayments,test,test_sbp')))),
+    'connectable' => array_values(array_filter(
+        explode(',', (string) env('PAYSWITCH_CONNECTABLE', 'cloudpayments,test,test_sbp')),
+        fn (string $name): bool => $test_connectors_enabled || ! in_array($name, ['test', 'test_sbp'], true),
+    )),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Test Connectors
+    |--------------------------------------------------------------------------
+    |
+    | `test`/`test_sbp` approve a payment with no money and verify no webhook
+    | signature. Only local/testing by default; in production the app refuses to
+    | boot with them on (AppServiceProvider) and the factory will not build them.
+    |
+    */
+
+    'test_connectors_enabled' => $test_connectors_enabled,
 
     /*
     |--------------------------------------------------------------------------
@@ -79,7 +97,7 @@ return [
     */
 
     'idempotency' => [
-        'compare_request_hash' => (bool) env('PAYSWITCH_IDEMPOTENCY_COMPARE_REQUEST_HASH', false),
+        'compare_request_hash' => (bool) env('PAYSWITCH_IDEMPOTENCY_COMPARE_REQUEST_HASH', true),
     ],
 
 ];

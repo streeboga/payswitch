@@ -160,11 +160,14 @@ Route::prefix('v1/dashboard')->middleware(['auth:sanctum', 'resolve.merchant', '
     Route::delete('/users/roles/{roleId}', [UserRoleController::class, 'destroy']);
 });
 
-// Test PSP simulator — no auth, no middleware
-Route::prefix('v1')->group(function () {
-    Route::get('/test-psp/{paymentKey}', [TestPspController::class, 'show']);
-    Route::post('/test-psp/{paymentKey}/complete', [TestPspController::class, 'complete']);
-});
+// Test PSP simulator — no auth, no middleware; only where test connectors are on
+// (local/testing). In production the routes do not exist.
+if (config('payswitch.test_connectors_enabled')) {
+    Route::prefix('v1')->group(function () {
+        Route::get('/test-psp/{paymentKey}', [TestPspController::class, 'show']);
+        Route::post('/test-psp/{paymentKey}/complete', [TestPspController::class, 'complete']);
+    });
+}
 
 Route::prefix('v1')->middleware('json-api')->group(function () {
     // Incoming PSP webhooks (no auth)

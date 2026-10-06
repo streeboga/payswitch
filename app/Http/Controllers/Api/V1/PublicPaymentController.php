@@ -64,11 +64,12 @@ final class PublicPaymentController extends Controller
             'connector' => ['sometimes', 'string'],
         ]);
 
-        $dto = ConfirmPaymentData::from($request->only([
-            'payment_method',
-            'payment_method_data',
-            'connector',
-        ]));
+        // Routing is the merchant's: a payer holding only client_secret must not pick
+        // the connector (e.g. the test one, which approves without money).
+        $isSecret = $request->attributes->get('api_key_type') === 'secret';
+        $dto = ConfirmPaymentData::from($request->only(
+            $isSecret ? ['payment_method', 'payment_method_data', 'connector'] : ['payment_method', 'payment_method_data'],
+        ));
 
         $merchantAccountId = $request->attributes->get('merchant_id');
         $payment = $this->paymentService->confirm($paymentKey, $dto, $merchantAccountId);

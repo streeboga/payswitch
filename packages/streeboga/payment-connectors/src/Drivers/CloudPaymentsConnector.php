@@ -126,7 +126,11 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
             return (bool) config('payswitch.allow_unsigned_webhooks', false);
         }
 
-        $apiSecret = $this->credentials['api_secret'] ?? $this->credentials['api_key'] ?? '';
+        $apiSecret = (string) ($this->credentials['api_secret'] ?? $this->credentials['api_key'] ?? '');
+        if ($apiSecret === '') {
+            // HMAC with an empty key is computable by anyone.
+            return false;
+        }
         $expected = base64_encode(hash_hmac('sha256', $payload, $apiSecret, true));
 
         return hash_equals($expected, $hmac);

@@ -23,7 +23,7 @@ test('can add stripe connector to merchant', function () {
         'profile_id' => $this->profile->key,
         'connector_account_details' => [
             'auth_type' => 'HeaderKey',
-            'api_key' => 'sk_test_xxx',
+            'public_id' => 'pk_test', 'api_secret' => 'sk_test_xxx',
         ],
         'payment_methods_enabled' => [
             [
@@ -48,7 +48,7 @@ test('connector credentials are stored encrypted', function () {
         'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'profile_id' => $this->profile->key,
-        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test_secret'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk', 'api_key' => 'sk_test_secret'],
         'test_mode' => true,
     ], ['api-key' => 'admin_test_key']);
 
@@ -64,7 +64,7 @@ test('can list connectors for merchant', function () {
             'connector_name' => $name,
             'connector_type' => 'fiz_operations',
             'profile_id' => $this->profile->key,
-            'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'test'],
+            'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk', 'api_key' => 'test'],
             'test_mode' => true,
         ], ['api-key' => 'admin_test_key']);
     }
@@ -83,7 +83,7 @@ test('can delete connector', function () {
         'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'profile_id' => $this->profile->key,
-        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'test'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk', 'api_key' => 'test'],
         'test_mode' => true,
     ], ['api-key' => 'admin_test_key']);
 
@@ -101,7 +101,7 @@ test('can update connector via PATCH', function () {
         'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
         'profile_id' => $this->profile->key,
-        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'old'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk', 'api_key' => 'old'],
         'test_mode' => true,
     ], ['api-key' => 'admin_test_key']);
 
