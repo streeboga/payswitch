@@ -9,6 +9,7 @@ use App\Enums\WebhookEventType;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 use Streeboga\PaymentData\Models\PaymentAction;
@@ -200,6 +201,20 @@ final readonly class PaymentIntentRepository implements PaymentIntentRepositoryI
         return PaymentIntent::whereNotNull('expires_on')
             ->where('expires_on', '<', now())
             ->whereIn('status', $statuses);
+    }
+
+    public function dueForProviderPoll(array $statuses, array $exceptConnectors, int $maxAttempts, \DateTimeInterface $firstBefore, int $limit): Collection
+    {
+        return PaymentIntent::whereIn('status', $statuses)
+            ->whereNotIn('connector', $exceptConnectors)
+            ->whereHas('paymentAttempts', fn (Builder $attempts) => $attempts->whereNotNull('connector_transaction_id'))
+            ->where('poll_attempts', '<', $maxAttempts)
+            ->where(fn (Builder $due) => $due
+                ->where('next_poll_at', '<=', now())
+                ->orWhere(fn (Builder $first) => $first->whereNull('next_poll_at')->where('updated_at', '<=', $firstBefore)))
+            ->orderBy('updated_at')
+            ->limit($limit)
+            ->get();
     }
 
     /**

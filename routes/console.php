@@ -1,7 +1,7 @@
 <?php
 
 use App\Jobs\CleanExpiredPaymentsJob;
-use App\Jobs\ReconcilePendingRefundsJob;
+use App\Jobs\PollProviderStatusJob;
 use App\Jobs\ReconcileWebhookEventsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -13,5 +13,4 @@ Artisan::command('inspire', function () {
 
 Schedule::job(CleanExpiredPaymentsJob::class)->everyFiveMinutes();
 Schedule::job(ReconcileWebhookEventsJob::class)->everyFiveMinutes()->withoutOverlapping();
-Schedule::job(ReconcilePendingRefundsJob::class)->everyTenMinutes()->withoutOverlapping()
-    ->when(fn () => (bool) config('payswitch.refund.reconcile_enabled'));
+Schedule::job(PollProviderStatusJob::class)->everyMinute()->withoutOverlapping();

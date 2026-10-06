@@ -8,6 +8,7 @@ use App\Builders\RefundQueryBuilder;
 use App\Repositories\Contracts\RefundRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Enums\RefundStatus;
 use Streeboga\PaymentData\Models\Refund;
 
@@ -103,13 +104,19 @@ final readonly class RefundRepository implements RefundRepositoryInterface
         return Refund::query()->whereKey($id)->lockForUpdate()->first();
     }
 
-    public function pendingWithProviderReference(\DateTimeInterface $from, \DateTimeInterface $to): Builder
+    public function dueForProviderPoll(int $maxAttempts, \DateTimeInterface $firstBefore, int $limit): Collection
     {
         return Refund::query()
             ->where('status', RefundStatus::Pending)
             ->whereNotNull('connector_refund_id')
             ->whereNotNull('connector')
-            ->whereBetween('updated_at', [$from, $to]);
+            ->where('poll_attempts', '<', $maxAttempts)
+            ->where(fn (Builder $due) => $due
+                ->where('next_poll_at', '<=', now())
+                ->orWhere(fn (Builder $first) => $first->whereNull('next_poll_at')->where('updated_at', '<=', $firstBefore)))
+            ->orderBy('updated_at')
+            ->limit($limit)
+            ->get();
     }
 
     /**

@@ -159,7 +159,8 @@ final class RbsConnector implements ConnectorInterface, WebhookEventReading
             'transaction_id' => $data['orderId'] ?? ($params['transaction_id'] ?? null),
             'message' => $this->orderStatusLabel($orderStatus),
             'code' => (string) $orderStatus,
-            'data' => $data,
+            // sync читает data.status; у RBS статус заказа — число orderStatus.
+            'data' => $data + ['status' => (string) $orderStatus],
         ];
     }
 

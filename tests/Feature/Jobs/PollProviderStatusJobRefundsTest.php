@@ -3,8 +3,7 @@
 declare(strict_types=1);
 
 use App\Jobs\DeliverWebhookJob;
-use App\Jobs\ReconcilePendingRefundsJob;
-use Illuminate\Console\Scheduling\Schedule;
+use App\Jobs\PollProviderStatusJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -85,7 +84,7 @@ function yooKassaRefund(array $overrides = []): void
 
 function runRefundReconcile(): void
 {
-    app()->call([new ReconcilePendingRefundsJob, 'handle']);
+    app()->call([new PollProviderStatusJob, 'handle']);
 }
 
 test('провайдер подтвердил возврат: succeeded и одно refund_succeeded, запрос только на чтение', function () {
@@ -160,14 +159,24 @@ test('не трогает свежие, без id провайдера, уже �
     expect(WebhookEvent::count())->toBe(0);
 });
 
-test('в расписании сверка идёт только при включённом флаге', function () {
-    $event = collect(app(Schedule::class)->events())
-        ->first(fn ($event) => str_contains((string) $event->description, 'ReconcilePendingRefundsJob'));
+test('возврат без итога опрашивается с нарастающим интервалом, через сутки — запись в лог и больше не опрашивается', function () {
+    Log::spy();
+    $refund = pendingRefund();
+    yooKassaRefund(['status' => 'pending']);
 
-    expect($event)->not->toBeNull()
-        ->and($event->filtersPass(app()))->toBeFalse();
+    runRefundReconcile();
+    runRefundReconcile(); // срок следующего опроса не настал
+    Http::assertSentCount(1);
+    expect($refund->fresh()->poll_attempts)->toBe(1);
 
-    config(['payswitch.refund.reconcile_enabled' => true]);
+    for ($i = 0; $i < 12; $i++) {
+        $this->travel(6)->hours();
+        runRefundReconcile();
+    }
 
-    expect($event->filtersPass(app()))->toBeTrue();
+    Http::assertSentCount(9);
+    expect($refund->fresh()->status)->toBe(RefundStatus::Pending)
+        ->and($refund->fresh()->next_poll_at)->toBeNull()
+        ->and(WebhookEvent::count())->toBe(0);
+    Log::shouldHaveReceived('error')->withArgs(fn ($message) => str_contains($message, 'refund still pending after a day'))->once();
 });

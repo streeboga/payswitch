@@ -88,12 +88,30 @@ PSP — факт, а не наше решение: 3DS или СБП дольш�
 равна выставленной — `succeeded`; не названа — `processing` с `error_code`
 `amount_unconfirmed` и событием `payment_status_changed`; названа другая —
 `requires_merchant_action` / `amount_mismatch`. Из `processing` платёж выводит
-уведомление с суммой или `POST /payments/{id}/sync` — **сам payswitch провайдера
-не переспрашивает**. Успех без суммы по `expired`/`failed` уходит в
+уведомление с суммой, `POST /payments/{id}/sync` или опрос по расписанию (ниже). Успех без суммы по `expired`/`failed` уходит в
 `requires_merchant_action`. Обратный вызов RBS суммы не несёт: такой платёж ждёт
-`sync` (Сбер и Альфа сейчас не подключаются — `PAYSWITCH_CONNECTABLE`). Холд
+опроса (Сбер и Альфа сейчас не подключаются — `PAYSWITCH_CONNECTABLE`). Холд
 (`requires_capture`) не сверяется: денег он не взял. Тестовый коннектор сумму в
 ответе называет; сторонний тестовый драйвер без `data.amount` даст `processing`.
+
+**Опрос провайдера по расписанию** (06.10.2026) — `PollProviderStatusJob` раз в
+минуту, `ProviderPollingService`. Платёж в `processing` или
+`requires_customer_action` с транзакцией у провайдера спрашивается тем же
+`PaymentService::sync()`, что и ручной `sync`: переходы и события обычные.
+Интервал — `SCHEDULE`: опросы на 1, 3, 8, 23, 83 минуте от входа в статус, дальше
+раз в 6 часов; состояние — `poll_attempts` и `next_poll_at`, обнуляется при смене
+статуса (хук `updating` модели). После девятого опроса без итога (≈ 25 ч)
+`processing` уходит в `requires_merchant_action` с `error_code`
+`provider_unconfirmed` и событием `payment_status_changed`
+(`requires_customer_action` раньше истекает по своему сроку; без срока — `expired`).
+За прогон — до 50 платежей и 50 возвратов и 45 секунд; один платёж опрашивает один
+процесс (`Cache::lock`). Тестовые коннекторы не опрашиваются: симулятор отвечает
+«оплачено» на любой вопрос. Pending-возврат с id провайдера идёт тем же расписанием
+через `RefundReconciliationService` (умеет только YooKassa); через сутки остаётся
+`pending` с `Log::error` — конечного статуса и события нет намеренно: деньги могли
+уйти. `sync` читает `data.status` ответа коннектора: у RBS его ставит драйвер из
+`orderStatus`; **у T-Bank (`Status`) и Точки (вложенный `Data.Operation`) не
+ставит никто — их `sync` и опрос ничего не меняют**, Robokassa статус не отдаёт.
 
 ## Подпись вебхуков от PSP
 

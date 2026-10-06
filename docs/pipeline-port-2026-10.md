@@ -15,7 +15,7 @@
 |---|---|---|
 | Уведомление провайдера, закрывшее pending-возврат, шлёт мерчанту `refund_succeeded` / `refund_failed` (`RefundResultService`); возврат чужого коннектора не двигается | исправление, без флага | работает |
 | Хэш тела запроса рядом с `Idempotency-Key`; расхождение → тот же 422 `idempotency_key_reused` | `PAYSWITCH_IDEMPOTENCY_COMPARE_REQUEST_HASH` | `false` — только запись в лог |
-| Сверка pending-возвратов с провайдером (`ReconcilePendingRefundsJob`, раз в 10 минут, только чтение) | `PAYSWITCH_REFUND_RECONCILE_ENABLED` | `false` — в расписании не идёт |
+| Сверка pending-возвратов с провайдером (только чтение) | с 06.10.2026 без флага: идёт в `PollProviderStatusJob` с нарастающим интервалом, `ReconcilePendingRefundsJob` и `PAYSWITCH_REFUND_RECONCILE_ENABLED` сняты | работает |
 | `php artisan payswitch:webhooks:retry` — догнать события с потерянным заданием доставки | только вручную | не запускается |
 | Контракт выплаты: таблицы, модели, сервисы | флага нет: нет маршрутов, реестр каналов пуст, верификатор отказывает | закрыто |
 

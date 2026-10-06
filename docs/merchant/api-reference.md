@@ -158,7 +158,10 @@ POST /api/v1/payments/{key}/cancel
 равна выставленной; `amount_received` — эта сумма. Если провайдер сообщил об успехе
 без суммы, платёж остаётся `processing` с `error_code: amount_unconfirmed` (событие
 `payment_status_changed`) и оплаченным не считается: дождитесь `payment_succeeded`
-или вызовите `POST /api/v1/payments/{key}/sync`. Названа другая сумма —
+или вызовите `POST /api/v1/payments/{key}/sync`. Payswitch и сам спрашивает провайдера:
+через 1, 3, 8, 23 и 83 минуты, дальше раз в 6 часов. Если за сутки итога нет, платёж
+переходит в `requires_merchant_action` с `error_code: provider_unconfirmed` (событие
+`payment_status_changed`) — провайдер мог взять деньги, разбирать вручную. Названа другая сумма —
 `requires_merchant_action` с `error_code: amount_mismatch`.
 
 ## Возвраты
