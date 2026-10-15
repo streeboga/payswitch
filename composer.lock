@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "05b75fa82a9821faeaeb6e12f3f36604",
+    "content-hash": "e2ffada7c9e58162c5b7838527939fc1",
     "packages": [
         {
             "name": "brick/math",
@@ -5060,10 +5060,16 @@
         {
             "name": "streeboga/payment-omnipay",
             "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "git@github.com:streeboga/payment-omnipay.git",
+                "reference": "39f95013204b34643ee472ab122dfc6fd4df9a62"
+            },
             "dist": {
-                "type": "path",
-                "url": "../../payment-omnipay",
-                "reference": "813345e81c8097be95010418a9e003d825d189c5"
+                "type": "zip",
+                "url": "https://api.github.com/repos/streeboga/payment-omnipay/zipball/39f95013204b34643ee472ab122dfc6fd4df9a62",
+                "reference": "39f95013204b34643ee472ab122dfc6fd4df9a62",
+                "shasum": ""
             },
             "require": {
                 "omnipay/common": "^3.5",
@@ -5078,6 +5084,7 @@
                 "php-http/guzzle7-adapter": "^1.1",
                 "phpstan/phpstan": "^2.1"
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -5093,10 +5100,11 @@
                 "proprietary"
             ],
             "description": "Single Omnipay adapter for Payswitch connectors; Robokassa gateway with fiscal receipts",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "source": "https://github.com/streeboga/payment-omnipay/tree/main",
+                "issues": "https://github.com/streeboga/payment-omnipay/issues"
+            },
+            "time": "2026-10-15T21:35:16+00:00"
         },
         {
             "name": "symfony/clock",

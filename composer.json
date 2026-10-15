@@ -10,11 +10,8 @@
     "license": "MIT",
     "repositories": {
         "payment-omnipay": {
-            "type": "path",
-            "url": "../../payment-omnipay",
-            "options": {
-                "symlink": true
-            }
+            "type": "vcs",
+            "url": "git@github.com:streeboga/payment-omnipay.git"
         },
         "0": {
             "type": "path",
@@ -51,7 +48,7 @@
         "spatie/laravel-query-builder": "^6.0",
         "streeboga/payment-connectors": "@dev",
         "streeboga/payment-data": "@dev",
-        "streeboga/payment-omnipay": "@dev",
+        "streeboga/payment-omnipay": "dev-main",
         "symfony/http-client": "^8.0"
     },
     "require-dev": {
