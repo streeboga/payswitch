@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use Streeboga\PaymentConnectors\ConnectorCapabilities;
-
 it('has a file in public/ for every connector logoPath', function () {
     $paths = collect(glob(base_path('packages/streeboga/payment-connectors/src/Drivers/*Connector.php')))
         ->map(fn ($f) => 'Streeboga\\PaymentConnectors\\Drivers\\'.basename($f, '.php'))
