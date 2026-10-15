@@ -10,6 +10,7 @@ use Streeboga\PaymentConnectors\Drivers\TBankConnector;
 use Streeboga\PaymentConnectors\Drivers\TestConnector;
 use Streeboga\PaymentConnectors\Drivers\TochkaConnector;
 use Streeboga\PaymentConnectors\Drivers\YooKassaConnector;
+use Streeboga\PaymentOmnipay\Robokassa\RobokassaConnector as OmnipayRobokassaConnector;
 
 return [
 
@@ -33,7 +34,11 @@ return [
         'sberbank' => RbsConnector::class,
         'alfabank' => RbsConnector::class,
         'tbank' => TBankConnector::class,
-        'robokassa' => RobokassaConnector::class,
+        // PAYSWITCH_ROBOKASSA_DRIVER=omnipay switches to the Omnipay adapter (streeboga/payment-omnipay).
+        // The legacy driver stays the default until the adapter is verified with live passwords.
+        'robokassa' => env('PAYSWITCH_ROBOKASSA_DRIVER', 'legacy') === 'omnipay'
+            ? OmnipayRobokassaConnector::class
+            : RobokassaConnector::class,
         'tochka' => TochkaConnector::class,
         'test' => TestConnector::class,
         'test_sbp' => TestConnector::class,

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "23c6752218a7225e9f1dcfb3c7e93054",
+    "content-hash": "05b75fa82a9821faeaeb6e12f3f36604",
     "packages": [
         {
             "name": "brick/math",
@@ -203,7 +203,7 @@
         },
         {
             "name": "dedoc/scramble",
-            "version": "dev-main",
+            "version": "dev-feat/omnipay-bridge",
             "dist": {
                 "type": "path",
                 "url": "packages/scramble",
@@ -4987,7 +4987,7 @@
         },
         {
             "name": "streeboga/payment-connectors",
-            "version": "dev-main",
+            "version": "dev-feat/omnipay-bridge",
             "dist": {
                 "type": "path",
                 "url": "packages/streeboga/payment-connectors",
@@ -5023,7 +5023,7 @@
         },
         {
             "name": "streeboga/payment-data",
-            "version": "dev-main",
+            "version": "dev-feat/omnipay-bridge",
             "dist": {
                 "type": "path",
                 "url": "packages/streeboga/payment-data",
@@ -5052,6 +5052,47 @@
                 "proprietary"
             ],
             "description": "Payment data layer: contracts, enums, models, migrations for Payswitch",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
+        {
+            "name": "streeboga/payment-omnipay",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "../../payment-omnipay",
+                "reference": "813345e81c8097be95010418a9e003d825d189c5"
+            },
+            "require": {
+                "omnipay/common": "^3.5",
+                "php": "^8.3",
+                "streeboga/payment-connectors": "@dev",
+                "streeboga/payment-data": "@dev"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.9",
+                "laravel/pint": "^1.27",
+                "pestphp/pest": "^4.4",
+                "php-http/guzzle7-adapter": "^1.1",
+                "phpstan/phpstan": "^2.1"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Streeboga\\PaymentOmnipay\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Streeboga\\PaymentOmnipay\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Single Omnipay adapter for Payswitch connectors; Robokassa gateway with fiscal receipts",
             "transport-options": {
                 "symlink": true,
                 "relative": true
@@ -13772,12 +13813,13 @@
     "stability-flags": {
         "dedoc/scramble": 20,
         "streeboga/payment-connectors": 20,
-        "streeboga/payment-data": 20
+        "streeboga/payment-data": 20,
+        "streeboga/payment-omnipay": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.3"
+        "php": "^8.4"
     },
     "platform-dev": {},
     "plugin-api-version": "2.6.0"

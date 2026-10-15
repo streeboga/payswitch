@@ -8,29 +8,36 @@
         "framework"
     ],
     "license": "MIT",
-    "repositories": [
-        {
+    "repositories": {
+        "payment-omnipay": {
+            "type": "path",
+            "url": "../../payment-omnipay",
+            "options": {
+                "symlink": true
+            }
+        },
+        "0": {
             "type": "path",
             "url": "packages/streeboga/payment-data",
             "options": {
                 "symlink": true
             }
         },
-        {
+        "1": {
             "type": "path",
             "url": "packages/streeboga/payment-connectors",
             "options": {
                 "symlink": true
             }
         },
-        {
+        "2": {
             "type": "path",
             "url": "packages/scramble",
             "options": {
                 "symlink": true
             }
         }
-    ],
+    },
     "require": {
         "php": "^8.4",
         "dedoc/scramble": "@dev",
@@ -44,6 +51,7 @@
         "spatie/laravel-query-builder": "^6.0",
         "streeboga/payment-connectors": "@dev",
         "streeboga/payment-data": "@dev",
+        "streeboga/payment-omnipay": "@dev",
         "symfony/http-client": "^8.0"
     },
     "require-dev": {

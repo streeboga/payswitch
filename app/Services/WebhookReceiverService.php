@@ -353,7 +353,8 @@ final readonly class WebhookReceiverService
      */
     private function mismatch(ConnectorInterface $connector, array $payload, PaymentIntent $payment, int $notifiedAmount): ?string
     {
-        $currency = $payload['Currency'] ?? $payload['currency'] ?? null;
+        // Robokassa quotes no currency of its own: it echoes the signed Shp_currency we sent.
+        $currency = $payload['Currency'] ?? $payload['currency'] ?? $payload['Shp_currency'] ?? null;
 
         $mismatch = match (true) {
             $notifiedAmount !== $payment->amount => 'amount_mismatch',

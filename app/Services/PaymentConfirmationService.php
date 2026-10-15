@@ -25,6 +25,7 @@ final readonly class PaymentConfirmationService
     public function __construct(
         private PaymentIntentRepositoryInterface $paymentRepository,
         private RoutingService $routingService,
+        private PaymentReceiptService $receipts = new PaymentReceiptService,
     ) {}
 
     public function confirm(string $paymentKey, ConfirmPaymentData $dto, int|string $merchantAccountId): PaymentIntent
@@ -83,6 +84,11 @@ final readonly class PaymentConfirmationService
                 'currency' => $payment->currency,
                 'description' => $payment->description,
                 'return_url' => $returnUrl,
+                // Providers that number invoices (Robokassa) need a unique integer, not our string key.
+                'invoice_number' => $payment->id,
+                // Merchant-supplied receipt lines (minor units); the connector validates them
+                // against the amount and falls back to one line from the description.
+                'receipt_items' => $payment->metadata['receipt_items'] ?? null,
             ];
 
             // Redirect flow: no card data and no saved token — create a PSP session
@@ -265,6 +271,7 @@ final readonly class PaymentConfirmationService
             'amount' => $payment->amount,
         ]);
         $this->paymentRepository->incrementAttemptCount($payment);
+        $this->receipts->openIfFiscal($payment, $mca);
 
         return $result->toArray();
     }
