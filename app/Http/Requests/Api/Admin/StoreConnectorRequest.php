@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Requests\Api\Admin;
 
 use App\DataTransferObjects\Admin\CreateConnectorData;
+use App\Http\Requests\Concerns\RequiresConnectorCredentials;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 final class StoreConnectorRequest extends FormRequest
 {
+    use RequiresConnectorCredentials;
+
     /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {

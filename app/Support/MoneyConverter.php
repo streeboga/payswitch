@@ -43,6 +43,10 @@ final class MoneyConverter
 
     public static function minorToMajor(int $amount, int $precision = 2): string
     {
+        if ($precision < 0 || $precision > 18) {
+            throw new PaymentException('Invalid money precision', 'invalid_money', 'invalid_request_error', 400);
+        }
+
         return (string) BigDecimal::of($amount)->dividedBy(BigInteger::of(10)->power($precision), $precision);
     }
 }

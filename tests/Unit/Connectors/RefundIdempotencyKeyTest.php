@@ -87,6 +87,26 @@ test('CloudPayments: ключ возврата уходит в X-Request-ID', fu
     Http::assertSent(fn ($request) => $request->header('X-Request-ID') === ['ref_CP1']);
 });
 
+test('CloudPayments: причина и состав чека возврата уходят в JsonData, без них JsonData нет', function () {
+    Http::fake(['api.cloudpayments.ru/payments/refund' => Http::response(['Success' => true, 'Model' => ['TransactionId' => 1]])]);
+    $connector = new CloudPaymentsConnector(['public_id' => 'pk_test', 'api_secret' => 'secret']);
+
+    $connector->refund(['transaction_id' => 1, 'amount' => 3000, 'refund_id' => 'ref_CP2']);
+    $connector->refund(['transaction_id' => 1, 'amount' => 3000, 'refund_id' => 'ref_CP3', 'reason' => 'Отказ от товара', 'receipt' => [
+        'taxation_system' => 'usn_income', 'email' => 'buyer@example.com',
+        'items' => [['label' => 'Товар', 'quantity' => 1, 'price' => 3000, 'amount' => 3000, 'vat' => 'none', 'payment_method' => 'full_payment', 'payment_object' => 'commodity']],
+    ]]);
+
+    [$bare, $full] = collect(Http::recorded())->map(fn ($pair) => $pair[0]->data())->all();
+    $data = json_decode($full['JsonData'], true);
+
+    expect($bare)->not->toHaveKey('JsonData')
+        ->and($full['Amount'])->toBe(30)
+        ->and($data['comment'])->toBe('Отказ от товара')
+        ->and($data['CloudPayments']['CustomerReceipt']['items'][0]['amount'])->toBe(30)
+        ->and($data['CloudPayments']['CustomerReceipt']['amounts'])->toBe(['electronic' => 30]);
+});
+
 test('TBank: ключ возврата уходит в ExternalRequestId и входит в токен', function () {
     Http::fake(['securepay.tinkoff.ru/*' => Http::response(['Success' => true, 'ErrorCode' => '0', 'PaymentId' => 99005])]);
 

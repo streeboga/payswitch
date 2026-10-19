@@ -27,6 +27,8 @@ use Streeboga\PaymentData\Support\IdGenerator;
  * @property array<string, mixed>|null $metadata
  * @property string|null $idempotency_key
  * @property string|null $request_hash
+ * @property int $poll_attempts
+ * @property Carbon|null $next_poll_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read PaymentIntent $paymentIntent
@@ -48,6 +50,8 @@ class Refund extends Model
         'metadata',
         'idempotency_key',
         'request_hash',
+        'poll_attempts',
+        'next_poll_at',
     ];
 
     protected function casts(): array
@@ -55,6 +59,7 @@ class Refund extends Model
         return [
             'status' => RefundStatus::class,
             'metadata' => 'array',
+            'next_poll_at' => 'datetime',
         ];
     }
 

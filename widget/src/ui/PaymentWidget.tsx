@@ -374,6 +374,11 @@ function loadCloudPaymentsWidget(params: Record<string, unknown>, outcome: Exter
         amount: params.amount as number,
         currency: (params.currency as string) || 'RUB',
         invoiceId: params.invoiceId as string,
+        // Плательщик и состав кассового чека (data.CloudPayments.CustomerReceipt) — как
+        // собрал сервер; нет — undefined, и виджет их не увидит.
+        accountId: params.accountId as string | undefined,
+        email: params.email as string | undefined,
+        data: params.data as Record<string, unknown> | undefined,
         skin: 'mini',
       },
       // Раньше сюда уходил null: закрытие окна, отказ и успех до нас не доходили.

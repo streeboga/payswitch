@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Services\PaymentService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\Response;
@@ -16,10 +15,6 @@ use Streeboga\PaymentData\Models\PaymentIntent;
 #[Group(name: 'Payment Widget', description: 'Public payment widget endpoints for retrieving, confirming payments and listing available payment methods', weight: 2)]
 final class PublicPaymentStatusController extends Controller
 {
-    public function __construct(
-        private readonly PaymentService $paymentService,
-    ) {}
-
     /**
      * Get payment status for polling
      *

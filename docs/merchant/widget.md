@@ -4,25 +4,20 @@ Embeddable JavaScript SDK для приёма платежей на вашем �
 
 ## Установка
 
-### npm
+Пакет `@payswitch/js` **не опубликован** ни в реестре npm, ни на CDN, и сервер
+payswitch сборку виджета по адресу не раздаёт. Сборку кладут в свой проект:
 
 ```bash
-npm install @payswitch/js
+git clone <репозиторий payswitch> && cd payswitch/widget
+npm ci && npm run build      # dist/payswitch.mjs (ESM) и dist/payswitch.js (UMD, глобальная Payswitch)
+cp dist/payswitch.mjs <ваш проект>/vendor/payswitch.mjs
 ```
 
 ```javascript
-import { loadPayswitch } from '@payswitch/js';
+import { loadPayswitch } from './vendor/payswitch.mjs';
 ```
 
-### CDN (UMD)
-
-```html
-<script src="https://cdn.payswitch.example.com/js/v1/payswitch.umd.js"></script>
-<script>
-  // Доступно через глобальную переменную Payswitch
-  const payswitch = await Payswitch.loadPayswitch('pk_xxx');
-</script>
-```
+Адрес API payswitch виджету передаётся явно — `loadPayswitch('pk_xxx', { customBackendUrl: 'https://psapi.gnzs.pro' })`.
 
 ## API
 
@@ -239,7 +234,7 @@ switch (result.type) {
   <div id="error-message"></div>
 
   <script type="module">
-    import { loadPayswitch } from '@payswitch/js';
+    import { loadPayswitch } from './vendor/payswitch.mjs';
 
     const payswitch = await loadPayswitch('pk_live_abc123', {
       customBackendUrl: 'https://api.payswitch.example.com'

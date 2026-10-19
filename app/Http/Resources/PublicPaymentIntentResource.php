@@ -29,7 +29,10 @@ final class PublicPaymentIntentResource extends JsonApiResource
         ];
     }
 
-    /** @return array<string, mixed>|null */
+    /**
+     * @param  array<string, mixed>|null  $metadata
+     * @return array<string, mixed>|null
+     */
     private function filterPublicMetadata(?array $metadata): ?array
     {
         if (! $metadata) {

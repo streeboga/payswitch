@@ -26,7 +26,7 @@ final class AuthenticateClientSecret
             return $this->errorResponse('client_secret is required', 'client_secret_required');
         }
 
-        $paymentKey = $request->route()->parameter('paymentKey');
+        $paymentKey = $request->route('paymentKey');
         $merchantId = $request->attributes->get('merchant_id');
 
         $payment = PaymentIntent::where('key', $paymentKey)

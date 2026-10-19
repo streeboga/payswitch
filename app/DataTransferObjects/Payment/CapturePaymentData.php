@@ -10,5 +10,6 @@ final class CapturePaymentData extends Data
 {
     public function __construct(
         public readonly int $amount_to_capture,
+        public readonly ?string $idempotency_key = null,
     ) {}
 }

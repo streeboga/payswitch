@@ -62,6 +62,7 @@ class RoutingRule extends Model
         return $this->belongsTo(MerchantAccount::class);
     }
 
+    /** @return BelongsTo<BusinessProfile, $this> */
     public function businessProfile(): BelongsTo
     {
         return $this->belongsTo(BusinessProfile::class);

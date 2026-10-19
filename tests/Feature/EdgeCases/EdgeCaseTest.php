@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\RoutingService;
-use App\Support\UrlSafetyValidator;
+use App\Support\OutboundUrlGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Streeboga\PaymentData\Models\ApiKey;
 use Streeboga\PaymentData\Models\BusinessProfile;
@@ -41,25 +41,25 @@ beforeEach(function () {
 // --- SSRF Protection ---
 
 test('SSRF blocks file:// scheme', function () {
-    expect(UrlSafetyValidator::isSafe('file:///etc/passwd'))->toBeFalse();
+    expect(OutboundUrlGuard::isSafe('file:///etc/passwd'))->toBeFalse();
 });
 
 test('SSRF blocks ftp:// scheme', function () {
-    expect(UrlSafetyValidator::isSafe('ftp://evil.com/payload'))->toBeFalse();
+    expect(OutboundUrlGuard::isSafe('ftp://evil.com/payload'))->toBeFalse();
 });
 
 test('SSRF blocks URLs with userinfo', function () {
-    expect(UrlSafetyValidator::isSafe('https://user:pass@example.com/webhook'))->toBeFalse();
+    expect(OutboundUrlGuard::isSafe('https://user:pass@example.com/webhook'))->toBeFalse();
 });
 
 test('SSRF blocks private IP addresses', function () {
-    expect(UrlSafetyValidator::isSafe('http://192.168.1.1/webhook'))->toBeFalse();
-    expect(UrlSafetyValidator::isSafe('http://10.0.0.1/webhook'))->toBeFalse();
-    expect(UrlSafetyValidator::isSafe('http://127.0.0.1/webhook'))->toBeFalse();
+    expect(OutboundUrlGuard::isSafe('http://192.168.1.1/webhook'))->toBeFalse();
+    expect(OutboundUrlGuard::isSafe('http://10.0.0.1/webhook'))->toBeFalse();
+    expect(OutboundUrlGuard::isSafe('http://127.0.0.1/webhook'))->toBeFalse();
 });
 
 test('SSRF blocks localhost', function () {
-    expect(UrlSafetyValidator::isSafe('http://localhost/webhook'))->toBeFalse();
+    expect(OutboundUrlGuard::isSafe('http://localhost/webhook'))->toBeFalse();
 });
 
 // --- API Key Validation ---

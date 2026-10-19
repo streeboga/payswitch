@@ -60,10 +60,13 @@ Accept: application/vnd.api+json
 
 ## 3. Подключите виджет (фронтенд)
 
-Установите SDK:
+Подключите SDK. Пакет `@payswitch/js` **не опубликован** ни в реестре npm, ни на CDN, и сервер
+payswitch сборку виджета по адресу не раздаёт. Сборку кладут в свой проект:
 
 ```bash
-npm install @payswitch/js
+git clone <репозиторий payswitch> && cd payswitch/widget
+npm ci && npm run build      # dist/payswitch.mjs (ESM) и dist/payswitch.js (UMD, глобальная Payswitch)
+cp dist/payswitch.mjs <ваш проект>/vendor/payswitch.mjs
 ```
 
 Добавьте контейнер на страницу:
@@ -75,7 +78,7 @@ npm install @payswitch/js
 Инициализируйте виджет:
 
 ```javascript
-import { loadPayswitch } from '@payswitch/js';
+import { loadPayswitch } from './vendor/payswitch.mjs';
 
 // Инициализация SDK с publishable key
 const payswitch = await loadPayswitch('pk_your_publishable_key', {

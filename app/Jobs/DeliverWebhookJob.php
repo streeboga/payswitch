@@ -6,7 +6,7 @@ namespace App\Jobs;
 
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\WebhookEventRepositoryInterface;
-use App\Support\UrlSafetyValidator;
+use App\Support\OutboundUrlGuard;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -57,9 +57,11 @@ final class DeliverWebhookJob implements ShouldQueue
             return;
         }
 
-        if (! UrlSafetyValidator::isSafe($profile->webhook_url)) {
+        // Каждая попытка заново: DNS мог смениться со времени записи адреса.
+        $target = OutboundUrlGuard::resolve($profile->webhook_url);
+        if ($target === null) {
             Log::warning("Blocked webhook delivery to unsafe URL for event {$this->webhookEventId}");
-            $webhookRepository->markFailed($event, $event->delivery_attempts, 'Webhook URL blocked: internal/private address');
+            $webhookRepository->markFailed($event, $event->delivery_attempts, 'Webhook URL blocked: not a public https address');
 
             return;
         }
@@ -101,7 +103,10 @@ final class DeliverWebhookJob implements ShouldQueue
         }
 
         try {
+            // Запрос прибит к проверенному IP (CURLOPT_RESOLVE), редиректы выключены.
             $response = Http::timeout(config('payswitch.webhook.timeout', 30))
+                ->withoutRedirecting()
+                ->withOptions(['curl' => [CURLOPT_RESOLVE => ["{$target['host']}:{$target['port']}:{$target['ip']}"]]])
                 ->withHeaders($headers)
                 ->withBody($payload, 'application/json')
                 ->post($profile->webhook_url);
@@ -112,9 +117,11 @@ final class DeliverWebhookJob implements ShouldQueue
                 return;
             }
 
-            $error = Str::limit("HTTP {$response->status()}: {$response->body()}", 1000);
+            // Тело ответа получателя в last_error не кладём: оно видно мерчанту (SSRF-эхо).
+            $error = "HTTP {$response->status()}";
         } catch (\Exception $e) {
-            $error = $e->getMessage();
+            Log::warning("Webhook delivery error for event {$event->key}: ".Str::limit($e->getMessage(), 300));
+            $error = 'Delivery failed: network error';
         }
 
         $this->retryOrFail($webhookRepository, $event, $error);

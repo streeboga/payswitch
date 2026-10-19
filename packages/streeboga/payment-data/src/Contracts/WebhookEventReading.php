@@ -18,6 +18,9 @@ interface WebhookEventReading
     /** A pre-charge question ("may I charge this?") rather than a report of a charge. */
     public const CHECK = 'payment.check';
 
+    /** Касса выдала чек: платёж не двигается, у него появляются номер и ссылка чека. */
+    public const RECEIPT = 'receipt.issued';
+
     /**
      * @param  array<string, mixed>  $payload
      */

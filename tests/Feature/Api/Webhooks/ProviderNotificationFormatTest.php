@@ -64,7 +64,8 @@ function rbsCallbackUrl(string $url, array $params, string $secret): string
     return $url.'?'.http_build_query($params + ['checksum' => strtoupper(hash_hmac('sha256', $signed, $secret))]);
 }
 
-test('rbs: deposited with status 1 succeeds the payment, with status 0 fails it', function (string $status, PaymentStatus $expected) {
+// Обратный вызов RBS суммы не несёт: «оплачено» без суммы — processing до sync.
+test('rbs: deposited with status 1 leaves the payment processing until the amount is confirmed, with status 0 fails it', function (string $status, PaymentStatus $expected) {
     $mca = providerMca($this, 'sberbank', ['username' => 'u', 'password' => 'p', 'callback_secret' => 'shared_key']);
     $payment = providerPayment($this, 'sberbank');
 
@@ -75,7 +76,7 @@ test('rbs: deposited with status 1 succeeds the payment, with status 0 fails it'
 
     expect($payment->fresh()->status)->toBe($expected);
 })->with([
-    'success' => ['1', PaymentStatus::Succeeded],
+    'success' => ['1', PaymentStatus::Processing],
     'failure' => ['0', PaymentStatus::Failed],
 ]);
 

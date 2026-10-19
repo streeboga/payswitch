@@ -40,6 +40,14 @@ use Streeboga\PaymentData\Support\IdGenerator;
  * @property Carbon|null $expires_on
  * @property string|null $idempotency_key
  * @property string|null $request_hash
+ * @property string|null $project_id
+ * @property string|null $operation_id
+ * @property string|null $order_id
+ * @property array{taxation_system: string, email?: string, items: list<array<string, int|string>>}|null $receipt
+ * @property string|null $receipt_id
+ * @property string|null $receipt_url
+ * @property int $poll_attempts
+ * @property Carbon|null $next_poll_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -69,6 +77,14 @@ class PaymentIntent extends Model
         'expires_on',
         'idempotency_key',
         'request_hash',
+        'project_id',
+        'operation_id',
+        'order_id',
+        'receipt',
+        'receipt_id',
+        'receipt_url',
+        'poll_attempts',
+        'next_poll_at',
     ];
 
     protected function casts(): array
@@ -78,7 +94,9 @@ class PaymentIntent extends Model
             'capture_method' => CaptureMethod::class,
             'authentication_type' => AuthenticationType::class,
             'metadata' => 'array',
+            'receipt' => 'array',
             'expires_on' => 'datetime',
+            'next_poll_at' => 'datetime',
         ];
     }
 
@@ -92,6 +110,15 @@ class PaymentIntent extends Model
         static::creating(function (PaymentIntent $model) {
             $model->key ??= IdGenerator::paymentId();
             $model->client_secret ??= IdGenerator::clientSecret($model->key);
+        });
+
+        // Новый статус — опрос провайдера с начала: иначе платёж, ушедший в processing
+        // после нескольких опросов requires_customer_action, ждал бы уже часовой интервал.
+        static::updating(function (PaymentIntent $model) {
+            if ($model->isDirty('status')) {
+                $model->poll_attempts = 0;
+                $model->next_poll_at = null;
+            }
         });
     }
 
@@ -109,6 +136,11 @@ class PaymentIntent extends Model
     public function receipts(): HasMany
     {
         return $this->hasMany(PaymentReceipt::class);
+    }
+
+    public function actions(): HasMany
+    {
+        return $this->hasMany(PaymentAction::class);
     }
 
     public function refunds(): HasMany

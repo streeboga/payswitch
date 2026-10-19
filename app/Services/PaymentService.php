@@ -11,6 +11,7 @@ use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Support\CanonicalRequest;
+use App\Support\ProviderAmount;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -75,6 +76,10 @@ final readonly class PaymentService
             'description' => $dto->description,
             'return_url' => $dto->return_url,
             'metadata' => $dto->metadata,
+            'project_id' => $dto->project_id,
+            'operation_id' => $dto->operation_id,
+            'order_id' => $dto->order_id,
+            'receipt' => $dto->receipt,
             'session_expiry' => $expiry,
             'attempt_count' => 1,
             'expires_on' => now()->addSeconds($expiry),
@@ -166,7 +171,7 @@ final readonly class PaymentService
     /**
      * Get available payment methods with smart method/connector resolution.
      *
-     * @return array{mode: string, methods: list<array<string, mixed>>, connectors: list<array<string, mixed>>}
+     * @return array{mode: string, methods: list<array<string, mixed>>, connectors: list<array<string, mixed>>, default_connector?: string}
      */
     public function getAvailablePaymentMethods(PaymentIntent $payment, ?string $locale = null): array
     {
@@ -199,7 +204,8 @@ final readonly class PaymentService
             $hasAnyDirectMethod = false;
 
             foreach ($enabledMethods as $method) {
-                if ($capabilities->supportsDirectMethod($method)) {
+                $directMethod = $capabilities->getDirectMethod($method);
+                if ($directMethod !== null) {
                     $hasAnyDirectMethod = true;
 
                     // First connector wins for each method
@@ -208,7 +214,6 @@ final readonly class PaymentService
                     }
 
                     $seenMethods[$method] = true;
-                    $directMethod = $capabilities->getDirectMethod($method);
 
                     $methods[] = [
                         'method' => $method,
@@ -250,12 +255,12 @@ final readonly class PaymentService
             $defaultConnector = $connectorEntries[0]['connector_key'];
         }
 
-        return [
-            'mode' => $mode,
-            'methods' => array_values($methods),
-            'connectors' => array_values($connectorEntries),
-            ...($defaultConnector ? ['default_connector' => $defaultConnector] : []),
-        ];
+        $result = ['mode' => $mode, 'methods' => $methods, 'connectors' => $connectorEntries];
+        if ($defaultConnector) {
+            $result['default_connector'] = $defaultConnector;
+        }
+
+        return $result;
     }
 
     /**
@@ -286,14 +291,15 @@ final readonly class PaymentService
      *
      * Handles both ['card', 'sbp'] and [['payment_method' => 'card']] formats.
      *
+     * @param  array<int|string, mixed>  $methods
      * @return list<string>
      */
     private function normalizeEnabledMethods(array $methods): array
     {
-        return array_map(
+        return array_values(array_map(
             fn (mixed $m): string => is_array($m) ? ($m['payment_method'] ?? '') : (string) $m,
             $methods,
-        );
+        ));
     }
 
     /**
@@ -319,11 +325,21 @@ final readonly class PaymentService
         return $this->confirmationService->confirm($paymentKey, $dto, $merchantAccountId);
     }
 
-    public function capture(string $paymentKey, int $amount, int|string $merchantAccountId): PaymentIntent
+    /**
+     * С Idempotency-Key повтор того же захвата отдаёт платёж как есть ($replayed === true):
+     * к провайдеру не ходит и второй раз не списывает. Тот же ключ с другим действием или
+     * суммой — 422 idempotency_key_reused. Ключ запоминается только у проведённого действия:
+     * после отказа или неизвестного исхода (502) повтор идёт к провайдеру снова.
+     */
+    public function capture(string $paymentKey, int $amount, int|string $merchantAccountId, ?string $idempotencyKey = null, bool &$replayed = false): PaymentIntent
     {
-        $result = DB::transaction(function () use ($paymentKey, $amount, $merchantAccountId) {
+        $result = DB::transaction(function () use ($paymentKey, $amount, $merchantAccountId, $idempotencyKey, &$replayed) {
             $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
             $previousStatus = $payment->status->value;
+
+            if ($replayed = $this->alreadyDone($payment, $idempotencyKey, 'capture', $amount)) {
+                return ['payment' => $payment, 'previousStatus' => null];
+            }
 
             if (! in_array($payment->status, [PaymentStatus::RequiresCapture, PaymentStatus::PartiallyCapturedAndCapturable], true)) {
                 throw new InvalidStateTransitionException($payment->status->value, PaymentStatus::Succeeded->value);
@@ -361,6 +377,8 @@ final readonly class PaymentService
                 'amount' => $amount,
                 'currency' => $payment->currency,
                 'transaction_id' => $lastAttempt->connector_transaction_id,
+                // По нему Stripe и YooKassa строят свой ключ идемпотентности захвата.
+                'payment_id' => $payment->key,
             ]);
 
             if (! $result['success']) {
@@ -372,28 +390,39 @@ final readonly class PaymentService
                 ? PaymentStatus::PartiallyCapturedAndCapturable
                 : PaymentStatus::Succeeded;
 
-            PaymentStateMachine::assertTransition($payment->status, $newStatus);
+            // Второй частичный захват оставляет платёж в том же статусе — это не переход.
+            if ($newStatus !== $payment->status) {
+                PaymentStateMachine::assertTransition($payment->status, $newStatus);
+            }
             $this->paymentRepository->update($payment, [
                 'status' => $newStatus,
                 'amount_received' => ($payment->amount_received ?? 0) + $amount,
                 'amount_capturable' => $remaining,
             ]);
+            $this->rememberAction($payment, $idempotencyKey, 'capture', $amount);
 
             $payment->refresh();
 
             return ['payment' => $payment, 'previousStatus' => $previousStatus];
         });
 
-        $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
+        if ($result['previousStatus'] !== null) {
+            $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
+        }
 
         return $result['payment'];
     }
 
-    public function cancel(string $paymentKey, int|string $merchantAccountId): PaymentIntent
+    /** Идемпотентность — как у capture(). */
+    public function cancel(string $paymentKey, int|string $merchantAccountId, ?string $idempotencyKey = null, bool &$replayed = false): PaymentIntent
     {
-        $result = DB::transaction(function () use ($paymentKey, $merchantAccountId) {
+        $result = DB::transaction(function () use ($paymentKey, $merchantAccountId, $idempotencyKey, &$replayed) {
             $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
             $previousStatus = $payment->status->value;
+
+            if ($replayed = $this->alreadyDone($payment, $idempotencyKey, 'cancel', null)) {
+                return ['payment' => $payment, 'previousStatus' => null];
+            }
 
             if ($payment->status === PaymentStatus::RequiresCapture && $payment->connector) {
                 $lastAttempt = $this->paymentRepository->findLastSuccessfulAttempt($payment);
@@ -415,15 +444,48 @@ final readonly class PaymentService
 
             PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Cancelled);
             $this->paymentRepository->update($payment, ['status' => PaymentStatus::Cancelled]);
+            $this->rememberAction($payment, $idempotencyKey, 'cancel', null);
 
             $payment->refresh();
 
             return ['payment' => $payment, 'previousStatus' => $previousStatus];
         });
 
-        $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
+        if ($result['previousStatus'] !== null) {
+            $this->dispatchStatusChanged($result['payment'], $result['previousStatus']);
+        }
 
         return $result['payment'];
+    }
+
+    /**
+     * Проведено ли уже это действие с этим ключом. Зовётся под блокировкой платежа, поэтому
+     * два одновременных повтора не пройдут оба.
+     */
+    private function alreadyDone(PaymentIntent $payment, ?string $idempotencyKey, string $action, ?int $amount): bool
+    {
+        $done = $idempotencyKey !== null ? $this->paymentRepository->findAction($payment, $idempotencyKey) : null;
+        if ($done === null) {
+            return false;
+        }
+
+        if ($done->action !== $action || $done->amount !== $amount) {
+            throw new PaymentException(
+                'Idempotency-Key was already used with different parameters',
+                'idempotency_key_reused',
+                'invalid_request_error',
+                422,
+            );
+        }
+
+        return true;
+    }
+
+    private function rememberAction(PaymentIntent $payment, ?string $idempotencyKey, string $action, ?int $amount): void
+    {
+        if ($idempotencyKey !== null) {
+            $this->paymentRepository->recordAction($payment, $idempotencyKey, $action, $amount);
+        }
     }
 
     /**
@@ -482,10 +544,24 @@ final readonly class PaymentService
         }
 
         $connector = ConnectorFactory::resolve($mca);
-        $result = $connector->getPaymentStatus(['transaction_id' => $lastAttempt->connector_transaction_id]);
+        $result = $connector->getPaymentStatus([
+            'transaction_id' => $lastAttempt->connector_transaction_id,
+            // Настоящим провайдерам не нужны: сумму они называют сами. Тестовый коннектор
+            // их возвращает — своей памяти у симулятора нет.
+            'amount' => $payment->amount,
+            'currency' => $payment->currency,
+        ]);
 
         $pspStatus = $result['data']['status'] ?? null;
         $newStatus = $pspStatus ? $connector->mapPaymentStatusToInternal($pspStatus) : null;
+
+        // «Оплачено» без суммы — processing, с чужой суммой — на разбор мерчанту.
+        // ponytail: валюту здесь не сверяем — её сверяет приёмник уведомлений; добавить,
+        // когда появится мультивалютный провайдер с sync.
+        $confirmedAmount = ProviderAmount::minor($connector, $result['data'] ?? []);
+        if ($newStatus === PaymentStatus::Succeeded) {
+            $newStatus = ProviderAmount::paidStatus($confirmedAmount, $payment->amount);
+        }
 
         if (! $newStatus || $newStatus === $payment->status) {
             return $payment;
@@ -495,7 +571,7 @@ final readonly class PaymentService
         // заблокированной строке, иначе sync затрёт `failed` на `succeeded`
         // или объявит тот же переход второй раз.
         $previousStatus = null;
-        $payment = DB::transaction(function () use ($paymentKey, $merchantAccountId, $newStatus, $syncableStatuses, &$previousStatus) {
+        $payment = DB::transaction(function () use ($paymentKey, $merchantAccountId, $newStatus, $confirmedAmount, $syncableStatuses, &$previousStatus) {
             $payment = $this->paymentRepository->findByKeyLocked($paymentKey, $merchantAccountId);
 
             if ($payment->status === $newStatus || ! in_array($payment->status, $syncableStatuses, true)) {
@@ -520,7 +596,10 @@ final readonly class PaymentService
 
             $updateData = ['status' => $newStatus];
             if ($newStatus === PaymentStatus::Succeeded) {
-                $updateData['amount_received'] = $payment->amount;
+                $updateData['amount_received'] = $confirmedAmount;
+            }
+            if (in_array($newStatus, [PaymentStatus::Succeeded, PaymentStatus::Processing, PaymentStatus::RequiresMerchantAction], true)) {
+                $updateData += ProviderAmount::errorFor($newStatus);
             }
             $this->paymentRepository->update($payment, $updateData);
             $previousStatus = $currentStatus->value;

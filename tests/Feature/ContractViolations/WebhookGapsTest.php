@@ -79,7 +79,7 @@ test('payment webhook sets connector name on payment', function () {
         'attempt_count' => 1,
     ]);
 
-    $body = ['type' => 'payment.succeeded', 'InvoiceId' => $payment->key];
+    $body = ['type' => 'payment.succeeded', 'InvoiceId' => $payment->key, 'Amount' => 50.00, 'Currency' => 'USD'];
 
     $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", $body, [
         'Content-HMAC' => base64_encode(hash_hmac('sha256', (string) json_encode($body), 'sekret', true)),

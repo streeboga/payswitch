@@ -85,7 +85,7 @@ test('processes payment status update from webhook and sets amount_received', fu
         'attempt_count' => 1,
     ]);
 
-    $body = ['type' => 'payment.succeeded', 'InvoiceId' => $payment->key];
+    $body = ['type' => 'payment.succeeded', 'InvoiceId' => $payment->key, 'Amount' => 50.00, 'Currency' => 'USD'];
 
     $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", $body, [
         'Content-HMAC' => base64_encode(hash_hmac('sha256', (string) json_encode($body), 'sekret', true)),
@@ -110,6 +110,7 @@ test('processes failed webhook and does not set amount_received', function () {
         'merchant_account_id' => $this->merchant->id,
         'amount' => 3000,
         'currency' => 'USD',
+        'connector' => 'test',
         'status' => PaymentStatus::Processing,
         'capture_method' => CaptureMethod::Automatic,
         'attempt_count' => 1,
@@ -222,6 +223,7 @@ test('cancelled webhook transitions requires_confirmation payment to cancelled',
         'merchant_account_id' => $this->merchant->id,
         'amount' => 7500,
         'currency' => 'USD',
+        'connector' => 'test',
         'status' => PaymentStatus::RequiresConfirmation,
         'capture_method' => CaptureMethod::Automatic,
         'attempt_count' => 1,
@@ -496,4 +498,22 @@ test('a malformed payload that raises a TypeError is refused, not a 500', functi
         'type' => 'payment.succeeded',
         'payment_id' => ['not', 'a', 'string'],
     ])->assertOk();
+});
+
+test('unsigned test-connector webhook cannot move a payment no connector conducts', function () {
+    $payment = PaymentIntent::create([
+        'merchant_account_id' => $this->merchant->id,
+        'amount' => 1000,
+        'currency' => 'USD',
+        'status' => PaymentStatus::RequiresConfirmation,
+        'capture_method' => CaptureMethod::Automatic,
+        'attempt_count' => 0,
+    ]);
+
+    $this->postJson("/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [
+        'type' => 'payment.succeeded',
+        'payment_id' => $payment->key,
+    ]);
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::RequiresConfirmation);
 });

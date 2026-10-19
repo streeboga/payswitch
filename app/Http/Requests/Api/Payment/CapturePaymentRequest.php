@@ -9,10 +9,16 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class CapturePaymentRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['idempotency_key' => $this->header('Idempotency-Key')]);
+    }
+
     /** @return array<string, array<int, mixed>|string> */
     public function rules(): array
     {
         return [
+            'idempotency_key' => ['nullable', 'string', 'max:255'],
             'amount_to_capture' => ['required', 'integer', 'min:1'],
         ];
     }

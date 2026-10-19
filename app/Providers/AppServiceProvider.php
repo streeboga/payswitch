@@ -125,6 +125,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Date::use(CarbonImmutable::class);
 
+        if (app()->isProduction() && config('payswitch.test_connectors_enabled')) {
+            // Test connectors approve payments without money and trust any webhook.
+            throw new \RuntimeException('payswitch.test_connectors_enabled must be off in production (PAYSWITCH_TEST_CONNECTORS)');
+        }
+
         Model::preventLazyLoading(! app()->isProduction());
 
         DB::prohibitDestructiveCommands(

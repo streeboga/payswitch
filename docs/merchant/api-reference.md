@@ -33,6 +33,8 @@ POST /api/v1/payments
 | `description` | string | нет | Описание платежа. Максимум: 1000 символов |
 | `return_url` | string | нет | URL для перенаправления после оплаты. Должен быть валидным URL |
 | `metadata` | object | нет | Произвольные пары ключ-значение для хранения дополнительных данных |
+| `project_id`, `operation_id`, `order_id` | string | нет | Ваши идентификаторы проекта, операции и заказа, до 128 символов каждый. Payswitch их не толкует: хранит и возвращает в ответах и в `content` событий платежа и возврата. Не переданное — `null` |
+| `receipt` | object | нет | Кассовый чек (54-ФЗ): `taxation_system` (`osn`, `usn_income`, `usn_income_outcome`, `esn`, `patent`), необязательный `email` покупателя и `items` — от одной позиции с `label`, `quantity`, `price`, `amount` (копейки), `vat` (`none`, `0`, `5`, `7`, `10`, `20`, `22`), `payment_method` (`full_prepayment`, `prepayment`, `advance`, `full_payment`), `payment_object` (`commodity`, `service`, `payment`, `another`). Сумма `items.*.amount` обязана равняться `amount`, иначе 422. Чек пробивает касса провайдера (сейчас — CloudPayments/CloudKassir); номер и ссылка выданного чека появляются в `receipt_id` и `receipt_url` платежа |
 | `session_expiry` | integer | нет | Время жизни сессии в секундах. Диапазон: 60–86400 (по умолчанию 3600) |
 
 #### Пример запроса
@@ -91,6 +93,12 @@ POST /api/v1/payments
 POST /api/v1/payments/{key}/capture
 ```
 
+Заголовок `Idempotency-Key` (до 255 символов, уникален в пределах платежа) делает
+запрос повторяемым: повтор того же захвата с тем же ключом возвращает платёж как
+есть с заголовком `Idempotent-Replayed: true` и второй раз не списывает. Тот же
+ключ с другой суммой или с отменой — 422 `idempotency_key_reused`. Ключ
+запоминается только у проведённого захвата: после 502 повтор уйдёт провайдеру снова.
+
 | Параметр | Описание |
 |----------|----------|
 | `key` | Идентификатор платежа (`pay_abc123`) |
@@ -120,6 +128,9 @@ POST /api/v1/payments/{key}/capture
 POST /api/v1/payments/{key}/cancel
 ```
 
+`Idempotency-Key` работает так же, как у захвата: повтор отмены с тем же ключом
+возвращает отменённый платёж с `Idempotent-Replayed: true`, а не ошибку перехода.
+
 | Параметр | Описание |
 |----------|----------|
 | `key` | Идентификатор платежа (`pay_abc123`) |
@@ -141,6 +152,18 @@ POST /api/v1/payments/{key}/cancel
 }
 ```
 
+### Статус `processing` и `amount_unconfirmed`
+
+Платёж становится `succeeded`, только когда провайдер назвал списанную сумму и она
+равна выставленной; `amount_received` — эта сумма. Если провайдер сообщил об успехе
+без суммы, платёж остаётся `processing` с `error_code: amount_unconfirmed` (событие
+`payment_status_changed`) и оплаченным не считается: дождитесь `payment_succeeded`
+или вызовите `POST /api/v1/payments/{key}/sync`. Payswitch и сам спрашивает провайдера:
+через 1, 3, 8, 23 и 83 минуты, дальше раз в 6 часов. Если за сутки итога нет, платёж
+переходит в `requires_merchant_action` с `error_code: provider_unconfirmed` (событие
+`payment_status_changed`) — провайдер мог взять деньги, разбирать вручную. Названа другая сумма —
+`requires_merchant_action` с `error_code: amount_mismatch`.
+
 ## Возвраты
 
 ### Создание возврата
@@ -154,7 +177,9 @@ POST /api/v1/refunds
 | Поле | Тип | Обязательное | Описание |
 |------|-----|:------------:|----------|
 | `payment_id` | string | да | Идентификатор платежа для возврата |
-| `amount` | integer | нет | Сумма возврата в минимальных единицах валюты. Если не указана — полный возврат |
+| `amount` | integer | да | Сумма возврата в минимальных единицах валюты |
+| `reason` | string | нет | Причина возврата, до 1000 знаков. CloudPayments получает её в `JsonData.comment` |
+| `receipt` | object | нет | Состав чека возврата, формат как у `receipt` платежа; сумма позиций равна `amount` (иначе 422). Нужен при частичном возврате платежа с чеком: без него касса строит чек возврата по исходному чеку. Не хранится, читает только CloudPayments |
 
 #### Пример запроса
 

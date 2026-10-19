@@ -110,6 +110,26 @@ describe('ExternalPspWidget', () => {
     expect(onExternalSuccess).toHaveBeenCalledTimes(1);
   });
 
+  it('плательщик и состав чека уходят в cp.pay как их отдал сервер', async () => {
+    stubScriptLoading('load');
+    const pay = stubCloudPayments('success');
+    const data = { CloudPayments: { CustomerReceipt: { items: [{ label: 'Пополнение', vat: null }] } } };
+
+    mount({
+      result: {
+        status: 'requires_external_widget',
+        externalWidget: {
+          provider: 'cloudpayments',
+          scriptUrl: 'https://widget.cloudpayments.ru/bundles/cloudpayments.js',
+          params: { publicId: 'pk_test', amount: 250, currency: 'RUB', invoiceId: 'pay_x', accountId: 'cus_1', email: 'buyer@example.com', data },
+        },
+      },
+    });
+    await flush();
+
+    expect(pay.mock.calls[0][1]).toMatchObject({ invoiceId: 'pay_x', accountId: 'cus_1', email: 'buyer@example.com', data });
+  });
+
   it('закрытое окно возвращает к выбору способа, а не в тупик', async () => {
     stubScriptLoading('load');
     stubCloudPayments('dismiss');

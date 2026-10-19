@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Dashboard;
 
+use App\Http\Requests\Concerns\RequiresConnectorCredentials;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 final class StoreDashboardConnectorRequest extends FormRequest
 {
+    use RequiresConnectorCredentials;
+
     public function authorize(): bool
     {
         return true;

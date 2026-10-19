@@ -122,7 +122,8 @@ final class TestConnector implements ConnectorInterface
             'transaction_id' => $params['transaction_id'] ?? 'test_txn',
             'message' => 'ok',
             'code' => 'ok',
-            'data' => ['status' => 'succeeded'],
+            // Симулятор своей памяти не имеет: сумму возвращает ту, что ему назвали.
+            'data' => ['status' => 'succeeded'] + array_filter(['amount' => $params['amount'] ?? null, 'currency' => $params['currency'] ?? null]),
         ];
     }
 
@@ -187,7 +188,8 @@ final class TestConnector implements ConnectorInterface
                 'transaction_id' => 'test_'.($authorize ? 'auth_' : 'ch_').Str::ulid(),
                 'message' => $authorize ? 'Authorization successful' : 'Payment successful',
                 'code' => 'ok',
-                'data' => [],
+                // Настоящий провайдер называет списанную сумму в ответе; симулятор — тоже.
+                'data' => array_filter(['amount' => $params['amount'] ?? null, 'currency' => $params['currency'] ?? null]),
             ],
         };
     }

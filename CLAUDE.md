@@ -78,9 +78,40 @@ PSP — факт, а не наше решение: 3DS или СБП дольш�
 совпали с намерением (`error_code` `amount_mismatch`/`currency_mismatch`), или
 оплатили отменённый платёж. Разбирает человек.
 
-`amount_received` — сумма из уведомления провайдера в минорных единицах, а не
-копия `amount`. Сверяется только верхний уровень (`Amount`, `amount`,
-`OutSum`): у Stripe и YooKassa сумма глубже, для них это пока копия.
+`amount_received` — сумма, названная провайдером, в минорных единицах, а не
+копия `amount`. Читает её `App\Support\ProviderAmount::minor()`: верхний уровень
+(`Amount`, `amount`, `OutSum`), `object.amount.value` (YooKassa) и
+`data.object.amount` (Stripe), в единицах коннектора.
+
+**Успех без суммы — не оплата** (06.10.2026). Правило одно на уведомление, `sync`
+и синхронный ответ `purchase` (`ProviderAmount::paidStatus()`): сумма названа и
+равна выставленной — `succeeded`; не названа — `processing` с `error_code`
+`amount_unconfirmed` и событием `payment_status_changed`; названа другая —
+`requires_merchant_action` / `amount_mismatch`. Из `processing` платёж выводит
+уведомление с суммой, `POST /payments/{id}/sync` или опрос по расписанию (ниже). Успех без суммы по `expired`/`failed` уходит в
+`requires_merchant_action`. Обратный вызов RBS суммы не несёт: такой платёж ждёт
+опроса (Сбер и Альфа сейчас не подключаются — `PAYSWITCH_CONNECTABLE`). Холд
+(`requires_capture`) не сверяется: денег он не взял. Тестовый коннектор сумму в
+ответе называет; сторонний тестовый драйвер без `data.amount` даст `processing`.
+
+**Опрос провайдера по расписанию** (06.10.2026) — `PollProviderStatusJob` раз в
+минуту, `ProviderPollingService`. Платёж в `processing` или
+`requires_customer_action` с транзакцией у провайдера спрашивается тем же
+`PaymentService::sync()`, что и ручной `sync`: переходы и события обычные.
+Интервал — `SCHEDULE`: опросы на 1, 3, 8, 23, 83 минуте от входа в статус, дальше
+раз в 6 часов; состояние — `poll_attempts` и `next_poll_at`, обнуляется при смене
+статуса (хук `updating` модели). После девятого опроса без итога (≈ 25 ч)
+`processing` уходит в `requires_merchant_action` с `error_code`
+`provider_unconfirmed` и событием `payment_status_changed`
+(`requires_customer_action` раньше истекает по своему сроку; без срока — `expired`).
+За прогон — до 50 платежей и 50 возвратов и 45 секунд; один платёж опрашивает один
+процесс (`Cache::lock`). Тестовые коннекторы не опрашиваются: симулятор отвечает
+«оплачено» на любой вопрос. Pending-возврат с id провайдера идёт тем же расписанием
+через `RefundReconciliationService` (умеет только YooKassa); через сутки остаётся
+`pending` с `Log::error` — конечного статуса и события нет намеренно: деньги могли
+уйти. `sync` читает `data.status` ответа коннектора: у RBS его ставит драйвер из
+`orderStatus`; **у T-Bank (`Status`) и Точки (вложенный `Data.Operation`) не
+ставит никто — их `sync` и опрос ничего не меняют**, Robokassa статус не отдаёт.
 
 ## Подпись вебхуков от PSP
 
@@ -178,6 +209,40 @@ $request->attributes->set('merchant_id', $apiKeyModel->merchant_account_id);
 `pending` и отдаёт 502 `refund_pending` с ключом в `errors[0].meta.refund_id` —
 повторять с тем же ключом. Genesis и invoicing заголовок шлют.
 
+**Захват и отмена — тоже по `Idempotency-Key`** (06.10.2026), но ключ уникален в
+пределах платежа и лежит в `payment_actions` (действие, сумма). Повтор — платёж
+как есть и `Idempotent-Replayed: true`, без похода к PSP; тот же ключ с другим
+действием или суммой — 422 `idempotency_key_reused`. Проверка и запись — под
+блокировкой платежа в той же транзакции, что и переход: ключ остаётся только у
+проведённого действия. После 502 (`capture_failed`, `void_failed`) записи нет, и
+повтор идёт к PSP снова — от двойного списания там защищает ключ самого
+провайдера (Stripe, YooKassa строят его из `payment_id`, который захват теперь
+передаёт). «Действия в ожидании» (`pending_action` конвейера) нет.
+
+**Бизнес-поля** `project_id`, `operation_id`, `order_id` (06.10.2026) —
+необязательные строки до 128 символов в `POST /payments`; хранятся на
+`payment_intents`, отдаются в ресурсе платежа и в `content` событий платежа и
+возврата. Payswitch их не толкует и по ним не ищет. В событии возврата едет и
+`metadata` платежа: по `metadata.purpose` Genesis решает, кому событие отдать.
+
+**Кассовый чек** (`receipt` в `POST /payments`, 05.10.2026): состав хранится в
+`payment_intents.receipt`, сумма позиций обязана равняться `amount` (422). В коды
+кассы словарь переводит только `CloudPaymentsConnector::receiptData()` —
+`CustomerReceipt` в обёртке `CloudPayments` уходит в `data` виджета (`cp.pay`) и
+в `JsonData` оплаты по криптограмме; суммы у кассы в рублях, `vat: none` — это
+`null`, а не 0. Остальные коннекторы `receipt` не читают. Уведомление Receipt
+CloudKassir узнаётся по `FiscalSign`/`QrCodeUrl` (`WebhookEventReading::RECEIPT`),
+подпись та же (`Content-HMAC`), статус не двигает: чек прихода пишет `receipt_id`
+и `receipt_url`, чек возврата и чек без нашего заказа принимаются (`code: 0`) и
+ничего не меняют. В кабинете CloudPayments адрес уведомления Receipt — тот же,
+что у Pay/Check. Держит `tests/Feature/Api/PaymentReceiptTest.php`.
+`POST /refunds` (06.10.2026) передаёт коннектору `reason` и необязательный `receipt`
+(те же правила, сумма позиций = сумме возврата, не хранится): у CloudPayments
+`payments/refund` знает только `TransactionId`, `Amount` и `JsonData`, поэтому причина
+идёт в `JsonData.comment`, состав чека возврата — туда же `CustomerReceipt`. Без
+`receipt` чек возврата касса строит сама по исходному — при частичном возврате
+состав передаёт мерчант.
+
 Перенос работы конвейера от 05.10.2026 (сверка возвратов, хэш тела запроса,
 контракт выплаты — всё выключено флагами) описан в `docs/pipeline-port-2026-10.md`.
 
@@ -248,10 +313,15 @@ cd widget && npm run test
 - invoicing-service кладёт `payswitch.mjs` прямо в исходники чекаута
   (`resources/js/checkout/vendor/`).
 
-**Документация мерчанту при этом врёт.** `docs/merchant/quickstart.md:66` и
-`docs/merchant/widget.md:10` предлагают `npm install @payswitch/js`, а
-`widget.md:20` — CDN `https://cdn.payswitch.example.com/...`. Ни то, ни другое
-не существует.
+**По адресу виджет не отдаёт никто, и это не поломка.** Маршрута или каталога
+`/widget/` нет ни в Laravel (`routes/`, `public/`), ни в выкладке:
+`https://psapi.gnzs.pro/widget/payswitch.js` отвечает 404 по построению. Ни
+Genesis, ни invoicing его оттуда не ждут — оба импортируют вложенный
+`payswitch.mjs` и передают адрес API через `customBackendUrl`. Документация
+мерчанту (`docs/merchant/widget.md`, `quickstart.md`) с 06.10.2026 говорит то же:
+сборку кладут к себе. Раздавать её со своего адреса понадобится только для
+стороннего мерчанта без сборки — тогда приёмник должен копировать `widget/dist`
+в `public/widget/` (или nginx — отдавать каталог), с долгим кэшем по имени версии.
 
 ## Грабли
 
@@ -364,3 +434,180 @@ cd dashboard && npm run lint / types:check / test / e2e
 Маршруты: `routes/web.php` — вход, выход, 2FA; `routes/api.php` — дашбордное
 API под Sanctum, админское под admin-ключом, публичное под publishable key +
 client_secret, мерчантское под секретным ключом, приёмник вебхуков, healthcheck.
+
+# Laravel API Agent
+
+Ты — Laravel API архитектор. Весь код следует слоистой архитектуре JSON:API v1.1.
+
+## Архитектура (нарушение = баг)
+
+```
+Controller → Service → Repository → QueryBuilder → Model → DB
+```
+
+- Controller вызывает ТОЛЬКО Service. Никаких Repository, Model, DB в контроллере.
+- Service содержит бизнес-логику. Вызывает Repository. Никаких Model::query() напрямую.
+- Repository — CRUD. Делегирует сложные запросы в QueryBuilder.
+- Model — relations, casts, accessors. БЕЗ scopeXxx().
+- Все классы: `final`, `readonly` (где применимо), `declare(strict_types=1)`.
+
+## Фазы работы — ОБЯЗАТЕЛЬНОЕ чтение reference-файлов
+
+ПЕРЕД написанием любого кода определи фазу и ПРОЧИТАЙ указанные файлы скилла `laravel-api`. Не пиши код, пока не прочитаешь.
+
+### Фаза: Создание сущности
+
+Триггеры: "создай сущность", "новый CRUD", "добавь модель", "сгенерируй API для..."
+
+1. ПРОЧИТАЙ `references/architecture.md`
+1a. ПРОЧИТАЙ `references/secure-design.md` и ВЫПИШИ инварианты сущности (кто / что шлёт / контроль / граница / ресурс / тест) — до первого файла
+2. Создай ВСЕ 14 файлов по чеклисту (ниже). Пропуск файла = незавершённая работа.
+3. Для каждого слоя ЧИТАЙ reference:
+
+| Файлы | Reference |
+|-------|-----------|
+| Migration, Model | `references/models.md` |
+| Enum | `references/enums.md` |
+| DTO, FormRequest | `references/dto.md` |
+| QueryBuilder, Repository | `references/repository-layer.md` |
+| Service | `references/service-layer.md` |
+| Controller, Routes | `references/controller.md` |
+| JsonApiResource | `references/api-resources.md` |
+| Tests | `references/testing.md` + `references/testing-edge-cases.md` |
+
+4. После генерации ПРОЧИТАЙ `references/api-docs.md` — добавь Scramble-аннотации.
+5. Запусти: `./vendor/bin/phpstan analyse` и `./vendor/bin/pint --test`
+
+**Чеклист 14 файлов (каждый обязателен):**
+1. Migration — таблица с `key` (string, 40, unique)
+2. Model — prefix+ULID, casts к Enum, `getRouteKeyName() → 'key'`
+3. Enum(s) — HasLabel + HasColor + HasIcon
+4. CreateDto — `final readonly class` через Spatie Data
+5. UpdateDto — с `Optional` для nullable полей
+6. StoreRequest — с `toDto()`
+7. UpdateRequest — с `toDto()`
+8. QueryBuilder — типизированные фильтры
+9. RepositoryInterface — в `Contracts/`
+10. Repository — в `Eloquent/`, использует QueryBuilder
+11. Service — транзакции, события, кеширование
+12. Controller — thin, Scramble-аннотации, возвращает Resource
+13. JsonApiResource — `toId()` → key, `toType()`, `toAttributes()`, `toRelationships()`, `toLinks()`
+14. Tests — feature tests, ВСЕ edge cases + по тесту на каждый инвариант (два фиктивных арендатора, печальные пути)
+
+### Фаза: Написание/изменение кода по ТЗ
+
+Триггеры: любая задача, "добавь метод", "реализуй", "напиши"
+
+1. Определи какие слои затронуты
+1a. Задача задевает границу доверия (маршрут, владелец/статус, деньги, токены, вебхук, исходящий HTTP, кэш/очередь/поиск, удаление)? → ПРОЧИТАЙ `references/secure-design.md`, выпиши инварианты ДО кода
+2. ПРОЧИТАЙ reference для каждого затронутого слоя (таблица выше)
+3. Пиши код СТРОГО по шаблонам из reference
+4. Деньги → `references/money.md`
+5. Подменяемый компонент (оплата, SMS) → `references/patterns.md`
+
+### Фаза: Code Review
+
+Триггеры: "ревью", "проверь код", "review"
+
+1. ПРОЧИТАЙ `references/code-review.md`
+2. Пройди ВСЕ 14 секций. Не пропускай.
+3. Для каждого нарушения — прочитай reference того слоя и исправь.
+4. Выдай отчёт с оценкой.
+
+### Фаза: Тестирование
+
+Триггеры: "напиши тесты", "покрой тестами"
+
+1. ПРОЧИТАЙ `references/testing.md` + `references/testing-edge-cases.md`
+2. Покрой ВСЕ 25 edge cases (где применимо)
+3. `covers()` или `mutates()` в каждом тест-файле
+4. `XDEBUG_MODE=coverage ./vendor/bin/pest --coverage --min=85`
+
+### Фаза: Безопасность
+
+Триггеры: исходящий HTTP/вебхук/callback, `base_url`, секрет, токен, деньги/баланс, регистрация, публичный ресурс, загрузка файла
+
+1. ПРОЧИТАЙ `references/secure-design.md` — шесть строк инварианта, классы атак, родственные пути, печальные пути
+1a. ПРОЧИТАЙ `references/security.md` — раздел «Правила по результатам аудита» (готовые решения с кодом)
+2. Сверься с таблицей «Границы доверия по слоям» в `references/architecture.md`
+3. На каждую затронутую границу добавь регрессионный тест
+
+### Фаза: Аудит безопасности
+
+Триггеры: "проверь безопасность", "аудит", "security review", перед релизом денежной или публичной функции
+
+1. ПРОЧИТАЙ `references/secure-design.md` — раздел «Фаза „Аудит безопасности“»
+2. Разведка → таблица покрытия (поверхность × класс атаки) → инвариант и трассировка по каждой клетке
+3. Находка = сторона + граница + ресурс + локальный тест. Без этого — не находка
+4. Наименьшая правка + регрессионный тест. Только исходники и локальные тесты, без запросов к боевым адресам
+
+### Фаза: Качество / Pre-commit
+
+Триггеры: "проверь качество", "готово?", "перед коммитом"
+
+1. ПРОЧИТАЙ `references/quality.md`
+2. Запусти: `./vendor/bin/pint` → `./vendor/bin/phpstan analyse` → `php artisan test`
+
+## Жёсткие правила (нарушение = переделка)
+
+### ВСЕГДА
+- `declare(strict_types=1)` в каждом PHP файле
+- `final` на controllers, services, repositories, DTOs, resources, requests
+- `readonly` на services и DTOs
+- Типы на ВСЁ: параметры, свойства, возвраты
+- JSON:API формат через `JsonApiResource`
+- PATCH для обновления, 201+Location для создания, 204 для удаления
+- Enum для констант, статусов, типов
+- `$fillable` на моделях
+- `Model::preventLazyLoading()` в AppServiceProvider
+- Policy для каждой сущности
+
+### НИКОГДА
+- `Model::where()` / `::create()` / `->save()` в Controller или Service
+- `scopeXxx()` в Model
+- `response()->json()` в Controller
+- `mixed` тип
+- `PUT` для обновлений
+- PHPStan baseline или `@phpstan-ignore`
+- `$guarded = []`
+- Бизнес-логика в Controller
+- DB-запросы в Controller или Service
+
+## Безопасность (нарушение = баг)
+
+**Сначала инвариант, потом код.** Для любой правки на границе доверия выпиши шесть строк (кто / что шлёт / контроль / граница / ресурс / тест) по `references/secure-design.md`. Контроль ставится один раз — на последнем доверенном решении; на каждый инвариант — регрессионный тест.
+
+- Исходящий HTTP на адрес из данных пользователя — только через `OutboundUrlGuard`: https, A+AAAA, непубличные IP запрещены (в т.ч. `::ffff:`, CGNAT, `169.254`), IP закреплён `CURLOPT_RESOLVE`, `withoutRedirecting()`, проверка при каждой отправке, тело ответа не сохраняется
+- `{path}` и сегменты от пользователя проверяются на `? # .. \` и закодированные формы; чужому серверу не пересылаются `X-Forwarded-*`, `X-Real-IP`, `Forwarded`
+- Секрет: `hash_equals`, пустой секрет = отказ, только заголовок (не query), boot guard в production на пустой/dev/короткий
+- Входящий вебхук: подпись + timestamp + обязательные сумма и валюта; исходящий callback подписывается
+- `Rule::exists(...)->where(владелец)` вместо голого `exists`; пустой фильтр = пустой результат, не «без фильтра»
+- Статусы площадки (`BLOCKED`, `PENDING`) владелец не меняет; одноразовые операции — атомарный `UPDATE ... WHERE ... IS NULL`; баланс — резерв, не check-then-act
+- Ключ идемпотентности включает владельца; данные контрагента (usage, цена) ограничены потолком
+- Смена почты/пароля — `current_password` и отзыв токенов; регистрация с `throttle` и нормализацией почты; каждый маршрут с `abilities:`
+- Resource — белый список полей; секреты `encrypted` + `$hidden`; клиенту не отдаётся `$e->getMessage()`; в логах нет `Authorization` и тел
+- `max:` на строках, массивах и `per_page`; у джоб `timeout/tries/backoff`; `withoutOverlapping` в минутах
+- Тестовые маршруты и коннекторы выключены в production и не регистрируются; `.env` — `640`
+
+## Зависимости
+
+`timacdonald/json-api`, `spatie/laravel-query-builder`, `spatie/laravel-data`, `brick/money`, `laravel/sanctum`, `dedoc/scramble`, `phpstan/phpstan` + `larastan/larastan` (level 8), `laravel/pint`, `pestphp/pest`
+
+## Структура
+
+```
+app/
+├── Builders/                    # QueryBuilder
+├── Contracts/Enums/             # Enum interfaces
+├── DataTransferObjects/         # DTOs (Spatie Data)
+├── Enums/                       # PHP Enums
+├── Http/
+│   ├── Controllers/Api/V1/     # Thin controllers
+│   ├── Requests/{Entity}/      # FormRequests
+│   └── Resources/              # JsonApiResource
+├── Models/                      # Eloquent
+├── Repositories/
+│   ├── Contracts/              # Interfaces
+│   └── Eloquent/               # Implementations
+└── Services/                    # Business logic
+```

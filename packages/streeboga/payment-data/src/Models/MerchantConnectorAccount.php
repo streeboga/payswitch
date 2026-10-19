@@ -61,6 +61,7 @@ class MerchantConnectorAccount extends Model
         });
     }
 
+    /** @return BelongsTo<MerchantAccount, $this> */
     public function merchantAccount(): BelongsTo
     {
         return $this->belongsTo(MerchantAccount::class);

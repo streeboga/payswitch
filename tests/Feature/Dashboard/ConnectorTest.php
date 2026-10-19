@@ -27,7 +27,7 @@ test('connectors list returns json:api response', function () {
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
         'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk_test', 'api_secret' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);
@@ -47,7 +47,7 @@ test('connector create returns 201', function () {
         ->postJson('/api/v1/dashboard/connectors', [
             'connector_name' => 'cloudpayments',
             'connector_type' => 'fiz_operations',
-            'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
+            'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk_test', 'api_secret' => 'sk_test'],
             'profile_id' => $profile->key,
             'test_mode' => true,
         ], $this->headers);
@@ -63,7 +63,7 @@ test('connector delete returns 204', function () {
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
         'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk_test', 'api_secret' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);
@@ -135,7 +135,7 @@ test('connector update payment methods via PATCH', function () {
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
         'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk_test', 'api_secret' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);
@@ -158,7 +158,7 @@ test('connector enable/disable toggle via PATCH', function () {
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
         'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk_test', 'api_secret' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
         'disabled' => false,
@@ -195,7 +195,7 @@ test('connector delete removes record from database', function () {
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
         'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk_test', 'api_secret' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);
@@ -235,7 +235,7 @@ test('connector update validation fails with invalid types', function () {
         'business_profile_id' => $this->merchant->businessProfiles->first()->id,
         'connector_name' => 'cloudpayments',
         'connector_type' => 'fiz_operations',
-        'connector_account_details' => ['auth_type' => 'HeaderKey', 'api_key' => 'sk_test'],
+        'connector_account_details' => ['auth_type' => 'HeaderKey', 'public_id' => 'pk_test', 'api_secret' => 'sk_test'],
         'payment_methods_enabled' => [['payment_method' => 'card']],
         'test_mode' => true,
     ]);

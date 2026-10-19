@@ -62,8 +62,8 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
             'IpAddress' => $params['ip_address'] ?? '127.0.0.1',
             'Description' => $params['description'] ?? '',
             'InvoiceId' => $params['payment_id'] ?? '',
-            'JsonData' => json_encode($params['metadata'] ?? []),
-        ]);
+            'JsonData' => json_encode(($params['metadata'] ?? []) + $this->receiptData($params)),
+        ] + $this->payerFields($params));
     }
 
     public function authorize(array $params): array
@@ -76,7 +76,7 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
             'IpAddress' => $params['ip_address'] ?? '127.0.0.1',
             'Description' => $params['description'] ?? '',
             'InvoiceId' => $params['payment_id'] ?? '',
-        ]);
+        ] + $this->payerFields($params) + (($data = $this->receiptData($params)) === [] ? [] : ['JsonData' => json_encode($data)]));
     }
 
     public function capture(array $params): array
@@ -89,11 +89,19 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
 
     public function refund(array $params): array
     {
+        // У payments/refund три параметра: TransactionId, Amount и JsonData — «любые другие
+        // данные, в том числе инструкции для формирования онлайн-чека». Своего поля причины
+        // нет: она уходит в JsonData.comment. Состав чека возврата — тот же CustomerReceipt;
+        // без него касса строит чек по исходному, поэтому при частичном возврате платежа с
+        // чеком состав передаёт мерчант.
+        // @see https://developers.cloudpayments.ru/#vozvrat-deneg
+        $data = array_filter(['comment' => $params['reason'] ?? null]) + $this->receiptData($params);
+
         // X-Request-ID — идемпотентность CloudPayments: повтор с тем же id отдаёт первый ответ.
         return $this->makeRequest('/payments/refund', [
             'TransactionId' => $params['transaction_id'] ?? '',
             'Amount' => ($params['amount'] ?? 0) / 100,
-        ], $params['refund_id'] ?? null);
+        ] + ($data === [] ? [] : ['JsonData' => json_encode($data)]), $params['refund_id'] ?? null);
     }
 
     public function void(array $params): array
@@ -118,7 +126,11 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
             return (bool) config('payswitch.allow_unsigned_webhooks', false);
         }
 
-        $apiSecret = $this->credentials['api_secret'] ?? $this->credentials['api_key'] ?? '';
+        $apiSecret = (string) ($this->credentials['api_secret'] ?? $this->credentials['api_key'] ?? '');
+        if ($apiSecret === '') {
+            // HMAC with an empty key is computable by anyone.
+            return false;
+        }
         $expected = base64_encode(hash_hmac('sha256', $payload, $apiSecret, true));
 
         return hash_equals($expected, $hmac);
@@ -164,6 +176,12 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
     {
         if (isset($payload['type'])) {
             return (string) $payload['type'];
+        }
+
+        // Чек кассы (CloudKassir): свои поля, которых нет ни у одного платёжного уведомления.
+        // Раньше остальных: у чека возврата тоже есть TransactionId и InvoiceId.
+        if (isset($payload['FiscalSign']) || isset($payload['QrCodeUrl'])) {
+            return self::RECEIPT;
         }
 
         // Before Status: money going back to the payer must never read as a payment.
@@ -262,8 +280,60 @@ final class CloudPaymentsConnector implements ConnectorInterface, WebhookAcknowl
                 'currency' => $params['currency'] ?? 'RUB',
                 'description' => $params['description'] ?? '',
                 'invoiceId' => $params['payment_id'] ?? '',
-            ],
+            ] + array_change_key_case($this->payerFields($params)) + (($data = $this->receiptData($params)) === [] ? [] : ['data' => $data]),
         );
+    }
+
+    /**
+     * Плательщик: AccountId — наш customer_id, Email — куда касса шлёт чек.
+     * Ключи — как в API; виджету те же поля нужны с маленькой буквы (accountId, email).
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<string, string>
+     */
+    private function payerFields(array $params): array
+    {
+        return array_filter([
+            'AccountId' => $params['customer_id'] ?? null,
+            'Email' => $params['receipt']['email'] ?? null,
+        ]);
+    }
+
+    /**
+     * Состав чека для CloudKassir: объект CustomerReceipt в обёртке CloudPayments — в `data`
+     * виджета и в `JsonData` оплаты по криптограмме. Без receipt — пусто, чек не заказывается.
+     *
+     * Словарь payswitch → коды кассы; суммы у кассы в рублях. `vat: none` — это null
+     * («НДС не облагается»), а не 0 («НДС 0 %»).
+     *
+     * @see https://developers.cloudkassir.ru/#customerreceipt
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>
+     */
+    private function receiptData(array $params): array
+    {
+        $receipt = $params['receipt'] ?? null;
+        if (! is_array($receipt) || empty($receipt['items'])) {
+            return [];
+        }
+
+        $items = array_map(fn (array $item): array => [
+            'label' => $item['label'],
+            'price' => $item['price'] / 100,
+            'quantity' => $item['quantity'] + 0,
+            'amount' => $item['amount'] / 100,
+            'vat' => $item['vat'] === 'none' ? null : (int) $item['vat'],
+            'method' => ['full_prepayment' => 1, 'prepayment' => 2, 'advance' => 3, 'full_payment' => 4][$item['payment_method']],
+            'object' => ['commodity' => 1, 'service' => 4, 'payment' => 10, 'another' => 13][$item['payment_object']],
+        ], $receipt['items']);
+
+        return ['CloudPayments' => ['CustomerReceipt' => array_filter([
+            'items' => $items,
+            'taxationSystem' => ['osn' => 0, 'usn_income' => 1, 'usn_income_outcome' => 2, 'esn' => 4, 'patent' => 5][$receipt['taxation_system']],
+            'email' => $receipt['email'] ?? null,
+            'amounts' => ['electronic' => array_sum(array_column($items, 'amount'))],
+        ], fn ($value) => $value !== null)]];
     }
 
     public function mapPaymentStatusToInternal(string $rawStatus): ?PaymentStatus

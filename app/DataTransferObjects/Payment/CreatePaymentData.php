@@ -13,6 +13,7 @@ final class CreatePaymentData extends Data
     /**
      * @param  array<string, mixed>|null  $metadata
      * @param  array<string, mixed>|null  $payment_method_data
+     * @param  array<string, mixed>|null  $receipt
      */
     public function __construct(
         public readonly int $amount,
@@ -30,5 +31,9 @@ final class CreatePaymentData extends Data
         public readonly ?array $payment_method_data = null,
         public readonly ?string $payment_id = null,
         public readonly ?string $idempotency_key = null,
+        public readonly ?string $project_id = null,
+        public readonly ?string $operation_id = null,
+        public readonly ?string $order_id = null,
+        public readonly ?array $receipt = null,
     ) {}
 }

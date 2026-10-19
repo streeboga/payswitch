@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Contracts;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Streeboga\PaymentData\Models\Refund;
 
 interface RefundRepositoryInterface
@@ -37,11 +37,13 @@ interface RefundRepositoryInterface
     public function findByIdLocked(int $id): ?Refund;
 
     /**
-     * Pending refunds the provider has given an id to, last touched within the window.
+     * Pending-возвраты с id провайдера, о которых пора его спросить: опрошены меньше
+     * $maxAttempts раз и срок следующего опроса настал (первый — когда возврат не
+     * трогали с $firstBefore: ответ на сам запрос возврата ещё может писаться).
      *
-     * @return Builder<Refund>
+     * @return Collection<int, Refund>
      */
-    public function pendingWithProviderReference(\DateTimeInterface $from, \DateTimeInterface $to): Builder;
+    public function dueForProviderPoll(int $maxAttempts, \DateTimeInterface $firstBefore, int $limit): Collection;
 
     /**
      * @param  array<string, mixed>  $attributes
