@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\PaymentMethodController;
 use App\Http\Controllers\Api\V1\PublicPaymentController;
 use App\Http\Controllers\Api\V1\PublicPaymentStatusController;
 use App\Http\Controllers\Api\V1\RefundController;
+use App\Http\Controllers\Api\V1\RobokassaReturnController;
 use App\Http\Controllers\Api\V1\WebhookReceiverController;
 use App\Http\Controllers\Auth\UserController;
 use App\Http\Controllers\Dashboard\AnalyticsController;
@@ -168,6 +169,12 @@ if (config('payswitch.test_connectors_enabled')) {
         Route::post('/test-psp/{paymentKey}/complete', [TestPspController::class, 'complete']);
     });
 }
+
+// Robokassa SuccessURL/FailURL: the buyer's browser, not a webhook. Status comes from storage.
+Route::match(['get', 'post'], '/v1/pay/robokassa/{merchantKey}/{mcaKey}/{outcome}', RobokassaReturnController::class)
+    ->where('outcome', 'success|fail')
+    ->withoutMiddleware(['auth.api_key'])
+    ->middleware('throttle:60,1');
 
 Route::prefix('v1')->middleware('json-api')->group(function () {
     // Incoming PSP webhooks (no auth)
