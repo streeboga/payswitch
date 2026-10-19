@@ -104,4 +104,22 @@ return [
         'compare_request_hash' => (bool) env('PAYSWITCH_IDEMPOTENCY_COMPARE_REQUEST_HASH', false),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Robokassa test shop
+    |--------------------------------------------------------------------------
+    |
+    | Read only by `payswitch:robokassa-mca`, which copies them into a merchant's
+    | connector account. Empty by default; real values live in .env, never in git.
+    |
+    */
+
+    'robokassa_account' => [
+        'login' => env('ROBOKASSA_LOGIN', ''),
+        'password1' => env('ROBOKASSA_PASSWORD_1', ''),
+        'password2' => env('ROBOKASSA_PASSWORD_2', ''),
+        'hash_algo' => env('ROBOKASSA_HASH_ALGO', 'md5'),
+        'test_mode' => (bool) env('ROBOKASSA_TEST_MODE', true),
+        'fiscal' => (bool) env('ROBOKASSA_FISCAL', false),
+    ],
 ];
