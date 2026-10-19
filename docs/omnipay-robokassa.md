@@ -49,3 +49,20 @@
 1. В пакете: `Gateway` (Omnipay `AbstractGateway`) + `PurchaseRequest/Response` + `Notification` (подпись проверяется в конструкторе).
 2. `XxxConnector extends OmnipayConnector`: `makeGateway`, `sessionOptions`, `requiredCredentials`, `capabilities()`.
 3. Запись в `config/payswitch.php` (за флагом драйвера), тесты на фикстурах подписи, строка в таблице границ доверия выше.
+
+## Включение и адреса для кабинета Робокассы
+
+1. Payswitch `.env`: `PAYSWITCH_ROBOKASSA_DRIVER=omnipay`, `robokassa` в `PAYSWITCH_CONNECTABLE`, `ROBOKASSA_*` (логин, пароли #1/#2, `ROBOKASSA_HASH_ALGO`, `ROBOKASSA_TEST_MODE=true`). Значения вносит владелец.
+2. Genesis `.env`: `robokassa` в `PAYSWITCH_CONNECTABLE`. Мерчант payswitch заводится при первом обращении проекта (ключи в `app_modules.settings['payswitch']`).
+3. MCA: либо форма шлюзов в панели Genesis, либо `php artisan payswitch:robokassa-mca <merchant_key>` (берёт `ROBOKASSA_*`).
+4. Кабинет Робокассы → Технические настройки магазина:
+
+| Поле | Значение |
+|---|---|
+| Result URL (метод POST) | `https://psapi.gnzs.pro/api/v1/webhooks/{merchant_key}/{mca_key}` |
+| Алгоритм подписи | тот же, что `ROBOKASSA_HASH_ALGO` |
+| Success URL / Fail URL | страница возврата проекта (статика кабинета; платёж по ней не подтверждается) |
+
+`merchant_key` и `mca_key` видны после шага 3 (`GET /api/v1/merchants/{merchant_key}/connectors`).
+
+Путь платежа: Hub → Genesis (`PayswitchPaymentsService`) → payswitch `/payments` + confirm → адаптер отдаёт форму `form_redirect` → Робокасса → ResultURL в payswitch (подпись Паролем #2, `OK{InvId}`) → статус платежа → исходящий вебхук payswitch на `https://api.gnzs.pro/internal/webhooks/payswitch/{app_uuid}` (HMAC, проект в адресе) → Genesis зачисляет. Чек: отдельная строка `payment_receipts`, двигается только фискальным сигналом.
