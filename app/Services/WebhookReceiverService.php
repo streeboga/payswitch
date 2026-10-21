@@ -152,6 +152,7 @@ final readonly class WebhookReceiverService
         $orphan = $eventType === WebhookEventReading::RECEIPT ? null : 'unacceptable';
 
         $paymentId = $connector->extractPaymentIdFromWebhook($payload);
+        Log::info('DBG2', ['pid' => $paymentId, 'ma' => $merchantAccountId, 'found' => $paymentId ? (bool) $this->paymentRepository->findByKeyOrNull($paymentId, $merchantAccountId) : null, 'evt' => $eventType, 'name' => $connectorName]);
         if (! $paymentId) {
             return $orphan;
         }
