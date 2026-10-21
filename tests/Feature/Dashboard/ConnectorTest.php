@@ -356,3 +356,23 @@ test('connector update adds credentials without erasing the saved secrets', func
     expect($mca->refresh()->connector_account_details)
         ->toMatchArray(['merchant_login' => 'shop', 'password1' => 'p1', 'fiscal' => 'true', 'sno' => 'usn_income']);
 });
+
+test('connector resource shows login and fiscal settings plainly and masks the secrets', function () {
+    $mca = MerchantConnectorAccount::create([
+        'merchant_account_id' => $this->merchant->id,
+        'business_profile_id' => $this->merchant->businessProfiles->first()->id,
+        'connector_name' => 'robokassa',
+        'connector_type' => 'fiz_operations',
+        'connector_account_details' => ['login' => 'shop', 'password1' => 'secret-pass-1', 'fiscal' => 'true', 'sno' => 'usn_income'],
+        'payment_methods_enabled' => [['payment_method' => 'card']],
+        'test_mode' => false,
+    ]);
+
+    $this->actingAs($this->user)
+        ->getJson("/api/v1/dashboard/connectors/{$mca->key}", $this->headers)
+        ->assertOk()
+        ->assertJsonPath('data.attributes.connector_account_details.login', 'shop')
+        ->assertJsonPath('data.attributes.connector_account_details.fiscal', 'true')
+        ->assertJsonPath('data.attributes.connector_account_details.sno', 'usn_income')
+        ->assertJsonPath('data.attributes.connector_account_details.password1', 'secr*********');
+});

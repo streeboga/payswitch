@@ -39,11 +39,19 @@ final class ConnectorResource extends JsonApiResource
         ];
     }
 
+    /** Не секреты: логин магазина и параметры чека — отдаются как есть, чтобы форма их показывала. */
+    private const PLAIN = ['login', 'fiscal', 'sno', 'tax', 'payment_method', 'payment_object', 'hash_algo'];
+
     /** @return array<string, string> */
     private function maskedCredentials(): array
     {
         $masked = [];
         foreach ($this->connector_account_details as $key => $value) {
+            if (in_array($key, self::PLAIN, true) && is_string($value)) {
+                $masked[$key] = $value;
+
+                continue;
+            }
             if (! is_string($value) || $value === '') {
                 $masked[$key] = '';
 
