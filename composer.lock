@@ -203,7 +203,7 @@
         },
         {
             "name": "dedoc/scramble",
-            "version": "dev-main",
+            "version": "dev-bump",
             "dist": {
                 "type": "path",
                 "url": "packages/scramble",
@@ -4987,7 +4987,7 @@
         },
         {
             "name": "streeboga/payment-connectors",
-            "version": "dev-main",
+            "version": "dev-bump",
             "dist": {
                 "type": "path",
                 "url": "packages/streeboga/payment-connectors",
@@ -5023,7 +5023,7 @@
         },
         {
             "name": "streeboga/payment-data",
-            "version": "dev-main",
+            "version": "dev-bump",
             "dist": {
                 "type": "path",
                 "url": "packages/streeboga/payment-data",
@@ -5063,12 +5063,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:streeboga/payment-omnipay.git",
-                "reference": "f9b9aa0d227a3a0212392a7fcd2fec3712d63b18"
+                "reference": "661ed1bd4eec81574b2f6752f680a5ca5fed156e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/streeboga/payment-omnipay/zipball/f9b9aa0d227a3a0212392a7fcd2fec3712d63b18",
-                "reference": "f9b9aa0d227a3a0212392a7fcd2fec3712d63b18",
+                "url": "https://api.github.com/repos/streeboga/payment-omnipay/zipball/661ed1bd4eec81574b2f6752f680a5ca5fed156e",
+                "reference": "661ed1bd4eec81574b2f6752f680a5ca5fed156e",
                 "shasum": ""
             },
             "require": {
@@ -5104,7 +5104,7 @@
                 "source": "https://github.com/streeboga/payment-omnipay/tree/main",
                 "issues": "https://github.com/streeboga/payment-omnipay/issues"
             },
-            "time": "2026-10-21T13:31:35+00:00"
+            "time": "2026-10-21T13:46:50+00:00"
         },
         {
             "name": "symfony/clock",

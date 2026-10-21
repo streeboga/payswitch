@@ -310,7 +310,7 @@ final readonly class WebhookReceiverService
             return;
         }
 
-        $transactionId = $payload['TransactionId'] ?? null;
+        $transactionId = $payload['TransactionId'] ?? $payload['InvId'] ?? null;
         $attributes = array_filter([
             'status' => $failed ? PaymentAttemptStatus::Failed->value : PaymentAttemptStatus::Succeeded->value,
             'connector_transaction_id' => is_scalar($transactionId) ? (string) $transactionId : null,
