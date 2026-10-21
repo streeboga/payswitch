@@ -42,6 +42,15 @@ final readonly class PaymentConfirmationService
                 throw new PaymentException('Payment session has expired', 'payment_expired', 'invalid_request_error', 400);
             }
 
+            // Клиент вернулся с банка и выбрал другой способ: форма провайдера ещё не оплачена, сессию
+            // открываем заново. Оплата по первой форме при этом не двоится: номер счёта у провайдера один.
+            $redirectRetry = $payment->status === PaymentStatus::RequiresCustomerAction
+                && empty($dto->payment_method_data) && empty($dto->payment_method_id);
+            if ($redirectRetry) {
+                $this->paymentRepository->update($payment, ['status' => PaymentStatus::RequiresPaymentMethod]);
+                $payment->refresh();
+            }
+
             if (! in_array($payment->status, [PaymentStatus::RequiresPaymentMethod, PaymentStatus::RequiresConfirmation], true)) {
                 throw new PaymentException(
                     "Payment cannot be confirmed in status '{$payment->status->value}'",

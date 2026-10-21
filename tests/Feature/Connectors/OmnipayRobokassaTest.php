@@ -220,3 +220,14 @@ it('lets an explicit test_mode in the details win over the column', function () 
     expect(rkFormFor($this, true, ['test_mode' => false]))->not->toHaveKey('IsTest')
         ->and(rkFormFor($this, false, ['test_mode' => true]))->toHaveKey('IsTest', '1');
 });
+
+test('a payment awaiting the customer reopens the session when another method is chosen', function () {
+    $first = app(PaymentConfirmationService::class)->confirm($this->payment->key, new ConfirmPaymentData(payment_method: 'card'), $this->merchant->id);
+    expect($first->status)->toBe(PaymentStatus::RequiresCustomerAction);
+
+    $second = app(PaymentConfirmationService::class)->confirm($this->payment->key, new ConfirmPaymentData(payment_method: 'sbp'), $this->merchant->id);
+
+    expect($second->status)->toBe(PaymentStatus::RequiresCustomerAction)
+        ->and($second->metadata['params']['IncCurrLabel'])->toBe('SBP')
+        ->and($second->metadata['params']['InvId'])->toBe($first->metadata['params']['InvId']);
+});
