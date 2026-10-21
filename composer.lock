@@ -5063,12 +5063,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:streeboga/payment-omnipay.git",
-                "reference": "661ed1bd4eec81574b2f6752f680a5ca5fed156e"
+                "reference": "1f559ae09971ef793e600442b7d72ba71b4bb655"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/streeboga/payment-omnipay/zipball/661ed1bd4eec81574b2f6752f680a5ca5fed156e",
-                "reference": "661ed1bd4eec81574b2f6752f680a5ca5fed156e",
+                "url": "https://api.github.com/repos/streeboga/payment-omnipay/zipball/1f559ae09971ef793e600442b7d72ba71b4bb655",
+                "reference": "1f559ae09971ef793e600442b7d72ba71b4bb655",
                 "shasum": ""
             },
             "require": {
