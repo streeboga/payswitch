@@ -69,6 +69,9 @@ final class ConnectorFactory
             $credentials = [];
         }
 
+        // The account's test_mode column is the switch a form sets; an explicit key in the details wins.
+        $credentials += ['test_mode' => (bool) $mca->test_mode];
+
         return new $driverClass($credentials);
     }
 

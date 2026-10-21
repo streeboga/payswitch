@@ -189,3 +189,23 @@ test('receipt state moves only by a fiscal signal and registered is final', func
     expect($service->markFailed($receipt->fresh(), 'x', 'y'))->toBeFalse();
     expect($receipt->fresh())->status->toBe(ReceiptStatus::Registered)->fiscal_url->toBe('https://ofd.test/r/1')->error_code->toBeNull();
 });
+
+function rkFormFor(object $t, bool $column, array $details): array
+{
+    $t->mca->update(['test_mode' => $column, 'connector_account_details' => ['login' => 'shop', 'password1' => RK_P1, 'password2' => RK_P2] + $details]);
+    $res = ConnectorFactory::resolve($t->mca->refresh())->createPaymentSession([
+        'payment_id' => $t->payment->key, 'amount' => 10050, 'currency' => 'RUB', 'invoice_number' => $t->payment->id,
+    ]);
+
+    return $res->toArray()['params'];
+}
+
+it('takes IsTest from the account test_mode column when the details do not say', function () {
+    expect(rkFormFor($this, true, []))->toHaveKey('IsTest', '1')
+        ->and(rkFormFor($this, false, []))->not->toHaveKey('IsTest');
+});
+
+it('lets an explicit test_mode in the details win over the column', function () {
+    expect(rkFormFor($this, true, ['test_mode' => false]))->not->toHaveKey('IsTest')
+        ->and(rkFormFor($this, false, ['test_mode' => true]))->toHaveKey('IsTest', '1');
+});
