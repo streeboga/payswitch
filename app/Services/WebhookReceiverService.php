@@ -75,6 +75,16 @@ final readonly class WebhookReceiverService
         }
 
         $payload = $request->all();
+        // The signature was checked against the raw body; a provider that sends it under an
+        // unexpected Content-Type (Robokassa's .NET client) leaves all() empty, and the
+        // payment would be processed as "no id" and refused.
+        if ($payload === [] && $raw !== '') {
+            if (str_starts_with(ltrim($raw), '{')) {
+                $payload = json_decode($raw, true) ?: [];
+            } else {
+                parse_str($raw, $payload);
+            }
+        }
 
         Log::info("Incoming webhook from {$mca->connector_name}", [
             'mca_key' => $mcaKey,

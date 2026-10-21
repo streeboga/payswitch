@@ -127,6 +127,17 @@ test('a signed ResultURL succeeds the payment, answers OK{InvId} and leaves the 
     Event::assertDispatchedTimes(PaymentStatusChanged::class, 1);
 });
 
+test('a ResultURL under an unexpected Content-Type is still read from the signed raw body', function () {
+    app(PaymentConfirmationService::class)->confirm($this->payment->key, new ConfirmPaymentData(payment_method: 'card'), $this->merchant->id);
+    $params = rkCallback($this);
+
+    $response = $this->call('POST', "/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [], [], [],
+        ['CONTENT_TYPE' => 'text/plain'], http_build_query($params));
+
+    expect($response->getContent())->toBe('OK'.$this->payment->id)
+        ->and($this->payment->fresh()->status)->toBe(PaymentStatus::Succeeded);
+});
+
 test('a repeated ResultURL is acknowledged and changes nothing', function () {
     app(PaymentConfirmationService::class)->confirm($this->payment->key, new ConfirmPaymentData(payment_method: 'card'), $this->merchant->id);
     rkPost($this, rkCallback($this))->assertOk();
