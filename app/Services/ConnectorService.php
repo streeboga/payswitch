@@ -72,6 +72,15 @@ final readonly class ConnectorService
             unset($updateData['profile_id']);
         }
 
+        // Реквизиты дополняются, а не заменяются: форма не знает сохранённых секретов
+        // и не шлёт пустые поля — замена стирала бы пароли магазина.
+        if (is_array($updateData['connector_account_details'] ?? null)) {
+            $updateData['connector_account_details'] = array_merge(
+                $connector->connector_account_details,
+                $updateData['connector_account_details'],
+            );
+        }
+
         $this->merchantRepository->updateConnector($connector, $updateData);
 
         $connector->refresh();

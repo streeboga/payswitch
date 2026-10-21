@@ -336,3 +336,23 @@ test('dashboard offers only connectable connectors', function () {
         ], $this->headers)
         ->assertStatus(422);
 });
+
+test('connector update adds credentials without erasing the saved secrets', function () {
+    $mca = MerchantConnectorAccount::create([
+        'merchant_account_id' => $this->merchant->id,
+        'business_profile_id' => $this->merchant->businessProfiles->first()->id,
+        'connector_name' => 'robokassa',
+        'connector_type' => 'fiz_operations',
+        'connector_account_details' => ['merchant_login' => 'shop', 'password1' => 'p1'],
+        'payment_methods_enabled' => [['payment_method' => 'card']],
+        'test_mode' => false,
+    ]);
+
+    $this->actingAs($this->user)
+        ->patchJson("/api/v1/dashboard/connectors/{$mca->key}", [
+            'connector_account_details' => ['fiscal' => 'true', 'sno' => 'usn_income'],
+        ], $this->headers)->assertOk();
+
+    expect($mca->refresh()->connector_account_details)
+        ->toMatchArray(['merchant_login' => 'shop', 'password1' => 'p1', 'fiscal' => 'true', 'sno' => 'usn_income']);
+});
