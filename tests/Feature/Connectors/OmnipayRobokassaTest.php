@@ -127,9 +127,9 @@ test('a signed ResultURL succeeds the payment, answers OK{InvId} and leaves the 
     Event::assertDispatchedTimes(PaymentStatusChanged::class, 1);
 });
 
-test('a ResultURL under an unexpected Content-Type is still read from the signed raw body', function () {
+test('a ResultURL with empty fields and an odd Content-Type is read from the signed raw body', function () {
     app(PaymentConfirmationService::class)->confirm($this->payment->key, new ConfirmPaymentData(payment_method: 'card'), $this->merchant->id);
-    $params = rkCallback($this);
+    $params = rkCallback($this, ['EMail' => '', 'Fee' => '']);
 
     $response = $this->call('POST', "/api/v1/webhooks/{$this->merchant->key}/{$this->mca->key}", [], [], [],
         ['CONTENT_TYPE' => 'text/plain'], http_build_query($params));
@@ -181,7 +181,7 @@ test('a callback for another connector account cannot move this account\'s payme
         'connector_name' => 'robokassa', 'connector_type' => 'fiz_operations',
         'connector_account_details' => ['login' => 'x', 'password1' => 'a', 'password2' => 'other-secret'], 'test_mode' => true,
     ]);
-    $params = rkCallback($this);
+    $params = rkCallback($this, ['EMail' => '', 'Fee' => '']);
 
     // Signed with Password#2 of this account, posted to the other one's URL.
     $this->call('POST', "/api/v1/webhooks/{$this->merchant->key}/{$other->key}", $params, [], [],

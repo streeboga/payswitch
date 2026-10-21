@@ -74,16 +74,17 @@ final readonly class WebhookReceiverService
             return ['status' => 'invalid_signature', 'code' => 401];
         }
 
-        $payload = $request->all();
-        // The signature was checked against the raw body; a provider that sends it under an
-        // unexpected Content-Type (Robokassa's .NET client) leaves all() empty, and the
-        // payment would be processed as "no id" and refused.
-        if ($payload === [] && $raw !== '') {
+        // The signature was checked against the raw body, so the payload is read from it
+        // too: all() turns empty fields (Robokassa's EMail, Fee) into null, which the
+        // gateway's strict notification rejects, and is empty under an odd Content-Type.
+        if ($raw !== '') {
             if (str_starts_with(ltrim($raw), '{')) {
                 $payload = json_decode($raw, true) ?: [];
             } else {
                 parse_str($raw, $payload);
             }
+        } else {
+            $payload = $request->all();
         }
 
         Log::info("Incoming webhook from {$mca->connector_name}", [
@@ -116,8 +117,6 @@ final readonly class WebhookReceiverService
                 return ['status' => 'error', 'code' => 500];
             }
         }
-
-        Log::info('DBG webhook result', ['ct' => $request->header('Content-Type'), 'keys' => array_keys($payload), 'refusal' => $refusal, 'ack' => $connector instanceof WebhookAcknowledging ? $connector->webhookAck($refusal, $payload) : null]);
 
         return [
             'status' => 'ok',
@@ -152,7 +151,6 @@ final readonly class WebhookReceiverService
         $orphan = $eventType === WebhookEventReading::RECEIPT ? null : 'unacceptable';
 
         $paymentId = $connector->extractPaymentIdFromWebhook($payload);
-        Log::info('DBG2', ['pid' => $paymentId, 'ma' => $merchantAccountId, 'found' => $paymentId ? (bool) $this->paymentRepository->findByKeyOrNull($paymentId, $merchantAccountId) : null, 'evt' => $eventType, 'name' => $connectorName]);
         if (! $paymentId) {
             return $orphan;
         }
