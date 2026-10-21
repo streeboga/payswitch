@@ -117,6 +117,8 @@ final readonly class WebhookReceiverService
             }
         }
 
+        Log::info('DBG webhook result', ['ct' => $request->header('Content-Type'), 'keys' => array_keys($payload), 'refusal' => $refusal, 'ack' => $connector instanceof WebhookAcknowledging ? $connector->webhookAck($refusal, $payload) : null]);
+
         return [
             'status' => 'ok',
             'code' => 200,
