@@ -203,7 +203,7 @@
         },
         {
             "name": "dedoc/scramble",
-            "version": "dev-bump",
+            "version": "dev-main",
             "dist": {
                 "type": "path",
                 "url": "packages/scramble",
@@ -4987,7 +4987,7 @@
         },
         {
             "name": "streeboga/payment-connectors",
-            "version": "dev-bump",
+            "version": "dev-main",
             "dist": {
                 "type": "path",
                 "url": "packages/streeboga/payment-connectors",
@@ -5023,7 +5023,7 @@
         },
         {
             "name": "streeboga/payment-data",
-            "version": "dev-bump",
+            "version": "dev-main",
             "dist": {
                 "type": "path",
                 "url": "packages/streeboga/payment-data",
