@@ -41,9 +41,10 @@ interface RefundRepositoryInterface
      * $maxAttempts раз и срок следующего опроса настал (первый — когда возврат не
      * трогали с $firstBefore: ответ на сам запрос возврата ещё может писаться).
      *
+     * @param  array<int, string>  $exceptConnectors  Симулятор: исход возврата задаёт test-psp, опрос не нужен.
      * @return Collection<int, Refund>
      */
-    public function dueForProviderPoll(int $maxAttempts, \DateTimeInterface $firstBefore, int $limit): Collection;
+    public function dueForProviderPoll(array $exceptConnectors, int $maxAttempts, \DateTimeInterface $firstBefore, int $limit): Collection;
 
     /**
      * @param  array<string, mixed>  $attributes

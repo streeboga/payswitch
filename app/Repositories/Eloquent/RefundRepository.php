@@ -104,12 +104,13 @@ final readonly class RefundRepository implements RefundRepositoryInterface
         return Refund::query()->whereKey($id)->lockForUpdate()->first();
     }
 
-    public function dueForProviderPoll(int $maxAttempts, \DateTimeInterface $firstBefore, int $limit): Collection
+    public function dueForProviderPoll(array $exceptConnectors, int $maxAttempts, \DateTimeInterface $firstBefore, int $limit): Collection
     {
         return Refund::query()
             ->where('status', RefundStatus::Pending)
             ->whereNotNull('connector_refund_id')
             ->whereNotNull('connector')
+            ->whereNotIn('connector', $exceptConnectors)
             ->where('poll_attempts', '<', $maxAttempts)
             ->where(fn (Builder $due) => $due
                 ->where('next_poll_at', '<=', now())

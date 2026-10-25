@@ -180,3 +180,17 @@ test('возврат без итога опрашивается с нараст�
         ->and(WebhookEvent::count())->toBe(0);
     Log::shouldHaveReceived('error')->withArgs(fn ($message) => str_contains($message, 'refund still pending after a day'))->once();
 });
+
+test('возврат симулятора не опрашивается и не занимает место настоящих', function () {
+    Log::spy();
+    config(['payswitch.test_connectors_enabled' => false]);
+    $simulated = pendingRefund(['connector' => 'test', 'connector_refund_id' => 'test_ref_1']);
+    $real = pendingRefund();
+    yooKassaRefund();
+
+    runRefundReconcile();
+
+    expect($simulated->fresh()->status)->toBe(RefundStatus::Pending)
+        ->and($real->fresh()->status)->toBe(RefundStatus::Succeeded);
+    Log::shouldNotHaveReceived('error');
+});

@@ -62,7 +62,7 @@ final readonly class ProviderPollingService
             fn (PaymentIntent $payment) => $this->pollPayment($payment),
         );
         $this->each(
-            $this->refunds->dueForProviderPoll(count(self::SCHEDULE), $firstBefore, $limit),
+            $this->refunds->dueForProviderPoll($testConnectors, count(self::SCHEDULE), $firstBefore, $limit),
             $deadline,
             fn (Refund $refund) => $this->pollRefund($refund),
         );
