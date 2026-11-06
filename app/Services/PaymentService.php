@@ -546,6 +546,7 @@ final readonly class PaymentService
         $connector = ConnectorFactory::resolve($mca);
         $result = $connector->getPaymentStatus([
             'transaction_id' => $lastAttempt->connector_transaction_id,
+            'payment_id' => $payment->key,
             // Настоящим провайдерам не нужны: сумму они называют сами. Тестовый коннектор
             // их возвращает — своей памяти у симулятора нет.
             'amount' => $payment->amount,

@@ -6,6 +6,8 @@ namespace App\Services;
 
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use Illuminate\Support\Facades\Log;
+use Streeboga\PaymentData\Enums\PaymentStatus;
 
 /**
  * Where to send a buyer coming back from Robokassa (SuccessURL / FailURL).
@@ -20,6 +22,7 @@ final readonly class RobokassaReturnService
     public function __construct(
         private MerchantRepositoryInterface $merchantRepository,
         private PaymentIntentRepositoryInterface $paymentRepository,
+        private PaymentService $payments,
     ) {}
 
     /**
@@ -39,6 +42,16 @@ final readonly class RobokassaReturnService
         $invId = $params['InvId'] ?? null;
         if ($payment === null || ! is_scalar($invId) || (string) $payment->id !== (string) $invId) {
             return null;
+        }
+
+        // The browser can return before ResultURL arrives. Ask Robokassa for
+        // the operation now; the same sync is also used by the background poller.
+        if (in_array($payment->status, [PaymentStatus::RequiresCustomerAction, PaymentStatus::Processing], true)) {
+            try {
+                $payment = $this->payments->sync($payment->key, $merchant->id);
+            } catch (\Throwable $e) {
+                Log::warning('Robokassa return: status sync failed', ['payment_id' => $payment->key, 'error' => $e->getMessage()]);
+            }
         }
 
         $returnUrl = $payment->return_url;

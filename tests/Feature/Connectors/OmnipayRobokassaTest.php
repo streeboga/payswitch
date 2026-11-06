@@ -6,8 +6,11 @@ use App\DataTransferObjects\Payment\ConfirmPaymentData;
 use App\Events\PaymentStatusChanged;
 use App\Services\PaymentConfirmationService;
 use App\Services\PaymentReceiptService;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Omnipay\Common\Http\ClientInterface;
+use Psr\Http\Message\ResponseInterface;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Enums\CaptureMethod;
 use Streeboga\PaymentData\Enums\PaymentStatus;
@@ -92,8 +95,42 @@ test('confirm opens a signed Robokassa form with the receipt and a pending recei
         ->and($meta['params'])->toHaveKey('Receipt')
         ->and(json_encode($meta))->not->toContain(RK_P1)->not->toContain(RK_P2);
 
+    expect($payment->paymentAttempts()->latest()->first()?->connector_transaction_id)->toBe((string) $payment->id);
+
     $receipt = $payment->receipts()->sole();
     expect($receipt->status)->toBe(ReceiptStatus::Pending)->and($receipt->total)->toBe(10050)->and($receipt->connector)->toBe('robokassa');
+});
+
+test('the buyer return checks the Robokassa operation and closes a paid payment', function () {
+    $this->mca->update([
+        'connector_account_details' => ['login' => 'shop', 'password1' => RK_P1, 'password2' => RK_P2, 'test_mode' => false],
+        'test_mode' => false,
+    ]);
+    $payment = app(PaymentConfirmationService::class)->confirm($this->payment->key, new ConfirmPaymentData(payment_method: 'sbp'), $this->merchant->id);
+    expect($payment->metadata['params']['IncCurrLabel'])->toBe('SBP');
+
+    $xml = '<R><Result><Code>0</Code></Result><State><Code>100</Code></State>'
+        .'<Info><OutSum>100.500000</OutSum></Info><UserFields><Field>'
+        .'<Name>Shp_payment_id</Name><Value>'.$payment->key.'</Value></Field></UserFields></R>';
+    RobokassaConnector::$http = new class($xml) implements ClientInterface
+    {
+        public function __construct(private string $xml) {}
+
+        public function request($method, $uri, array $headers = [], $body = null, $protocolVersion = '1.1'): ResponseInterface
+        {
+            return new Response(200, [], $this->xml);
+        }
+    };
+
+    try {
+        $this->get("/api/v1/pay/robokassa/{$this->merchant->key}/{$this->mca->key}/success?InvId={$payment->id}&Shp_payment_id={$payment->key}")
+            ->assertRedirect('https://merchant.test/return?payment_id='.$payment->key.'&status=succeeded');
+    } finally {
+        RobokassaConnector::$http = null;
+    }
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Succeeded)
+        ->and($payment->fresh()->amount_received)->toBe(10050);
 });
 
 test('invoice receipt reaches the signed Robokassa form', function () {
@@ -249,6 +286,6 @@ test('a payment awaiting the customer reopens the session when another method is
     $second = app(PaymentConfirmationService::class)->confirm($this->payment->key, new ConfirmPaymentData(payment_method: 'sbp'), $this->merchant->id);
 
     expect($second->status)->toBe(PaymentStatus::RequiresCustomerAction)
-        ->and($second->metadata['params']['IncCurrLabel'])->toBe('SBPPSR')
+        ->and($second->metadata['params']['IncCurrLabel'])->toBe('SBP')
         ->and($second->metadata['params']['InvId'])->toBe($first->metadata['params']['InvId']);
 });
