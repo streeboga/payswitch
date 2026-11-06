@@ -96,6 +96,27 @@ test('confirm opens a signed Robokassa form with the receipt and a pending recei
     expect($receipt->status)->toBe(ReceiptStatus::Pending)->and($receipt->total)->toBe(10050)->and($receipt->connector)->toBe('robokassa');
 });
 
+test('invoice receipt reaches the signed Robokassa form', function () {
+    $this->payment->update(['receipt' => [
+        'taxation_system' => 'usn_income', 'email' => 'buyer@example.test',
+        'items' => [[
+            'label' => 'Пополнение баланса', 'quantity' => 1, 'price' => 10050, 'amount' => 10050,
+            'vat' => 'none', 'payment_method' => 'full_prepayment', 'payment_object' => 'service',
+        ]],
+    ]]);
+
+    $payment = app(PaymentConfirmationService::class)->confirm($this->payment->key, new ConfirmPaymentData(payment_method: 'card'), $this->merchant->id);
+    $params = $payment->metadata['params'];
+    $receipt = json_decode(urldecode($params['Receipt']), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($params['Email'])->toBe('buyer@example.test')
+        ->and($receipt['sno'])->toBe('usn_income')
+        ->and($receipt['items'][0])->toMatchArray([
+            'name' => 'Пополнение баланса', 'sum' => 100.5, 'tax' => 'none',
+            'payment_method' => 'full_prepayment', 'payment_object' => 'service',
+        ]);
+});
+
 test('a non-fiscal account sends no receipt and opens no receipt row', function () {
     $this->mca->update(['connector_account_details' => ['login' => 'shop', 'password1' => RK_P1, 'password2' => RK_P2]]);
 

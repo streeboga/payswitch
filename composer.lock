@@ -5063,12 +5063,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:streeboga/payment-omnipay.git",
-                "reference": "4d0c6c9cb6ae1339c71662c03c04f133bd7045da"
+                "reference": "8be5db425835d076f44decc1af98eea466499f25"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/streeboga/payment-omnipay/zipball/4d0c6c9cb6ae1339c71662c03c04f133bd7045da",
-                "reference": "4d0c6c9cb6ae1339c71662c03c04f133bd7045da",
+                "url": "https://api.github.com/repos/streeboga/payment-omnipay/zipball/8be5db425835d076f44decc1af98eea466499f25",
+                "reference": "8be5db425835d076f44decc1af98eea466499f25",
                 "shasum": ""
             },
             "require": {
@@ -5104,7 +5104,7 @@
                 "source": "https://github.com/streeboga/payment-omnipay/tree/main",
                 "issues": "https://github.com/streeboga/payment-omnipay/issues"
             },
-            "time": "2026-10-21T13:46:50+00:00"
+            "time": "2026-11-06T09:01:53+00:00"
         },
         {
             "name": "symfony/clock",
