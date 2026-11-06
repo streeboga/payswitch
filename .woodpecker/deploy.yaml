@@ -1,6 +1,5 @@
-# Лёгкая выкладка: без тестов (тесты гоняем локально), без клона.
-# Приёмник на сервере сам делает git pull ровно этого sha, composer/npm-сборку,
-# migrate, config:clear, queue:restart и откат при провале проверки.
+# Выкладка Payswitch в k3s: приёмник на build node собирает образ из этого commit,
+# запускает миграции и перекатывает API, очередь и scheduler.
 labels:
   pool: services   # агент PHP-сервисов на 87.58.220.19, отдельно от очереди rosary
 
@@ -8,22 +7,21 @@ when:
   - event: [push, manual]
     branch: main
 
-skip_clone: true
-
 steps:
   - name: deploy
     image: alpine:3.22
     environment:
       DEPLOY_KEY: {from_secret: deploy_key}
-      DEPLOY_KNOWN_HOSTS: {from_secret: deploy_known_hosts}
     commands:
-      - apk add --no-cache openssh-client
+      - apk add --no-cache openssh-client tar
       - install -d -m 700 /tmp/k && printf '%s\n' "$DEPLOY_KEY" > /tmp/k/key && chmod 600 /tmp/k/key
-      - printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > /tmp/k/kh
-      - ssh -i /tmp/k/key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/tmp/k/kh -o ServerAliveInterval=15 deploy@85.198.101.184 "deploy $CI_COMMIT_SHA"
+      - tar -c --exclude=.git --exclude=node_modules --exclude=./vendor --exclude=.claude . |
+        ssh -i /tmp/k/key -o IdentitiesOnly=yes -o BatchMode=yes
+        -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/k/kh
+        -o ServerAliveInterval=15 root@195.133.35.162 "deploy payswitch $CI_COMMIT_SHA"
 
   - name: health
     image: alpine:3.22
     commands:
       - apk add --no-cache curl
-      - curl --fail --silent --show-error --output /dev/null --retry 10 --retry-delay 3 --retry-all-errors https://psapi.gnzs.pro/up https://payswitch.gnzs.pro/
+      - curl --fail --silent --show-error --output /dev/null --retry 10 --retry-delay 3 --retry-all-errors https://psapi.gnzs.pro/up
