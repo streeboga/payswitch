@@ -12,12 +12,14 @@ steps:
     image: alpine:3.22
     environment:
       DEPLOY_KEY: {from_secret: deploy_key}
+      DEPLOY_KNOWN_HOSTS: {from_secret: deploy_known_hosts}
     commands:
       - apk add --no-cache openssh-client tar
       - install -d -m 700 /tmp/k && printf '%s\n' "$DEPLOY_KEY" > /tmp/k/key && chmod 600 /tmp/k/key
+      - printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > /tmp/k/kh
       - tar -c --exclude=.git --exclude=node_modules --exclude=./vendor --exclude=.claude . |
-        ssh -i /tmp/k/key -o IdentitiesOnly=yes -o BatchMode=yes
-        -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/tmp/k/kh
+        ssh -C -i /tmp/k/key -o IdentitiesOnly=yes -o BatchMode=yes
+        -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/tmp/k/kh
         -o ServerAliveInterval=15 root@195.133.35.162 "deploy payswitch $CI_COMMIT_SHA"
 
   - name: health
