@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\RoutingRuleType;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Streeboga\PaymentConnectors\ConnectorCapabilities;
@@ -24,6 +25,8 @@ use Tests\Helpers\ScriptedConnector;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $this->signalsFile = sys_get_temp_dir().'/payswitch-native-'.bin2hex(random_bytes(6)).'.json';
+    config(['observability.file' => $this->signalsFile, 'tracing.endpoint' => null]);
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
     $this->profile = BusinessProfile::create(['merchant_account_id' => $this->merchant->id]);
@@ -212,6 +215,7 @@ test('priority routing: first connector declines, second succeeds', function () 
 
     $this->assertDatabaseHas('payment_attempts', ['connector' => 'declining', 'status' => 'failed', 'error_code' => 'card_declined']);
     $this->assertDatabaseHas('payment_attempts', ['connector' => 'test', 'status' => 'succeeded']);
+    expect(app(FallbackSignals::class)->render())->toContain('reason="alternate_connector",action="allow"} 1');
 });
 
 test('rule-based routing: matched connector declines, fallback succeeds', function () {
@@ -251,7 +255,31 @@ test('all connectors decline results in failed payment', function () {
         ->assertJsonPath('data.attributes.status', 'failed');
 
     $this->assertDatabaseMissing('payment_attempts', ['status' => 'succeeded']);
+    expect(app(FallbackSignals::class)->render())->toContain('reason="alternate_connector",action="allow"} 0');
 });
+
+test('success without matching amount keeps the original financial guard and emits its reason', function (array $evidence, string $status, string $reason, string $action): void {
+    ScriptedConnector::register('evidence', ['purchase' => ['success' => true, 'transaction_id' => 'evidence-txn', 'code' => 'ok', 'data' => $evidence]]);
+    MerchantConnectorAccount::create([
+        'merchant_account_id' => $this->merchant->id, 'business_profile_id' => $this->profile->id,
+        'connector_name' => 'evidence', 'connector_type' => 'fiz_operations',
+        'connector_account_details' => ['api_key' => 'PRIVATE_SENTINEL'], 'test_mode' => true,
+    ]);
+    RoutingRule::create([
+        'merchant_account_id' => $this->merchant->id, 'business_profile_id' => $this->profile->id,
+        'type' => RoutingRuleType::Priority, 'name' => 'Evidence first',
+        'rules' => ['connectors' => ['evidence', 'test']], 'active' => true, 'priority' => 1,
+    ]);
+    $id = failoverCreatePayment()->json('data.id');
+    failoverConfirmPayment($id)->assertOk()->assertJsonPath('data.attributes.status', $status);
+    expect(app(FallbackSignals::class)->render())
+        ->toContain('component="payment",operation="confirm",reason="'.$reason.'",action="'.$action.'"} 1')
+        ->not->toContain('PRIVATE_SENTINEL');
+    $this->assertDatabaseMissing('payment_attempts', ['connector' => 'test']);
+})->with([
+    'missing amount' => [[], 'processing', 'amount_unconfirmed', 'retry'],
+    'different amount' => [['amount' => 6541], 'requires_merchant_action', 'amount_mismatch', 'reject'],
+]);
 
 // П6: исключение, таймаут или неразобранный ответ — первый провайдер мог списать.
 // Данные карты второму не уходят: платёж остаётся processing, клиенту 502.
@@ -279,6 +307,7 @@ test('connector exception: no fallback, payment stays processing, 502', function
 
     $this->assertDatabaseHas('payment_attempts', ['connector' => 'throwing', 'status' => 'failed', 'error_code' => 'connector_exception']);
     $this->assertDatabaseMissing('payment_attempts', ['connector' => 'test']);
+    expect(app(FallbackSignals::class)->render())->toContain('reason="indeterminate_outcome",action="reject"} 1');
 });
 
 test('timeout swallowed by driver or unparsed answer: no fallback', function (array $answer) {
@@ -312,3 +341,7 @@ test('timeout swallowed by driver or unparsed answer: no fallback', function (ar
     'connector_error' => [['success' => false, 'transaction_id' => null, 'message' => 'cURL error 28', 'code' => 'connector_error']],
     'пустой код' => [['success' => false, 'transaction_id' => null, 'message' => 'T-Bank error', 'code' => '']],
 ]);
+
+afterEach(function (): void {
+    @unlink($this->signalsFile);
+});

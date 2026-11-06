@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -78,7 +79,7 @@ final class CleanExpiredPaymentsJob implements ShouldQueue
         try {
             event(new PaymentStatusChanged($payment, $previousStatus));
         } catch (\Throwable $e) {
-            report($e);
+            app(FallbackSignals::class)->record('status_dispatch', $e);
         }
 
         return true;

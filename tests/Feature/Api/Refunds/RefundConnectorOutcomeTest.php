@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Jobs\DeliverWebhookJob;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
@@ -25,6 +26,8 @@ use Tests\Helpers\ScriptedConnector;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $this->signalsFile = sys_get_temp_dir().'/payswitch-native-'.bin2hex(random_bytes(6)).'.json';
+    config(['observability.file' => $this->signalsFile, 'tracing.endpoint' => null]);
     $org = Organization::create(['name' => 'Org']);
     $merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
     $profile = BusinessProfile::create(['merchant_account_id' => $merchant->id]);
@@ -89,6 +92,7 @@ test('таймаут PSP: возврат остаётся pending, 502 с клю
 
     expect(Refund::count())->toBe(1)
         ->and(ScriptedConnector::callsTo('refund'))->toHaveCount(1);
+    expect(app(FallbackSignals::class)->render())->toContain('component="refund",operation="create",reason="indeterminate_outcome",action="reject"} 1');
 });
 
 test('исключение, проглоченное драйвером (code=connector_error), тоже не делает возврат failed', function () {
@@ -209,4 +213,8 @@ test('причина и состав чека возврата доходят д
 
     expect(ScriptedConnector::callsTo('refund'))->toHaveCount(1)
         ->and(ScriptedConnector::callsTo('refund')[0])->toMatchArray(['reason' => 'Отказ от товара', 'receipt' => $receipt]);
+});
+
+afterEach(function (): void {
+    @unlink($this->signalsFile);
 });

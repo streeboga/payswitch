@@ -6,6 +6,7 @@ use App\Jobs\DeliverWebhookJob;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\WebhookEventRepositoryInterface;
 use App\Services\WebhookService;
+use App\Support\Observability\FallbackSignals;
 use App\Support\OutboundUrlGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Queue\Events\JobFailed;
@@ -23,6 +24,8 @@ use Streeboga\PaymentData\Support\WebhookSigner;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $this->signalsFile = sys_get_temp_dir().'/payswitch-native-'.bin2hex(random_bytes(6)).'.json';
+    config(['observability.file' => $this->signalsFile, 'tracing.endpoint' => null]);
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
     $this->profile = BusinessProfile::create([
@@ -59,6 +62,7 @@ test('marks delivery attempt on failure', function () {
 
     expect($this->event->fresh()->delivered)->toBeFalse();
     expect($this->event->fresh()->delivery_attempts)->toBe(1);
+    expect(app(FallbackSignals::class)->render())->toContain('component="webhook",operation="deliver",reason="delivery_failed",action="retry"} 1');
 });
 
 test('skips already delivered event', function () {
@@ -85,6 +89,7 @@ test('no webhook url: records the error, warns and retries instead of dropping t
     expect($event->delivered)->toBeFalse()
         ->and($event->delivery_attempts)->toBe(1)
         ->and($event->last_error)->toBe('No webhook URL configured');
+    expect(app(FallbackSignals::class)->render())->toContain('component="webhook",operation="deliver",reason="missing_url",action="retry"} 1');
     Log::shouldHaveReceived('warning')->withArgs(fn ($message) => str_contains($message, $event->key));
 });
 
@@ -106,10 +111,22 @@ test('exhausted attempts: job fails loudly and keeps the real error', function (
         ->and($event->delivery_attempts)->toBe(config('payswitch.webhook.max_attempts'))
         ->and($event->last_error)->toContain('HTTP 500')
         ->and($event->last_error)->toContain('permanently failed');
+    expect(app(FallbackSignals::class)->render())->toContain('component="webhook",operation="deliver",reason="attempts_exhausted",action="reject"} 1');
     Log::shouldHaveReceived('error')->withArgs(
         fn ($message, $context = []) => str_contains($message, $event->key)
-            && str_contains($context['last_error'] ?? '', 'HTTP 500'),
+            && ($context['error_type'] ?? null) === RuntimeException::class
+            && ! array_key_exists('last_error', $context),
     );
+});
+
+test('permanent delivery diagnostics never log an exception message', function () {
+    Log::spy();
+    (new DeliverWebhookJob($this->event->id))->failed(new RuntimeException('PRIVATE_SENTINEL'));
+
+    Log::shouldHaveReceived('error')->withArgs(
+        fn (string $message, array $context): bool => ! str_contains($message.json_encode($context, JSON_THROW_ON_ERROR), 'PRIVATE_SENTINEL')
+            && ($context['error_type'] ?? null) === RuntimeException::class,
+    )->once();
 });
 
 test('delivers to the profile of the event, not an arbitrary merchant profile', function () {
@@ -268,4 +285,8 @@ test('rebound dns to a private address blocks delivery on this attempt', functio
 
     Http::assertNothingSent();
     expect($this->event->fresh()->last_error)->toContain('blocked');
+});
+
+afterEach(function (): void {
+    @unlink($this->signalsFile);
 });

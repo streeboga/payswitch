@@ -15,6 +15,7 @@ use App\Services\Payout\PayoutChannels;
 use App\Services\Payout\PayoutExecutionService;
 use App\Services\Payout\PayoutResultService;
 use App\Services\Payout\PayoutService;
+use App\Support\Observability\FallbackSignals;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -139,6 +140,8 @@ test('reserve is rechecked before sending and changed approval is rejected', fun
 });
 
 test('timeout retains one attempt and restart syncs without failover', function () {
+    $file = sys_get_temp_dir().'/payout-signals-'.bin2hex(random_bytes(6)).'.json';
+    config(['observability.file' => $file]);
     $this->service->confirm($this->payout->key, $this->merchant->id, 'project-A');
     $executor = app(PayoutExecutionService::class);
     for ($i = 0; $i < 10; $i++) {
@@ -155,6 +158,9 @@ test('timeout retains one attempt and restart syncs without failover', function 
     }
     expect(DB::table('payout_external_events')->count())->toBe(1);
     $this->assertDatabaseCount('webhook_events', 1);
+    expect(app(FallbackSignals::class)->render())
+        ->toContain('component="payout",operation="execute",reason="indeterminate_outcome",action="reject"} 1');
+    @unlink($file);
 });
 
 test('bank signature is pending and reversal preserves success evidence', function () {

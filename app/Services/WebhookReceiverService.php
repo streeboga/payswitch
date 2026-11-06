@@ -9,6 +9,7 @@ use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Repositories\Contracts\RefundRepositoryInterface;
+use App\Support\Observability\FallbackSignals;
 use App\Support\ProviderAmount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -98,20 +99,23 @@ final readonly class WebhookReceiverService
             // Тело не той формы: повтор его не исправит, отказываем без 500.
             Log::error('Webhook payload of the wrong shape', [
                 'mca_key' => $mcaKey,
-                'error' => $e->getMessage(),
+                'error_type' => $e::class,
             ]);
 
             $refusal = 'unacceptable';
         } catch (\Throwable $e) {
             Log::error('Webhook processing failed', [
                 'mca_key' => $mcaKey,
-                'error' => $e->getMessage(),
+                'error_type' => $e::class,
             ]);
 
             // Check — вопрос «можно ли списать»: не знаем ответа — не ручаемся.
             if ($connector instanceof WebhookEventReading && $connector->webhookEventType($payload) === WebhookEventReading::CHECK) {
+                app(FallbackSignals::class)->record('webhook_receive_reject', $e);
                 $refusal = 'unacceptable';
             } else {
+                app(FallbackSignals::class)->record('webhook_receive_retry', $e);
+
                 // Отчёт о списании, который мы не записали (база, слушатель): ответ
                 // 200 с отказом провайдер не повторяет, 5xx — повторит.
                 return ['status' => 'error', 'code' => 500];

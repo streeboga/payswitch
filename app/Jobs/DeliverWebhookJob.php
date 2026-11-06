@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\WebhookEventRepositoryInterface;
+use App\Support\Observability\FallbackSignals;
 use App\Support\OutboundUrlGuard;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,7 +15,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Streeboga\PaymentData\Models\WebhookEvent;
 use Streeboga\PaymentData\Support\WebhookSigner;
 
@@ -52,7 +52,7 @@ final class DeliverWebhookJob implements ShouldQueue
         if (! $profile || ! $profile->webhook_url) {
             // Не выбрасывать: адрес могут прописать позже, событие — деньги получателя.
             Log::warning("No webhook URL configured for event {$event->key}", ['merchant_account_id' => $event->merchant_account_id]);
-            $this->retryOrFail($webhookRepository, $event, 'No webhook URL configured');
+            $this->retryOrFail($webhookRepository, $event, 'No webhook URL configured', 'webhook_missing_url');
 
             return;
         }
@@ -60,6 +60,7 @@ final class DeliverWebhookJob implements ShouldQueue
         // Каждая попытка заново: DNS мог смениться со времени записи адреса.
         $target = OutboundUrlGuard::resolve($profile->webhook_url);
         if ($target === null) {
+            app(FallbackSignals::class)->record('webhook_target');
             Log::warning("Blocked webhook delivery to unsafe URL for event {$this->webhookEventId}");
             $webhookRepository->markFailed($event, $event->delivery_attempts, 'Webhook URL blocked: not a public https address');
 
@@ -67,6 +68,7 @@ final class DeliverWebhookJob implements ShouldQueue
         }
 
         if (! $profile->payment_response_hash_key) {
+            app(FallbackSignals::class)->record('webhook_signing');
             Log::warning("No webhook signing key for merchant {$event->merchant_account_id}");
             $webhookRepository->markFailed($event, $event->delivery_attempts, 'No signing key configured');
 
@@ -113,6 +115,7 @@ final class DeliverWebhookJob implements ShouldQueue
 
             if ($response->successful()) {
                 $webhookRepository->markDelivered($event, $event->delivery_attempts + 1);
+                app(FallbackSignals::class)->succeeded('webhook_delivery');
 
                 return;
             }
@@ -120,7 +123,7 @@ final class DeliverWebhookJob implements ShouldQueue
             // Тело ответа получателя в last_error не кладём: оно видно мерчанту (SSRF-эхо).
             $error = "HTTP {$response->status()}";
         } catch (\Exception $e) {
-            Log::warning("Webhook delivery error for event {$event->key}: ".Str::limit($e->getMessage(), 300));
+            Log::warning('Webhook delivery network error', ['error_type' => $e::class]);
             $error = 'Delivery failed: network error';
         }
 
@@ -132,7 +135,7 @@ final class DeliverWebhookJob implements ShouldQueue
      * либо, когда попытки кончились, провалить job — тогда вызовется failed()
      * и запись ляжет в failed_jobs.
      */
-    private function retryOrFail(WebhookEventRepositoryInterface $webhookRepository, WebhookEvent $event, string $error): void
+    private function retryOrFail(WebhookEventRepositoryInterface $webhookRepository, WebhookEvent $event, string $error, string $signal = 'webhook_retry'): void
     {
         $attempts = $event->delivery_attempts + 1;
         $webhookRepository->markFailed($event, $attempts, $error);
@@ -140,16 +143,19 @@ final class DeliverWebhookJob implements ShouldQueue
         $exception = new \RuntimeException("Webhook delivery failed for event {$event->key} after {$attempts} attempts");
 
         if ($attempts >= config('payswitch.webhook.max_attempts', 16)) {
+            app(FallbackSignals::class)->record('webhook_exhausted');
             $this->fail($exception);
 
             return;
         }
 
+        app(FallbackSignals::class)->record($signal);
         throw $exception;
     }
 
     public function failed(\Throwable $e): void
     {
+        app(FallbackSignals::class)->record('webhook_permanent', $e);
         $webhookRepository = app(WebhookEventRepositoryInterface::class);
         $event = $webhookRepository->findById($this->webhookEventId);
 
@@ -167,8 +173,7 @@ final class DeliverWebhookJob implements ShouldQueue
             'merchant_account_id' => $event?->merchant_account_id,
             'payment_id' => $event?->content['payment_id'] ?? null,
             'attempts' => $event?->delivery_attempts,
-            'last_error' => $event?->last_error,
-            'error' => $e->getMessage(),
+            'error_type' => $e::class,
         ]);
     }
 }

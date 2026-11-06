@@ -9,6 +9,7 @@ use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Repositories\Contracts\RefundRepositoryInterface;
 use App\Support\CanonicalRequest;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -62,6 +63,8 @@ final readonly class RefundService
                 throw $e;
             }
 
+            app(FallbackSignals::class)->record('refund_idempotency');
+
             return $this->replayed($existing, $dto);
         }
 
@@ -86,6 +89,7 @@ final readonly class RefundService
         }
 
         if (ConnectorErrorNormalizer::isIndeterminate($result)) {
+            app(FallbackSignals::class)->record('refund_unknown');
             if (! empty($result['transaction_id'])) {
                 $this->refundRepository->updateRefund($refund, ['connector_refund_id' => $result['transaction_id']]);
             }
@@ -94,8 +98,7 @@ final readonly class RefundService
                 'refund_id' => $refund->key,
                 'payment_id' => $payment->key,
                 'connector' => $refund->connector,
-                'code' => $result['code'] ?? null,
-                'message' => $result['message'] ?? null,
+                'error_type' => 'indeterminate_outcome',
             ]);
 
             throw new PaymentException(
