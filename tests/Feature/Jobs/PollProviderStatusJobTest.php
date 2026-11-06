@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Jobs\PollProviderStatusJob;
 use App\Services\ProviderPollingService;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -24,6 +25,8 @@ uses(RefreshDatabase::class);
  * Платёж «в обработке» не ждёт уведомления вечно: провайдера спрашивает расписание.
  */
 beforeEach(function () {
+    $this->signalsFile = sys_get_temp_dir().'/payswitch-native-'.bin2hex(random_bytes(6)).'.json';
+    config(['observability.file' => $this->signalsFile, 'tracing.endpoint' => null]);
     Queue::fake();
     ScriptedConnector::register('scripted');
 
@@ -152,6 +155,7 @@ test('сутки без итога: processing уходит на разбор м
         ->and($payment->fresh()->error_code)->toBe(ProviderPollingService::UNCONFIRMED)
         ->and(($this->events)())->toBe([['payment_status_changed', 'requires_merchant_action']])
         ->and(ScriptedConnector::callsTo('getPaymentStatus'))->toHaveCount(count(ProviderPollingService::SCHEDULE));
+    expect(app(FallbackSignals::class)->render())->toContain('component="polling",operation="payment",reason="attempts_exhausted",action="reject"} 1');
 });
 
 test('смена статуса начинает опрос заново', function () {
@@ -183,4 +187,8 @@ test('опрос стоит в расписании каждую минуту', 
 
     expect($event)->not->toBeNull()
         ->and($event->expression)->toBe('* * * * *');
+});
+
+afterEach(function (): void {
+    @unlink($this->signalsFile);
 });

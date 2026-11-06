@@ -11,6 +11,7 @@ use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Support\CanonicalRequest;
+use App\Support\Observability\FallbackSignals;
 use App\Support\ProviderAmount;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +103,8 @@ final readonly class PaymentService
             if (! $existing) {
                 throw $e;
             }
+
+            app(FallbackSignals::class)->record('payment_idempotency');
 
             return $this->replayed($existing, $dto);
         }
@@ -505,11 +508,11 @@ final readonly class PaymentService
             return;
         }
 
+        app(FallbackSignals::class)->record('void_failed');
         Log::error('Void at connector failed, payment not cancelled', [
             'payment_id' => $payment->key,
             'connector' => $mca->connector_name,
-            'code' => $result['code'] ?? null,
-            'message' => $result['message'] ?? null,
+            'error_type' => 'provider_refusal',
         ]);
 
         throw new PaymentException(
@@ -544,14 +547,19 @@ final readonly class PaymentService
         }
 
         $connector = ConnectorFactory::resolve($mca);
-        $result = $connector->getPaymentStatus([
-            'transaction_id' => $lastAttempt->connector_transaction_id,
-            'payment_id' => $payment->key,
-            // Настоящим провайдерам не нужны: сумму они называют сами. Тестовый коннектор
-            // их возвращает — своей памяти у симулятора нет.
-            'amount' => $payment->amount,
-            'currency' => $payment->currency,
-        ]);
+        try {
+            $result = $connector->getPaymentStatus([
+                'transaction_id' => $lastAttempt->connector_transaction_id,
+                'payment_id' => $payment->key,
+                // Настоящим провайдерам не нужны: сумму они называют сами. Тестовый коннектор
+                // их возвращает — своей памяти у симулятора нет.
+                'amount' => $payment->amount,
+                'currency' => $payment->currency,
+            ]);
+        } catch (\Throwable $exception) {
+            app(FallbackSignals::class)->record('payment_sync', $exception);
+            throw $exception;
+        }
 
         $pspStatus = $result['data']['status'] ?? null;
         $newStatus = $pspStatus ? $connector->mapPaymentStatusToInternal($pspStatus) : null;
@@ -562,8 +570,14 @@ final readonly class PaymentService
         $confirmedAmount = ProviderAmount::minor($connector, $result['data'] ?? []);
         if ($newStatus === PaymentStatus::Succeeded) {
             $newStatus = ProviderAmount::paidStatus($confirmedAmount, $payment->amount);
+            if ($newStatus !== PaymentStatus::Succeeded) {
+                app(FallbackSignals::class)->record($newStatus === PaymentStatus::Processing ? 'sync_amount_unconfirmed' : 'sync_amount_mismatch');
+            }
         }
 
+        if ($newStatus === null) {
+            app(FallbackSignals::class)->record('sync_unconfirmed');
+        }
         if (! $newStatus || $newStatus === $payment->status) {
             return $payment;
         }
@@ -621,7 +635,7 @@ final readonly class PaymentService
         try {
             event(new PaymentStatusChanged($payment, $previousStatus));
         } catch (\Throwable $e) {
-            report($e);
+            app(FallbackSignals::class)->record('status_dispatch', $e);
         }
     }
 }

@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Support\Facades\Log;
 use Streeboga\PaymentConnectors\ConnectorFactory;
 use Streeboga\PaymentData\Contracts\RefundStatusQueryable;
@@ -43,7 +44,7 @@ final readonly class RefundReconciliationService
         try {
             $observed = $connector->getRefundStatus($refund->connector_refund_id);
         } catch (\Throwable $e) {
-            Log::warning('Refund reconciliation: provider did not answer', ['refund_id' => $refund->key, 'error' => $e->getMessage()]);
+            app(FallbackSignals::class)->record('refund_reconcile_failure', $e);
 
             return false;
         }
@@ -65,20 +66,21 @@ final readonly class RefundReconciliationService
             || $observed['payment_transaction_id'] !== $transactionId
             || $observed['amount'] !== $refund->amount
             || strtoupper((string) $observed['currency']) !== strtoupper($refund->currency)) {
-            Log::error('Refund reconciliation: provider refund does not match ours, left pending', [
-                'refund_id' => $refund->key,
-                'connector' => $refund->connector,
-                'expected' => [$transactionId, $refund->amount, $refund->currency],
-                'observed' => $observed,
-            ]);
+            app(FallbackSignals::class)->record('refund_reconcile_mismatch');
+            Log::error('Refund reconciliation: provider refund does not match ours, left pending');
 
             return false;
         }
 
-        return $this->results->settle(
+        $settled = $this->results->settle(
             $refund,
             $status,
             error: ['code' => 'refund_canceled', 'message' => 'The provider cancelled the refund'],
         );
+        if ($settled) {
+            app(FallbackSignals::class)->succeeded('refund_reconcile');
+        }
+
+        return $settled;
     }
 }

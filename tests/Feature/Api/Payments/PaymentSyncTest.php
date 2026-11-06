@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Events\PaymentStatusChanged;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -24,6 +25,8 @@ use Streeboga\PaymentData\Support\IdGenerator;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $this->signalsFile = sys_get_temp_dir().'/payswitch-sync-signals-'.bin2hex(random_bytes(6)).'.json';
+    config(['observability.file' => $this->signalsFile, 'tracing.endpoint' => null]);
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
     $this->profile = BusinessProfile::create(['merchant_account_id' => $this->merchant->id]);
@@ -257,6 +260,12 @@ test('sync when PSP returns unknown status leaves payment unchanged', function (
 
     $payment->refresh();
     expect($payment->status)->toBe(PaymentStatus::Processing);
+    expect(app(FallbackSignals::class)->render())
+        ->toContain('component="payment",operation="sync",reason="status_unconfirmed",action="degraded"} 1');
+});
+
+afterEach(function (): void {
+    @unlink($this->signalsFile);
 });
 
 test('sync does not overwrite a status a concurrent webhook just set', function () {

@@ -6,7 +6,7 @@ namespace App\Services;
 
 use App\Repositories\Contracts\MerchantRepositoryInterface;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
-use Illuminate\Support\Facades\Log;
+use App\Support\Observability\FallbackSignals;
 use Streeboga\PaymentData\Enums\PaymentStatus;
 
 /**
@@ -50,7 +50,7 @@ final readonly class RobokassaReturnService
             try {
                 $payment = $this->payments->sync($payment->key, $merchant->id);
             } catch (\Throwable $e) {
-                Log::warning('Robokassa return: status sync failed', ['payment_id' => $payment->key, 'error' => $e->getMessage()]);
+                app(FallbackSignals::class)->record('return_sync', $e);
             }
         }
 

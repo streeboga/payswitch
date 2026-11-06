@@ -8,6 +8,7 @@ use App\Contracts\PayoutAuthorizationVerifier;
 use App\Enums\PayoutStatus;
 use App\Models\Payout;
 use App\Repositories\Eloquent\PayoutRepository;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentData\Exceptions\PaymentException;
 
@@ -61,6 +62,8 @@ final readonly class PayoutExecutionService
             return $this->results->apply($key, $merchantId, $projectId, $result);
         }
 
+        app(FallbackSignals::class)->record('payout_unknown');
+
         return DB::transaction(function () use ($key, $merchantId, $projectId) {
             $current = $this->repository->find($key, $merchantId, $projectId);
             if ($current->status === PayoutStatus::Processing) {
@@ -78,6 +81,10 @@ final readonly class PayoutExecutionService
         $attempt = $this->repository->attempt($payout);
         // Sync remains available after success to observe later reversals.
         $result = $this->channels->resolve($payout->channel)->sync($payout, $attempt);
+
+        if ($result === null) {
+            app(FallbackSignals::class)->record('payout_sync_pending');
+        }
 
         return $result === null ? $payout : $this->results->apply($key, $merchantId, $projectId, $result);
     }

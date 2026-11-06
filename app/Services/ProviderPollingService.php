@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
 use App\Repositories\Contracts\RefundRepositoryInterface;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -66,6 +67,7 @@ final readonly class ProviderPollingService
             $deadline,
             fn (Refund $refund) => $this->pollRefund($refund),
         );
+        app(FallbackSignals::class)->succeeded('provider_poll');
     }
 
     /**
@@ -91,7 +93,7 @@ final readonly class ProviderPollingService
             try {
                 $poll($model);
             } catch (\Throwable $e) {
-                report($e);
+                app(FallbackSignals::class)->record('poll_failure', $e);
             } finally {
                 $lock->release();
             }
@@ -104,7 +106,7 @@ final readonly class ProviderPollingService
             $this->paymentService->sync($payment->key, $payment->merchant_account_id);
         } catch (\Throwable $e) {
             // Коннектор отключён или провайдер не ответил — тоже опрос без итога.
-            Log::warning('Provider poll: payment sync failed', ['payment_id' => $payment->key, 'error' => $e->getMessage()]);
+            app(FallbackSignals::class)->record('poll_payment_failure', $e);
         }
 
         $payment->refresh();
@@ -114,6 +116,7 @@ final readonly class ProviderPollingService
 
         $state = self::after($payment->poll_attempts + 1);
         if ($state['next_poll_at'] !== null) {
+            app(FallbackSignals::class)->record('poll_payment_retry');
             $this->payments->update($payment, $state);
 
             return;
@@ -149,13 +152,14 @@ final readonly class ProviderPollingService
             return;
         }
 
+        app(FallbackSignals::class)->record('poll_payment_exhausted');
         Log::error('Provider poll: no outcome within a day, payment closed', ['payment_id' => $payment->key, 'from' => $previous->value, 'to' => $payment->status->value]);
 
         // Недосланное событие догонит ReconcileWebhookEventsJob.
         try {
             event(new PaymentStatusChanged($payment, $previous->value));
         } catch (\Throwable $e) {
-            report($e);
+            app(FallbackSignals::class)->record('status_dispatch', $e);
         }
     }
 
@@ -171,7 +175,10 @@ final readonly class ProviderPollingService
         // Конечного статуса нет намеренно: деньги могли уйти, а события «возврат на
         // разборе» у мерчанта нет. pending держит сумму; закроет уведомление или человек.
         if ($state['next_poll_at'] === null) {
+            app(FallbackSignals::class)->record('poll_refund_exhausted');
             Log::error('Provider poll: refund still pending after a day, left for manual handling', ['refund_id' => $refund->key, 'connector' => $refund->connector]);
+        } else {
+            app(FallbackSignals::class)->record('poll_refund_retry');
         }
     }
 

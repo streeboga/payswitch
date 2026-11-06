@@ -8,6 +8,7 @@ use App\DataTransferObjects\Payment\ConfirmPaymentData;
 use App\Enums\PaymentAttemptStatus;
 use App\Events\PaymentStatusChanged;
 use App\Repositories\Contracts\PaymentIntentRepositoryInterface;
+use App\Support\Observability\FallbackSignals;
 use App\Support\ProviderAmount;
 use Illuminate\Support\Facades\DB;
 use Streeboga\PaymentConnectors\ConnectorErrorNormalizer;
@@ -136,6 +137,7 @@ final readonly class PaymentConfirmationService
                 $fallbackMca = $this->routingService->fallback($merchantAccountId, [$mca->connector_name]);
 
                 if ($fallbackMca) {
+                    app(FallbackSignals::class)->record('connector_switch');
                     $fallbackResult = $this->executeConnectorCall($payment, $fallbackMca, $connectorParams);
 
                     if ($fallbackResult['success']) {
@@ -186,6 +188,7 @@ final readonly class PaymentConfirmationService
                 ? $connector->authorize($connectorParams)
                 : $connector->purchase($connectorParams);
         } catch (\Throwable $e) {
+            app(FallbackSignals::class)->record('connector_exception', $e);
             $this->paymentRepository->createAttempt($payment, [
                 'connector' => $mca->connector_name,
                 'status' => PaymentAttemptStatus::Failed->value,
@@ -232,6 +235,7 @@ final readonly class PaymentConfirmationService
         try {
             $result = $connector->createPaymentSession($connectorParams);
         } catch (\Throwable $e) {
+            app(FallbackSignals::class)->record('session_exception', $e);
             $this->paymentRepository->createAttempt($payment, [
                 'connector' => $mca->connector_name,
                 'status' => PaymentAttemptStatus::Failed->value,
@@ -339,6 +343,9 @@ final readonly class PaymentConfirmationService
         $newStatus = $payment->capture_method === CaptureMethod::Manual
             ? PaymentStatus::RequiresCapture
             : ProviderAmount::paidStatus($confirmedAmount, $payment->amount);
+        if ($newStatus === PaymentStatus::Processing || $newStatus === PaymentStatus::RequiresMerchantAction) {
+            app(FallbackSignals::class)->record($newStatus === PaymentStatus::Processing ? 'confirm_amount_unconfirmed' : 'confirm_amount_mismatch');
+        }
 
         PaymentStateMachine::assertTransition($payment->status, $newStatus);
         $this->paymentRepository->update($payment, [
@@ -370,6 +377,7 @@ final readonly class PaymentConfirmationService
      */
     private function applyUnknownOutcomeStatus(PaymentIntent $payment, string $connectorName, array $result): void
     {
+        app(FallbackSignals::class)->record('payment_unknown');
         PaymentStateMachine::assertTransition($payment->status, PaymentStatus::Processing);
         $this->paymentRepository->update($payment, [
             'status' => PaymentStatus::Processing,
@@ -398,7 +406,7 @@ final readonly class PaymentConfirmationService
         try {
             event(new PaymentStatusChanged($payment, $previousStatus));
         } catch (\Throwable $e) {
-            report($e);
+            app(FallbackSignals::class)->record('status_dispatch', $e);
         }
     }
 }

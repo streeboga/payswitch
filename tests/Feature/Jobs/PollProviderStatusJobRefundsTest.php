@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Jobs\DeliverWebhookJob;
 use App\Jobs\PollProviderStatusJob;
+use App\Support\Observability\FallbackSignals;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,8 @@ use Streeboga\PaymentData\Models\WebhookEvent;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    $this->signalsFile = sys_get_temp_dir().'/payswitch-native-'.bin2hex(random_bytes(6)).'.json';
+    config(['observability.file' => $this->signalsFile, 'tracing.endpoint' => null]);
     Queue::fake();
     $org = Organization::create(['name' => 'Org']);
     $this->merchant = MerchantAccount::create(['org_id' => $org->id, 'name' => 'M']);
@@ -140,6 +143,7 @@ test('ответ про другой платёж, сумму или валют�
     expect($refund->fresh()->status)->toBe(RefundStatus::Pending)
         ->and(WebhookEvent::count())->toBe(0);
     Log::shouldHaveReceived('error')->withArgs(fn ($message) => str_contains($message, 'does not match'))->once();
+    expect(app(FallbackSignals::class)->render())->toContain('component="refund",operation="reconcile",reason="provider_mismatch",action="reject"} 1');
 })->with([
     'платёж' => [['payment_id' => 'yk_pay_other']],
     'сумма' => [['amount' => ['value' => '40.01', 'currency' => 'RUB']]],
@@ -179,6 +183,7 @@ test('возврат без итога опрашивается с нараст�
         ->and($refund->fresh()->next_poll_at)->toBeNull()
         ->and(WebhookEvent::count())->toBe(0);
     Log::shouldHaveReceived('error')->withArgs(fn ($message) => str_contains($message, 'refund still pending after a day'))->once();
+    expect(app(FallbackSignals::class)->render())->toContain('component="polling",operation="refund",reason="attempts_exhausted",action="reject"} 1');
 });
 
 test('возврат симулятора не опрашивается и не занимает место настоящих', function () {
@@ -193,4 +198,8 @@ test('возврат симулятора не опрашивается и не 
     expect($simulated->fresh()->status)->toBe(RefundStatus::Pending)
         ->and($real->fresh()->status)->toBe(RefundStatus::Succeeded);
     Log::shouldNotHaveReceived('error');
+});
+
+afterEach(function (): void {
+    @unlink($this->signalsFile);
 });
