@@ -228,6 +228,6 @@ test('a payment awaiting the customer reopens the session when another method is
     $second = app(PaymentConfirmationService::class)->confirm($this->payment->key, new ConfirmPaymentData(payment_method: 'sbp'), $this->merchant->id);
 
     expect($second->status)->toBe(PaymentStatus::RequiresCustomerAction)
-        ->and($second->metadata['params']['IncCurrLabel'])->toBe('SBP')
+        ->and($second->metadata['params']['IncCurrLabel'])->toBe('SBPPSR')
         ->and($second->metadata['params']['InvId'])->toBe($first->metadata['params']['InvId']);
 });
