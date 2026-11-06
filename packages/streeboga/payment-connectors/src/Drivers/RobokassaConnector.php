@@ -110,10 +110,8 @@ final class RobokassaConnector implements ConnectorInterface, WebhookAcknowledgi
         // Pre-select payment method if specified
         $method = $params['payment_method'] ?? null;
         if ($method === 'card') {
-            $formParams['IncCurrLabel'] = 'BankCardPSR';
+            $formParams['IncCurrLabel'] = 'BankCard';
         } elseif ($method === 'sbp') {
-            // NOTE: 'SBP' is the commonly used label; verify with real merchant
-            // credentials via Robokassa GetCurrencies API. Some docs use 'SBPPSR'.
             $formParams['IncCurrLabel'] = 'SBP';
         }
 
@@ -121,6 +119,7 @@ final class RobokassaConnector implements ConnectorInterface, WebhookAcknowledgi
             'https://auth.robokassa.ru/Merchant/Index.aspx',
             $formParams,
             'POST',
+            (string) $invId,
         );
     }
 

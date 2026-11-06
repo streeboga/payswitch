@@ -31,6 +31,7 @@ test('formRedirect creates result with correct type and data', function () {
         'https://gateway.example.com/3ds',
         ['PaReq' => 'abc123', 'MD' => 'def456'],
         'POST',
+        'txn_form_123',
     );
 
     expect($result->type)->toBe(SessionResultType::FormRedirect);
@@ -39,7 +40,8 @@ test('formRedirect creates result with correct type and data', function () {
     expect($array['type'])->toBe('form_redirect')
         ->and($array['url'])->toBe('https://gateway.example.com/3ds')
         ->and($array['params'])->toBe(['PaReq' => 'abc123', 'MD' => 'def456'])
-        ->and($array['method'])->toBe('POST');
+        ->and($array['method'])->toBe('POST')
+        ->and($array['transaction_id'])->toBe('txn_form_123');
 });
 
 test('embeddedWidget creates result with correct type and data', function () {
@@ -106,8 +108,9 @@ test('toArray returns only type-specific fields for formRedirect', function () {
     $result = PaymentSessionResult::formRedirect('https://example.com', ['key' => 'val']);
 
     $array = $result->toArray();
-    expect($array)->toHaveKeys(['type', 'url', 'params', 'method'])
-        ->and($array)->not->toHaveKeys(['transaction_id', 'provider', 'script_url', 'qr_data', 'format', 'payment_id', 'expires_at']);
+    expect($array)->toHaveKeys(['type', 'url', 'params', 'method', 'transaction_id'])
+        ->and($array['transaction_id'])->toBeNull()
+        ->and($array)->not->toHaveKeys(['provider', 'script_url', 'qr_data', 'format', 'payment_id', 'expires_at']);
 });
 
 test('toArray returns only type-specific fields for embeddedWidget', function () {

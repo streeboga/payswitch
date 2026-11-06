@@ -278,10 +278,7 @@ final readonly class PaymentConfirmationService
 
         $this->paymentRepository->createAttempt($payment, [
             'connector' => $mca->connector_name,
-            // Robokassa's form carries InvId; persist it so OpStateExt can
-            // resolve a payment if ResultURL never reaches us.
-            'connector_transaction_id' => $result->toArray()['transaction_id']
-                ?? ($mca->connector_name === 'robokassa' ? ($result->toArray()['params']['InvId'] ?? null) : null),
+            'connector_transaction_id' => $result->toArray()['transaction_id'] ?? null,
             'status' => PaymentAttemptStatus::RequiresAction->value,
             'amount' => $payment->amount,
         ]);

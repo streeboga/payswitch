@@ -39,13 +39,14 @@ final readonly class PaymentSessionResult
     /**
      * @param  array<string, mixed>  $params
      */
-    public static function formRedirect(string $url, array $params, string $method = 'POST'): self
+    public static function formRedirect(string $url, array $params, string $method = 'POST', ?string $transactionId = null): self
     {
         return new self(
             type: SessionResultType::FormRedirect,
             url: $url,
             method: $method,
             params: $params,
+            transactionId: $transactionId,
         );
     }
 
@@ -92,6 +93,7 @@ final readonly class PaymentSessionResult
                 'url' => $this->url,
                 'params' => $this->params,
                 'method' => $this->method,
+                'transaction_id' => $this->transactionId,
             ],
             SessionResultType::EmbeddedWidget => [
                 'type' => $this->type->value,

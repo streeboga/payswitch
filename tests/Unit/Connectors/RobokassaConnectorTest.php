@@ -112,7 +112,7 @@ test('createPaymentSession form params include all required fields', function ()
         ->toHaveKey('Shp_payment_id', 'pay_fields');
 });
 
-test('IncCurrLabel set to BankCardPSR for card method', function () {
+test('IncCurrLabel set to BankCard for card method', function () {
     $connector = robokassaConnector();
     $result = $connector->createPaymentSession([
         'payment_id' => 'pay_card',
@@ -121,7 +121,7 @@ test('IncCurrLabel set to BankCardPSR for card method', function () {
     ]);
 
     $params = $result->toArray()['params'];
-    expect($params['IncCurrLabel'])->toBe('BankCardPSR');
+    expect($params['IncCurrLabel'])->toBe('BankCard');
 });
 
 test('IncCurrLabel set to SBP for sbp method', function () {

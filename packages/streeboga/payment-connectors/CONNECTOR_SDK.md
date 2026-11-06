@@ -283,7 +283,7 @@ yourpsp: [
 PaymentSessionResult::serverRedirect($url, $method = 'GET', $transactionId = null)
 
 // Form POST с подписью (Робокасса)
-PaymentSessionResult::formRedirect($url, $params, $method = 'POST')
+PaymentSessionResult::formRedirect($url, $params, $method = 'POST', $transactionId = null)
 
 // JS widget PSP (CloudPayments)
 PaymentSessionResult::embeddedWidget($provider, $scriptUrl, $params, $transactionId = null)
@@ -291,6 +291,8 @@ PaymentSessionResult::embeddedWidget($provider, $scriptUrl, $params, $transactio
 // QR код inline + polling (SBP)
 PaymentSessionResult::qrInline($qrData, $format, $paymentId, $expiresAt = null, $transactionId = null)
 ```
+
+Передавайте `$transactionId`, если PSP выдаёт номер операции до перехода покупателя. Payswitch сохраняет его в попытке платежа и использует для фоновой сверки, если webhook не пришёл.
 
 ## ConnectorCapabilities
 
